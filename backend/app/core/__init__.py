@@ -1,0 +1,2 @@
+"""PlayBox — Core package."""
+

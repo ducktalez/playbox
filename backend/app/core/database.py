@@ -1,0 +1,46 @@
+"""PlayBox — Database setup."""
+
+from collections.abc import Generator
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
+from sqlmodel import SQLModel
+
+from app.core.config import settings
+
+# PostgreSQL engine (Quiz game)
+pg_engine = create_engine(settings.database_url, echo=settings.debug)
+PgSessionLocal = sessionmaker(bind=pg_engine, class_=Session, expire_on_commit=False)
+
+# SQLite engine (Imposter/Piccolo local data)
+sqlite_engine = create_engine(settings.sqlite_url, echo=settings.debug, connect_args={"check_same_thread": False})
+SqliteSessionLocal = sessionmaker(bind=sqlite_engine, class_=Session, expire_on_commit=False)
+
+
+def get_pg_session() -> Generator[Session, None, None]:
+    """Dependency: yield a PostgreSQL session."""
+    session = PgSessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+def get_sqlite_session() -> Generator[Session, None, None]:
+    """Dependency: yield a SQLite session."""
+    session = SqliteSessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+def init_pg_db() -> None:
+    """Create all PostgreSQL tables (use Alembic in production)."""
+    SQLModel.metadata.create_all(pg_engine)
+
+
+def init_sqlite_db() -> None:
+    """Create all SQLite tables."""
+    SQLModel.metadata.create_all(sqlite_engine)
+
