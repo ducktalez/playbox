@@ -1,6 +1,11 @@
 """PlayBox — Core configuration."""
 
+from pathlib import Path
+
 from pydantic_settings import BaseSettings
+
+
+ROOT_ENV_FILE = Path(__file__).resolve().parents[3] / ".env"
 
 
 class Settings(BaseSettings):
@@ -22,7 +27,7 @@ class Settings(BaseSettings):
     media_dir: str = "./media"
     max_media_size_mb: int = 50
 
-    model_config = {"env_prefix": "PLAYBOX_", "env_file": "../.env"}
+    model_config = {"env_prefix": "PLAYBOX_", "env_file": ROOT_ENV_FILE}
 
 
 settings = Settings()

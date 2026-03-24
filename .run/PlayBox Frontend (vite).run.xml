@@ -5,6 +5,7 @@
     <command value="run" />
     <scripts value="dev" />
     <node-interpreter value="project" />
+    <module name="playbox" />
     <envs />
     <method v="2" />
   </configuration>

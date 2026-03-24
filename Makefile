@@ -52,11 +52,11 @@ setup:
 # ---------------------------------------------------------------------------
 
 dev-backend:
-	@echo "Starting backend (uvicorn on http://localhost:8015)..."
-	cd backend && .venv\Scripts\uvicorn app.main:app --reload
+	@echo "Starting backend (uvicorn on http://localhost:8015 and your LAN IP on port 8015)..."
+	cd backend && .venv\Scripts\uvicorn app.main:app --reload --host 0.0.0.0 --port 8015
 
 dev-frontend:
-	@echo "Starting frontend (vite on http://localhost:5173)..."
+	@echo "Starting frontend (vite on http://localhost:5173 and your LAN IP on port 5173)..."
 	cd frontend && npm run dev
 
 # ---------------------------------------------------------------------------

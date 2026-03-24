@@ -21,7 +21,7 @@
 
 ## Phase 0 — Scaffolding
 
-- Done: app factory, API mounting, `/health`, frontend Vite app, Docker and shared navigation are in place.
+- Done: app factory, API mounting, `/health`, frontend Vite app, Docker, shared navigation, repo-root `.env` bootstrap, and PyCharm run configurations are in place.
 - Open: CI workflow and PWA shell are still missing.
 
 - [ ] Initialize Git repo, push to GitHub
@@ -86,13 +86,13 @@
 ## Phase 3 — Quiz MVP ("Wer wird Elite-Hater?")
 
 - Done: PostgreSQL models, Alembic scaffolding, the session finish flow, and most core backend endpoints are present.
-- Open: complete the remaining frontend game modes and full endpoint test coverage.
+- Open: complete the remaining frontend game modes, expand the starter question set, and standardize API error payloads.
 
 ### High Priority
 
 - [x] PostgreSQL schema: questions, answers, categories, tags, players
 - [x] Alembic migration setup
-- [ ] Backend: question CRUD (`GET/POST /api/v1/quiz/questions`)
+- [x] Backend: question CRUD (`GET/POST /api/v1/quiz/questions`)
 - [x] Backend: answer submission (`POST /api/v1/quiz/questions/{id}/attempt`)
 - [x] Backend: category and tag endpoints
 - [x] Backend: session management (start, state, finish)
@@ -100,7 +100,7 @@
 - [ ] Frontend: "Quizduell" mode — 1v1, category selection, alternating turns
 - [ ] Frontend: question submission form (text, correct answer, wrong answers, category, tags)
 - [ ] Seed initial Drachenlord question set (~50+ questions)
-- [ ] Player creation (name + UUID, no auth)
+- [x] Player creation (name + UUID, no auth)
 
 ### Medium Priority
 
@@ -149,14 +149,14 @@
 - [x] Add Piccolo endpoint `GET /api/v1/piccolo/challenges` (filterable by category/intensity)
 - [x] Add backend tests for Piccolo API in `backend/tests/test_piccolo.py`
 - [x] Add backend tests for Quiz API in `backend/tests/test_quiz.py`
-- [ ] Complete Quiz session flow with explicit finish endpoint/state update
+- [x] Complete Quiz session flow with explicit finish endpoint/state update
 - [x] Expand Imposter seed list to target at least 5-10 categories and 200+ words
 
 ### Medium Priority
 
 - [x] Implement minimal Imposter frontend flow (name entry + reveal + timer)
 - [x] Implement minimal Piccolo frontend flow (name entry + category/intensity + next challenge)
-- [ ] Add Quiz seed script for initial question set (minimal, file-based)
+- [x] Add Quiz seed script for initial question set (minimal, file-based)
 - [ ] Add/update API error payloads to consistently include `{ detail, code }`
 
 ## Backlog (Unscheduled)
@@ -186,9 +186,10 @@
 - Piccolo backend session flow endpoints
 - Piccolo `GET /challenges` endpoint (filterable by category/intensity)
 - Quiz core backend endpoints with ELO integration
+- Quiz file-based starter seed importer (`python -m app.games.quiz.seed`)
 - Shared test fixtures in `conftest.py`
 - Backend tests: `test_imposter.py` (7), `test_piccolo.py` (18), `test_quiz.py` (20), `test_elo.py` (8)
-- Shared PyCharm run configurations (`.run/`)
+- Shared PyCharm run configurations (`.run/`) and local IDE copies via `setup.py`
 
 ## Dependencies
 

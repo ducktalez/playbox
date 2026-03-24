@@ -10,13 +10,14 @@
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <option name="SCRIPT_NAME" value="" />
-    <option name="PARAMETERS" value="app.main:app --reload --port 8015" />
+    <option name="PARAMETERS" value="app.main:app --reload --host 0.0.0.0 --port 8015" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="true" />
     <option name="MODULE_MODE" value="true" />
     <option name="REDIRECT_INPUT" value="false" />
     <option name="INPUT_FILE" value="" />
     <option name="MODULE_NAME" value="uvicorn" />
+    <module name="playbox" />
     <method v="2" />
   </configuration>
 </component>

@@ -17,6 +17,7 @@
     <option name="REDIRECT_INPUT" value="false" />
     <option name="INPUT_FILE" value="" />
     <option name="MODULE_NAME" value="pytest" />
+    <module name="playbox" />
     <method v="2" />
   </configuration>
 </component>

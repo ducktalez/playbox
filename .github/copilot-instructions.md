@@ -8,6 +8,7 @@ The project is in early development. Only implement what is **technically necess
 - **Security, auth, caching, monitoring, styling polish**: deferred. Mark placeholders with `# TODO: post-dev`.
 - **No speculative features or database columns.** If it's not needed for the current task, don't build it.
 - **During development, avoid PostgreSQL where possible and prefer in-memory SQLite or other in-memory storage.** Keep PostgreSQL only where it is technically required today (currently the quiz module).
+- The shared local environment file lives at the **repo root** as `.env` (created from `.env.example` by `setup.py`).
 - **App-like optimization is part of development.** Prefer tap-friendly, shared-device, PWA-appropriate flows for game screens where it improves the current MVP.
 - **All apps should be mobile-optimized during development.** Default to layouts and interactions that work well on phones first.
 - **Social/party-game player registration should be generalized where practical.** If no names are entered, fall back to `Player 1`, `Player 2`, `Player 3`, ... instead of blocking local testing.
@@ -30,7 +31,7 @@ The project is in early development. Only implement what is **technically necess
 
 ## Known Pitfalls
 - **Tests must run from `backend/`**: `cd backend && python -m pytest tests/ -v`.
-- **Quiz uses PostgreSQL**, Imposter/Piccolo use **in-memory or SQLite**. Don't mix the engines per game.
+- **Quiz uses PostgreSQL**, Imposter/Piccolo use **in-memory or SQLite**. Prefer **in-memory SQLite during development** when persistence is not technically required. Don't mix the engines per game.
 - Imposter/Piccolo sessions are **in-memory only** — no DB persistence, data resets on restart.
 - Quiz ELO: both questions and players have ELO scores. Always update **both** after an attempt.
 - Quiz answers: exactly 1 correct, N wrong (N ≥ 1). The pool can be arbitrarily large; the API selects a random subset per request.

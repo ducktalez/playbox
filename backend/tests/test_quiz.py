@@ -2,6 +2,11 @@
 
 import uuid
 
+from sqlalchemy import select
+
+from app.games.quiz.models import Category, Question, Tag
+from app.games.quiz.seed import QuizSeedFile, seed_quiz_dataset
+
 
 # --- Category endpoints ---
 
@@ -373,6 +378,80 @@ def test_leaderboard(quiz_client) -> None:
     # Ranks should be sequential
     for i, entry in enumerate(data):
         assert entry["rank"] == i + 1
+
+
+# --- Seed import ---
+
+
+def _build_seed_dataset() -> QuizSeedFile:
+    """Helper: build a small validated quiz seed dataset."""
+    return QuizSeedFile(
+        categories=[
+            {"name": "Starter", "description": "Starter questions for tests."},
+            {"name": "Bonus", "description": "Additional category for tests."},
+        ],
+        questions=[
+            {
+                "text": "What does PWA stand for?",
+                "category": "Starter",
+                "tags": ["starter", "frontend"],
+                "answers": [
+                    {"text": "Progressive Web App", "is_correct": True},
+                    {"text": "Portable Web API", "is_correct": False},
+                    {"text": "Primary Window Application", "is_correct": False},
+                ],
+            },
+            {
+                "text": "Which game currently uses PostgreSQL in PlayBox?",
+                "category": "Bonus",
+                "tags": ["starter", "database"],
+                "answers": [
+                    {"text": "Quiz", "is_correct": True},
+                    {"text": "Imposter", "is_correct": False},
+                    {"text": "Piccolo", "is_correct": False},
+                ],
+            },
+        ],
+    )
+
+
+def test_seed_quiz_dataset_creates_categories_questions_and_tags(db_session) -> None:
+    """The quiz seed importer should create categories, tags, and questions from the dataset."""
+    result = seed_quiz_dataset(db=db_session, dataset=_build_seed_dataset())
+
+    categories = db_session.execute(select(Category)).scalars().all()
+    questions = db_session.execute(select(Question)).scalars().all()
+    tags = db_session.execute(select(Tag)).scalars().all()
+
+    assert result.created_categories == 2
+    assert result.created_questions == 2
+    assert result.created_tags == 3
+    assert result.skipped_questions == 0
+    assert {category.name for category in categories} == {"Starter", "Bonus"}
+    assert {question.text for question in questions} == {
+        "What does PWA stand for?",
+        "Which game currently uses PostgreSQL in PlayBox?",
+    }
+    assert {tag.name for tag in tags} == {"starter", "frontend", "database"}
+
+
+def test_seed_quiz_dataset_is_idempotent(db_session) -> None:
+    """Running the quiz seed importer twice should skip already imported questions."""
+    dataset = _build_seed_dataset()
+
+    first = seed_quiz_dataset(db=db_session, dataset=dataset)
+    second = seed_quiz_dataset(db=db_session, dataset=dataset)
+
+    question_count = len(db_session.execute(select(Question)).scalars().all())
+    category_count = len(db_session.execute(select(Category)).scalars().all())
+    tag_count = len(db_session.execute(select(Tag)).scalars().all())
+
+    assert first.created_questions == 2
+    assert second.created_questions == 0
+    assert second.skipped_questions == 2
+    assert question_count == 2
+    assert category_count == 2
+    assert tag_count == 3
 
 
 # --- Health check ---

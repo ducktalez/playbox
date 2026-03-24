@@ -11,7 +11,11 @@ applyTo: "backend/**"
 
 ## Database
 - **Quiz**: PostgreSQL, SQLAlchemy/SQLModel, Alembic migrations. UUID PKs, `snake_case`, audit fields (`created_at`, `updated_at`), soft delete (`deleted_at`).
-- **Imposter/Piccolo**: in-memory or bundled data only. No PostgreSQL dependency.
+- **Imposter/Piccolo**: prefer in-memory storage during development; use SQLite only when a lightweight local store is technically needed. No PostgreSQL dependency.
+
+## Local configuration
+- The shared development environment file is the repo-root `.env`.
+- Do not introduce separate backend-only `.env` conventions unless technically required.
 
 ## Deferred until go-live
 - **Security & auth**: no tokens, sessions, hashing, or input sanitization. Quiz players are identified by name + UUID, no passwords.

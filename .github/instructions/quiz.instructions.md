@@ -15,6 +15,7 @@ These instructions apply to both backend and frontend files for the Quiz game.
 - Do not access detached ORM entities after commit/close.
 - Any new question/attempt/session endpoint must have backend tests.
 - Prefer category-balanced question selection when listing general question pools so large categories do not crowd out the smaller ones.
+- Keep quiz starter seed data file-based for now; use `python -m app.games.quiz.seed` with `backend/app/games/quiz/seed_questions.json` for minimal local data imports.
 
 ## Frontend Rules
 - Prioritize core game modes over styling polish.

@@ -22,7 +22,7 @@
 |-------|-----------|
 | Backend | FastAPI (Python) |
 | Frontend | React (TypeScript), Vite |
-| Database | PostgreSQL (quiz), SQLite (offline games) |
+| Database | PostgreSQL (quiz), in-memory/SQLite (offline games during development) |
 | Deployment | Docker, PWA |
 | CI/CD | GitHub Actions |
 
@@ -69,15 +69,40 @@ python setup.py
 ```
 
 This single command:
-1. Creates `.env` from `.env.example` if it doesn't exist yet.
-2. Generates (or updates) the PyCharm run configurations in `.run/`.
-3. Starts backend (uvicorn) and frontend (vite) together.
+1. Creates the repo-root `.env` from `.env.example` if it doesn't exist yet.
+2. Generates (or updates) shared PyCharm run configurations in `.run/`.
+3. Writes local PyCharm copies to `.idea/runConfigurations/` for the currently opened workspace.
+4. Starts backend (uvicorn) and frontend (vite) together.
 
 Press **Ctrl+C** to stop both servers.
+
+**Optional — seed a small quiz starter dataset**
+```bash
+cd backend
+python -m app.games.quiz.seed
+```
+
+This imports the file-based starter questions from `backend/app/games/quiz/seed_questions.json`.
 
 **PyCharm alternative (after first `python setup.py` run)**
 
 Select `PlayBox Fullstack (compound)` in the run/debug dropdown and press **F5**. The compound config starts backend + frontend simultaneously.
+
+### Local vs. LAN URLs
+
+When `python setup.py` starts, it prints two groups of URLs:
+
+- **This computer** → use these on the same machine running PlayBox (`localhost`)
+- **Same LAN / Wi-Fi** → use these from a phone or another device in the same network
+
+That means you will usually see **two frontend/backend pairs**, not four different servers:
+
+- frontend on port `5173`
+- backend API on port `8015`
+- once as `localhost`
+- once as your LAN IP (for example `192.168.x.x`)
+
+If Vite itself also prints multiple network addresses, that usually just means your computer has multiple network adapters (for example Wi-Fi, Ethernet, VPN, Docker, or virtual adapters). In practice, the relevant one is typically the active Wi-Fi/LAN address in the same subnet as your phone.
 
 **Individual servers (for debugging)**
 ```bash
@@ -103,7 +128,7 @@ docker compose up --build
 
 ## PyCharm Run Configurations
 
-This repository ships shared PyCharm run configurations in `.run/`.
+This repository ships shared PyCharm run configurations in `.run/`. The setup script also writes local copies into `.idea/runConfigurations/` so PyCharm can see them immediately in the current workspace.
 
 - `PlayBox Fullstack (compound)` starts backend + frontend together (recommended default)
 - `PlayBox Backend (uvicorn)` runs `uvicorn app.main:app --reload` from `backend/`
@@ -117,7 +142,7 @@ How to use:
 3. Select `PlayBox Fullstack (compound)` from the Run/Debug dropdown for normal development.
 4. Use individual configs when needed (`pytest`, backend only, frontend only).
 
-Note: a README link cannot reliably trigger an automatic PyCharm import action. Versioning `.run` files is the portable one-click-equivalent approach.
+Note: a README link cannot reliably trigger an automatic PyCharm import action. Versioning `.run` files plus generating local `.idea/runConfigurations/` entries is the most reliable portable workaround.
 
 ## API Routes
 

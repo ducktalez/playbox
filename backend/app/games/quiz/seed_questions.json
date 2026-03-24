@@ -1,0 +1,75 @@
+{
+  "categories": [
+    {
+      "name": "PlayBox Basics",
+      "description": "Starter questions about the PlayBox project itself."
+    },
+    {
+      "name": "Web Basics",
+      "description": "Starter questions about web and app fundamentals."
+    }
+  ],
+  "questions": [
+    {
+      "text": "Which endpoint is used as the PlayBox health check?",
+      "category": "PlayBox Basics",
+      "tags": ["starter", "backend"],
+      "created_by": "PlayBox quiz seed",
+      "answers": [
+        {"text": "/health", "is_correct": true},
+        {"text": "/status", "is_correct": false},
+        {"text": "/ping", "is_correct": false},
+        {"text": "/api/v1/health", "is_correct": false}
+      ]
+    },
+    {
+      "text": "Which game currently uses PostgreSQL in PlayBox?",
+      "category": "PlayBox Basics",
+      "tags": ["starter", "database"],
+      "created_by": "PlayBox quiz seed",
+      "answers": [
+        {"text": "Quiz", "is_correct": true},
+        {"text": "Imposter", "is_correct": false},
+        {"text": "Piccolo", "is_correct": false},
+        {"text": "Chess", "is_correct": false}
+      ]
+    },
+    {
+      "text": "What is the default base ELO score for new quiz players?",
+      "category": "PlayBox Basics",
+      "tags": ["starter", "elo"],
+      "created_by": "PlayBox quiz seed",
+      "answers": [
+        {"text": "1200", "is_correct": true},
+        {"text": "800", "is_correct": false},
+        {"text": "1500", "is_correct": false},
+        {"text": "2000", "is_correct": false}
+      ]
+    },
+    {
+      "text": "What does PWA stand for?",
+      "category": "Web Basics",
+      "tags": ["starter", "frontend"],
+      "created_by": "PlayBox quiz seed",
+      "answers": [
+        {"text": "Progressive Web App", "is_correct": true},
+        {"text": "Private Web Access", "is_correct": false},
+        {"text": "Portable Web API", "is_correct": false},
+        {"text": "Primary Window Application", "is_correct": false}
+      ]
+    },
+    {
+      "text": "Which HTTP method is typically used to fetch data from a REST API?",
+      "category": "Web Basics",
+      "tags": ["starter", "http"],
+      "created_by": "PlayBox quiz seed",
+      "answers": [
+        {"text": "GET", "is_correct": true},
+        {"text": "PATCH", "is_correct": false},
+        {"text": "DELETE", "is_correct": false},
+        {"text": "TRACE", "is_correct": false}
+      ]
+    }
+  ]
+}
+
