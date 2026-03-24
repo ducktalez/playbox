@@ -5,7 +5,29 @@ const MIN_PLAYERS = 3;
 const MAX_PLAYERS = 20;
 const TIMER_OPTIONS = [120, 300, 420, 600, 900];
 
+const END_REASON_OPTIONS = [
+  { value: "TIME_OVER", label: "Time's over" },
+  { value: "SECRET_UNCOVERED", label: "Secret was uncovered" },
+  { value: "FOUND_IMPOSTER", label: "Found the imposter!" },
+] as const;
+
+const IMPOSTER_FATE_OPTIONS = [
+  { value: "ALIVE", label: "Alive" },
+  { value: "DEAD", label: "Dead" },
+] as const;
+
+const REPORT_REASON_OPTIONS = [
+  { value: "NO_REASON", label: "No reason" },
+  { value: "WORD_UNKNOWN_OR_COMPLEX", label: "Word unknown or complex" },
+  { value: "INAPPROPRIATE", label: "Inappropriate" },
+  { value: "MISSPELLING", label: "Misspelling" },
+  { value: "OTHER", label: "Other" },
+] as const;
+
 type Step = "setup" | "reveal" | "discussion" | "result";
+type EndReason = (typeof END_REASON_OPTIONS)[number]["value"] | "";
+type ImposterFate = (typeof IMPOSTER_FATE_OPTIONS)[number]["value"] | "";
+type ReportReason = (typeof REPORT_REASON_OPTIONS)[number]["value"];
 
 type SessionResponse = {
   id: string;
@@ -54,6 +76,25 @@ function formatDuration(totalSeconds: number): string {
   return `${minutes}:${seconds}`;
 }
 
+function buildReportReason(reason: ReportReason, notes: string): string {
+  const option = REPORT_REASON_OPTIONS.find((entry) => entry.value === reason);
+  const trimmedNotes = notes.trim();
+
+  if (!option) {
+    return trimmedNotes || "No reason";
+  }
+
+  if (reason === "NO_REASON") {
+    return trimmedNotes ? `No reason — ${trimmedNotes}` : "No reason";
+  }
+
+  if (reason === "OTHER") {
+    return trimmedNotes ? `Other — ${trimmedNotes}` : "Other";
+  }
+
+  return trimmedNotes ? `${option.label} — ${trimmedNotes}` : option.label;
+}
+
 export default function ImposterGame() {
   const [step, setStep] = useState<Step>("setup");
   const [playerNames, setPlayerNames] = useState<string[]>(["", "", ""]);
@@ -68,14 +109,23 @@ export default function ImposterGame() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isStarting, setIsStarting] = useState(false);
   const [isRevealing, setIsRevealing] = useState(false);
-  const [reportReason, setReportReason] = useState("");
+  const [resolvedWord, setResolvedWord] = useState<WordResponse | null>(null);
+  const [wordInfoError, setWordInfoError] = useState("");
+  const [isWordInfoOpen, setIsWordInfoOpen] = useState(false);
+  const [isLoadingWordInfo, setIsLoadingWordInfo] = useState(false);
+  const [reportReason, setReportReason] = useState<ReportReason>("NO_REASON");
+  const [reportNotes, setReportNotes] = useState("");
   const [reportMessage, setReportMessage] = useState("");
   const [isReporting, setIsReporting] = useState(false);
+  const [endReason, setEndReason] = useState<EndReason>("");
+  const [imposterFate, setImposterFate] = useState<ImposterFate>("");
 
   const normalizedPlayers = useMemo(
     () => playerNames.map((player) => player.trim()).filter(Boolean),
     [playerNames],
   );
+
+  const resolvedCategory = resolvedWord?.category ?? (selectedCategory || "Random");
 
   useEffect(() => {
     let ignore = false;
@@ -110,6 +160,7 @@ export default function ImposterGame() {
     }
 
     if (timeLeft <= 0) {
+      setEndReason((current) => current || "TIME_OVER");
       setStep("result");
       return undefined;
     }
@@ -123,6 +174,51 @@ export default function ImposterGame() {
     };
   }, [step, timeLeft]);
 
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadResolvedWord() {
+      if (!session) {
+        setResolvedWord(null);
+        setWordInfoError("");
+        return;
+      }
+
+      setIsLoadingWordInfo(true);
+
+      try {
+        const wordsUrl = selectedCategory
+          ? `${API_BASE}/words?category=${encodeURIComponent(selectedCategory)}`
+          : `${API_BASE}/words`;
+        const response = await fetch(wordsUrl);
+        const words = await parseApiResponse<WordResponse[]>(response);
+        const matchedWord = words.find((word) => word.text === session.word) ?? null;
+
+        if (!ignore) {
+          setResolvedWord(matchedWord);
+          setWordInfoError(matchedWord ? "" : "Word details are not available for this round.");
+        }
+      } catch (error) {
+        if (!ignore) {
+          setResolvedWord(null);
+          setWordInfoError(
+            error instanceof Error ? error.message : "Could not load word details.",
+          );
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoadingWordInfo(false);
+        }
+      }
+    }
+
+    void loadResolvedWord();
+
+    return () => {
+      ignore = true;
+    };
+  }, [session, selectedCategory]);
+
   function updatePlayerName(index: number, value: string) {
     setPlayerNames((current) =>
       current.map((playerName, currentIndex) =>
@@ -135,6 +231,7 @@ export default function ImposterGame() {
     if (playerNames.length >= MAX_PLAYERS) {
       return;
     }
+
     setPlayerNames((current) => [...current, ""]);
   }
 
@@ -142,6 +239,7 @@ export default function ImposterGame() {
     if (playerNames.length <= MIN_PLAYERS) {
       return;
     }
+
     setPlayerNames((current) => current.filter((_, currentIndex) => currentIndex !== index));
   }
 
@@ -152,8 +250,26 @@ export default function ImposterGame() {
     setCurrentReveal(null);
     setTimeLeft(0);
     setErrorMessage("");
-    setReportReason("");
+    setResolvedWord(null);
+    setWordInfoError("");
+    setIsWordInfoOpen(false);
+    setReportReason("NO_REASON");
+    setReportNotes("");
     setReportMessage("");
+    setEndReason("");
+    setImposterFate("");
+  }
+
+  function toggleEndReason(nextReason: EndReason) {
+    setEndReason((current) => {
+      const updatedReason = current === nextReason ? "" : nextReason;
+
+      if (updatedReason !== "FOUND_IMPOSTER") {
+        setImposterFate("");
+      }
+
+      return updatedReason;
+    });
   }
 
   async function startGame(nextPlayers?: string[]) {
@@ -166,8 +282,14 @@ export default function ImposterGame() {
 
     setIsStarting(true);
     setErrorMessage("");
+    setResolvedWord(null);
+    setWordInfoError("");
+    setIsWordInfoOpen(false);
+    setReportReason("NO_REASON");
+    setReportNotes("");
     setReportMessage("");
-    setReportReason("");
+    setEndReason("");
+    setImposterFate("");
 
     try {
       const response = await fetch(`${API_BASE}/session`, {
@@ -234,7 +356,8 @@ export default function ImposterGame() {
   }
 
   async function reportCurrentWord() {
-    if (!session) {
+    if (!resolvedWord) {
+      setReportMessage("Word details are not available yet.");
       return;
     }
 
@@ -242,30 +365,19 @@ export default function ImposterGame() {
     setReportMessage("");
 
     try {
-      const wordsUrl = selectedCategory
-        ? `${API_BASE}/words?category=${encodeURIComponent(selectedCategory)}`
-        : `${API_BASE}/words`;
-
-      const wordsResponse = await fetch(wordsUrl);
-      const words = await parseApiResponse<WordResponse[]>(wordsResponse);
-      const matchedWord = words.find((word) => word.text === session.word);
-
-      if (!matchedWord) {
-        throw new Error("Could not resolve the current word for reporting.");
-      }
-
-      const reportResponse = await fetch(`${API_BASE}/words/${matchedWord.id}/report`, {
+      const response = await fetch(`${API_BASE}/words/${resolvedWord.id}/report`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          reason: reportReason.trim(),
+          reason: buildReportReason(reportReason, reportNotes),
         }),
       });
 
-      await parseApiResponse(reportResponse);
-      setReportReason("");
+      await parseApiResponse(response);
+      setReportNotes("");
+      setReportReason("NO_REASON");
       setReportMessage("Thanks — the word has been reported.");
     } catch (error) {
       setReportMessage(
@@ -275,6 +387,18 @@ export default function ImposterGame() {
       setIsReporting(false);
     }
   }
+
+  const backToSetupButton = (
+    <div className="top-action-row">
+      <button
+        type="button"
+        className="button button--ghost back-button"
+        onClick={resetRound}
+      >
+        ← Back to setup
+      </button>
+    </div>
+  );
 
   if (step === "setup") {
     return (
@@ -289,7 +413,7 @@ export default function ImposterGame() {
         <div className="surface-panel stack-lg">
           <div className="stack-md">
             {playerNames.map((playerName, index) => (
-              <div key={`${index}-${playerName}`} className="player-row">
+              <div key={index} className="player-row">
                 <input
                   className="text-input"
                   type="text"
@@ -323,7 +447,10 @@ export default function ImposterGame() {
             </span>
           </div>
 
-          <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+          <div
+            className="form-grid"
+            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
+          >
             <label className="field-label">
               Category
               <select
@@ -356,7 +483,9 @@ export default function ImposterGame() {
             </label>
           </div>
 
-          {categoriesError && <p className="helper-text">Categories are optional: {categoriesError}</p>}
+          {categoriesError && (
+            <p className="helper-text">Categories are optional: {categoriesError}</p>
+          )}
           {errorMessage && <p className="alert-text">{errorMessage}</p>}
 
           <div className="button-row">
@@ -384,6 +513,7 @@ export default function ImposterGame() {
 
     return (
       <section className="placeholder-page stack-lg">
+        {backToSetupButton}
         <p className="placeholder-kicker">Pass and play</p>
         <h1>
           Player {currentPlayerIndex + 1} / {session.player_names.length}
@@ -438,6 +568,7 @@ export default function ImposterGame() {
   if (step === "discussion") {
     return (
       <section className="placeholder-page stack-lg">
+        {backToSetupButton}
         <p className="placeholder-kicker">Discussion</p>
         <h1>Discuss and find the Imposter</h1>
         <div className="surface-panel stack-lg">
@@ -446,7 +577,7 @@ export default function ImposterGame() {
           </div>
           <div className="inline-meta">
             <span>Players: {session.player_names.length}</span>
-            <span>Category: {selectedCategory || "Random"}</span>
+            <span>Category: {resolvedCategory}</span>
           </div>
           <p className="muted-text">
             The secret word stays hidden until the discussion is over.
@@ -467,59 +598,146 @@ export default function ImposterGame() {
 
   return (
     <section className="placeholder-page stack-lg">
+      {backToSetupButton}
       <p className="placeholder-kicker">Round result</p>
       <h1>Reveal the answer</h1>
 
       <div className="surface-panel stack-lg">
         <div className="inline-meta">
-          <span>Category: {selectedCategory || "Random"}</span>
+          <span>Category: {resolvedCategory}</span>
           <span>Timer: {formatDuration(session.timer_seconds)}</span>
         </div>
-        <div className="reveal-display">{session.word}</div>
+
+        <div className="word-title-row">
+          <div className="reveal-display">{session.word}</div>
+          <div className="bubble-anchor">
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="Show word details"
+              onClick={() => setIsWordInfoOpen((current) => !current)}
+            >
+              i
+            </button>
+
+            {isWordInfoOpen && (
+              <div className="info-bubble stack-md">
+                <div className="info-bubble__title">
+                  <strong>Word info</strong>
+                  <button
+                    type="button"
+                    className="button button--ghost back-button"
+                    onClick={() => setIsWordInfoOpen(false)}
+                  >
+                    Close
+                  </button>
+                </div>
+
+                <ul className="info-list">
+                  <li>
+                    <strong>Word:</strong> {session.word}
+                  </li>
+                  <li>
+                    <strong>Category:</strong> {resolvedCategory}
+                  </li>
+                  <li>
+                    <strong>Uploaded by:</strong> PlayBox bundled seed list
+                  </li>
+                  {!resolvedWord && !isLoadingWordInfo && (
+                    <li>
+                      <strong>Meaning:</strong> No additional description available yet.
+                    </li>
+                  )}
+                </ul>
+
+                {isLoadingWordInfo && <p className="helper-text">Loading word details...</p>}
+                {wordInfoError && <p className="helper-text">{wordInfoError}</p>}
+
+                <div className="meta-block">
+                  <p className="helper-text">Report this word</p>
+                  <div className="choice-chips">
+                    {REPORT_REASON_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`choice-chip${reportReason === option.value ? " choice-chip--selected" : ""}`}
+                        onClick={() => setReportReason(option.value)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  <textarea
+                    className="text-area"
+                    rows={3}
+                    value={reportNotes}
+                    placeholder="Optional note"
+                    onChange={(event) => setReportNotes(event.target.value)}
+                  />
+                  {reportMessage && (
+                    <p className={reportMessage.startsWith("Thanks") ? "helper-text" : "alert-text"}>
+                      {reportMessage}
+                    </p>
+                  )}
+                  <div className="button-row">
+                    <button
+                      type="button"
+                      className="button button--danger"
+                      onClick={() => void reportCurrentWord()}
+                      disabled={isReporting || isLoadingWordInfo}
+                    >
+                      {isReporting ? "Reporting..." : "Send report"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         <p>
           <strong>Imposter:</strong> {session.player_names[session.imposter_index]}
         </p>
 
+        <div className="stack-md">
+          <p className="helper-text">How did the round end? (optional)</p>
+          <div className="choice-chips">
+            {END_REASON_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={`choice-chip${endReason === option.value ? " choice-chip--selected" : ""}`}
+                onClick={() => toggleEndReason(option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+
+          {endReason === "FOUND_IMPOSTER" && (
+            <div className="choice-chips">
+              {IMPOSTER_FATE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`choice-chip${imposterFate === option.value ? " choice-chip--selected" : ""}`}
+                  onClick={() => setImposterFate((current) => current === option.value ? "" : option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="button-row">
           <button
             type="button"
-            className="button button--primary"
+            className="button button--primary button--hero"
             onClick={() => void startGame(session.player_names)}
             disabled={isStarting}
           >
             {isStarting ? "Creating round..." : "Play again"}
-          </button>
-          <button type="button" className="button button--secondary" onClick={resetRound}>
-            Back to setup
-          </button>
-        </div>
-      </div>
-
-      <div className="surface-panel stack-md">
-        <h2>Report this word</h2>
-        <p className="helper-text">
-          Send a short note if the selected word is inappropriate or broken.
-        </p>
-        <textarea
-          className="text-area"
-          rows={4}
-          value={reportReason}
-          placeholder="Optional reason"
-          onChange={(event) => setReportReason(event.target.value)}
-        />
-        {reportMessage && (
-          <p className={reportMessage.startsWith("Thanks") ? "helper-text" : "alert-text"}>
-            {reportMessage}
-          </p>
-        )}
-        <div className="button-row">
-          <button
-            type="button"
-            className="button button--danger"
-            onClick={() => void reportCurrentWord()}
-            disabled={isReporting}
-          >
-            {isReporting ? "Reporting..." : "Report word"}
           </button>
         </div>
       </div>
