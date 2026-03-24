@@ -46,6 +46,7 @@ playbox/
 │   └── vite.config.ts
 ├── .github/
 │   └── copilot-instructions.md
+├── .run/                      # Shared PyCharm run configurations
 ├── Architecture.md
 ├── Implementation-Plan.md
 ├── pyproject.toml
@@ -59,23 +60,45 @@ playbox/
 - Python 3.11+
 - Node.js 20+
 - PostgreSQL 15+ (for quiz game)
+- Make (optional, for convenience commands)
 
-### Backend
+### Quick Start
 
+**Step 1 — Install dependencies (one-time)**
 ```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+make install
 ```
 
-### Frontend
+**Step 2 — Start everything**
+```bash
+python setup.py
+```
+
+This single command:
+1. Creates `backend/.env` from `backend/.env.example` if it doesn't exist yet.
+2. Generates (or updates) the PyCharm run configurations in `.run/`.
+3. Starts backend (uvicorn) and frontend (vite) together.
+
+Press **Ctrl+C** to stop both servers.
+
+**PyCharm alternative (after first `python setup.py` run)**
+
+Select `PlayBox Fullstack (compound)` in the run/debug dropdown and press **F5**. The compound config starts backend + frontend simultaneously.
+
+**Individual servers (for debugging)**
+```bash
+make dev-backend      # http://localhost:8015
+make dev-frontend     # http://localhost:5173
+```
+
+### All Makefile Commands
 
 ```bash
-cd frontend
-npm install
-npm run dev
+make help              # Show all available commands
+make install           # Install all dependencies
+make setup             # Generate PyCharm configs + start all servers
+make test              # Run backend tests
+make docker-up         # Start with docker-compose
 ```
 
 ### Docker
@@ -83,6 +106,24 @@ npm run dev
 ```bash
 docker compose up --build
 ```
+
+## PyCharm Run Configurations
+
+This repository ships shared PyCharm run configurations in `.run/`.
+
+- `PlayBox Fullstack (compound)` starts backend + frontend together (recommended default)
+- `PlayBox Backend (uvicorn)` runs `uvicorn app.main:app --reload` from `backend/`
+- `PlayBox Frontend (vite)` runs `npm run dev` from `frontend/`
+- `PlayBox Backend Tests (pytest)` runs `python -m pytest tests/ -v` from `backend/`
+
+How to use:
+
+1. Open the project root in PyCharm.
+2. Wait for indexing and interpreter/package detection.
+3. Select `PlayBox Fullstack (compound)` from the Run/Debug dropdown for normal development.
+4. Use individual configs when needed (`pytest`, backend only, frontend only).
+
+Note: a README link cannot reliably trigger an automatic PyCharm import action. Versioning `.run` files is the portable one-click-equivalent approach.
 
 ## API Routes
 

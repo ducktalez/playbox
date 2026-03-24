@@ -2,18 +2,18 @@
 
 ## Current Status
 
-**Phase:** Initial Planning
-**Last Updated:** 2026-03-21
+**Phase:** Execution in Progress
+**Last Updated:** 2026-03-23
 
 ## Roadmap
 
 | Phase | Description | Target Date | Status |
 |-------|------------|-------------|--------|
-| 0 | Project scaffolding, CI/CD, Docker setup | 2026-04 | planned |
-| 1 | Imposter — MVP | 2026-05 | planned |
-| 2 | Piccolo — MVP | 2026-06 | planned |
-| 3 | Quiz ("Wer wird Elite-Hater?") — MVP | 2026-07 | planned |
-| 4 | Quiz — ELO system + media attachments | 2026-08 | planned |
+| 0 | Project scaffolding, CI/CD, Docker setup | 2026-04 | in progress |
+| 1 | Imposter — MVP | 2026-05 | in progress |
+| 2 | Piccolo — MVP | 2026-06 | in progress |
+| 3 | Quiz ("Wer wird Elite-Hater?") — MVP | 2026-07 | in progress |
+| 4 | Quiz — ELO system + media attachments | 2026-08 | in progress |
 | 5 | Chess Variants — MVP (low priority) | TBD | planned |
 | 6 | Polish, PWA optimization, offline hardening | TBD | planned |
 
@@ -21,25 +21,31 @@
 
 ## Phase 0 — Scaffolding
 
+- Done: app factory, API mounting, `/health`, frontend Vite app, Docker and shared navigation are in place.
+- Open: CI workflow and PWA shell are still missing.
+
 - [ ] Initialize Git repo, push to GitHub
-- [ ] Set up FastAPI backend with app factory pattern
-- [ ] Set up React/TypeScript frontend with Vite
-- [ ] Docker Compose: backend + PostgreSQL + frontend dev server
-- [ ] Production Dockerfile (backend serves built frontend)
+- [x] Set up FastAPI backend with app factory pattern
+- [x] Set up React/TypeScript frontend with Vite
+- [x] Docker Compose: backend + PostgreSQL + frontend dev server
+- [x] Production Dockerfile (backend serves built frontend)
 - [ ] GitHub Actions: lint + test pipeline
 - [ ] PWA basics: manifest.json, Service Worker shell
-- [ ] Shared layout / navigation between games
-- [ ] Health endpoint `GET /health`
+- [x] Shared layout / navigation between games
+- [x] Health endpoint `GET /health`
 
 ## Phase 1 — Imposter MVP
 
+- Done: core backend flow is available (`words`, `report`, `session`, reveal endpoint).
+- Open: expand seed data, add missing frontend flow, and complete medium-priority UX options.
+
 ### High Priority
 
-- [ ] Word list data model (SQLite or bundled JSON)
-- [ ] Seed initial word list (~200+ words, 5–10 categories)
-- [ ] Backend: `GET /api/v1/imposter/words`
-- [ ] Backend: `POST /api/v1/imposter/words/{id}/report`
-- [ ] Backend: `POST /api/v1/imposter/session` (create game, assign imposter)
+- [x] Word list data model (SQLite or bundled JSON)
+- [x] Seed initial word list (~200+ words, 5–10 categories)
+- [x] Backend: `GET /api/v1/imposter/words`
+- [x] Backend: `POST /api/v1/imposter/words/{id}/report`
+- [x] Backend: `POST /api/v1/imposter/session` (create game, assign imposter)
 - [ ] Frontend: player name entry screen
 - [ ] Frontend: pass-and-play word reveal screen (tap to reveal, tap to hide)
 - [ ] Frontend: imposter assignment (random player sees "Imposter")
@@ -56,12 +62,15 @@
 
 ## Phase 2 — Piccolo MVP
 
+- Done: in-memory challenge pool and session-based gameplay are implemented.
+- Open: add missing `GET /api/v1/piccolo/challenges`, backend tests, and frontend MVP screens.
+
 ### High Priority
 
-- [ ] Challenge data model and seed data
-- [ ] Backend: `GET /api/v1/piccolo/challenges`
-- [ ] Backend: `POST /api/v1/piccolo/session`
-- [ ] Backend: `GET /api/v1/piccolo/session/{id}/next`
+- [x] Challenge data model and seed data
+- [x] Backend: `GET /api/v1/piccolo/challenges`
+- [x] Backend: `POST /api/v1/piccolo/session`
+- [x] Backend: `GET /api/v1/piccolo/session/{id}/next`
 - [ ] Frontend: player name entry
 - [ ] Frontend: challenge display with player name insertion
 - [ ] Frontend: category selection
@@ -70,19 +79,22 @@
 
 ### Medium Priority
 
-- [ ] Challenge types: dare, question, group, versus, vote
-- [ ] Ensure no immediate repeat of challenges
+- [x] Challenge types: dare, question, group, versus, vote
+- [x] Ensure no immediate repeat of challenges
 - [ ] Animations / transitions between challenges
 
 ## Phase 3 — Quiz MVP ("Wer wird Elite-Hater?")
 
+- Done: PostgreSQL models, Alembic scaffolding, and most core backend endpoints are present.
+- Open: complete missing session finish behavior, frontend game modes, and full endpoint test coverage.
+
 ### High Priority
 
-- [ ] PostgreSQL schema: questions, answers, categories, tags, players
-- [ ] Alembic migration setup
+- [x] PostgreSQL schema: questions, answers, categories, tags, players
+- [x] Alembic migration setup
 - [ ] Backend: question CRUD (`GET/POST /api/v1/quiz/questions`)
-- [ ] Backend: answer submission (`POST /api/v1/quiz/questions/{id}/attempt`)
-- [ ] Backend: category and tag endpoints
+- [x] Backend: answer submission (`POST /api/v1/quiz/questions/{id}/attempt`)
+- [x] Backend: category and tag endpoints
 - [ ] Backend: session management (start, state, finish)
 - [ ] Frontend: "Wer wird Millionär" mode — escalating difficulty, single player
 - [ ] Frontend: "Quizduell" mode — 1v1, category selection, alternating turns
@@ -92,18 +104,21 @@
 
 ### Medium Priority
 
-- [ ] Leaderboard (`GET /api/v1/quiz/leaderboard`)
+- [x] Leaderboard (`GET /api/v1/quiz/leaderboard`)
 - [ ] Player profile page with stats
 - [ ] Tag-based quiz creation (play questions filtered by tag)
 - [ ] Lifelines in Millionär mode (50:50, audience, phone)
-- [ ] Randomized wrong answer selection from pool
+- [x] Randomized wrong answer selection from pool
 
 ## Phase 4 — Quiz ELO + Media
 
+- Done: ELO engine and per-attempt ELO update for player and question are implemented.
+- Open: media upload/display endpoints and stricter media type handling.
+
 ### High Priority
 
-- [ ] ELO calculation engine (K=32, base 1200)
-- [ ] ELO update on each question attempt (player + question)
+- [x] ELO calculation engine (K=32, base 1200)
+- [x] ELO update on each question attempt (player + question)
 - [ ] Question ordering by ELO in Millionär mode
 - [ ] Media upload endpoint (clips, images, documents)
 - [ ] Media display in question UI (video player, image viewer)
@@ -126,6 +141,23 @@
 
 ---
 
+## Next Sprint (1-2 weeks)
+
+### High Priority
+
+- [x] Add Piccolo endpoint `GET /api/v1/piccolo/challenges` (filterable by category/intensity)
+- [x] Add backend tests for Piccolo API in `backend/tests/test_piccolo.py`
+- [x] Add backend tests for Quiz API in `backend/tests/test_quiz.py`
+- [ ] Complete Quiz session flow with explicit finish endpoint/state update
+- [x] Expand Imposter seed list to target at least 5-10 categories and 200+ words
+
+### Medium Priority
+
+- [ ] Implement minimal Imposter frontend flow (name entry + reveal + timer)
+- [ ] Implement minimal Piccolo frontend flow (name entry + category/intensity + next challenge)
+- [ ] Add Quiz seed script for initial question set (minimal, file-based)
+- [ ] Add/update API error payloads to consistently include `{ detail, code }`
+
 ## Backlog (Unscheduled)
 
 - [ ] Multiplayer over WebSocket (Quiz Duel real-time)
@@ -145,7 +177,17 @@
 
 ## Completed
 
-_Nothing yet — project in planning phase._
+- FastAPI app factory and router mounting structure
+- `/health` endpoint
+- Docker + frontend Vite scaffold
+- Imposter backend core endpoints
+- Imposter seed word list (220 words, 10 categories)
+- Piccolo backend session flow endpoints
+- Piccolo `GET /challenges` endpoint (filterable by category/intensity)
+- Quiz core backend endpoints with ELO integration
+- Shared test fixtures in `conftest.py`
+- Backend tests: `test_imposter.py` (7), `test_piccolo.py` (18), `test_quiz.py` (20), `test_elo.py` (8)
+- Shared PyCharm run configurations (`.run/`)
 
 ## Dependencies
 

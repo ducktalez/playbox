@@ -22,6 +22,15 @@ class SessionOut(BaseModel):
     total_challenges: int
 
 
+class ChallengeTemplateOut(BaseModel):
+    """A raw challenge template (before player name substitution)."""
+
+    text: str
+    category: str
+    intensity: str
+    target_count: int
+
+
 class ChallengeOut(BaseModel):
     """A single challenge to display."""
 

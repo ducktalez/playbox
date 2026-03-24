@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="PlayBox Fullstack (compound)" type="CompoundRunConfigurationType">
+    <toRun name="PlayBox Backend (uvicorn)" type="PythonConfigurationType" />
+    <toRun name="PlayBox Frontend (vite)" type="js.build_tools.npm" />
+    <method v="2" />
+  </configuration>
+</component>

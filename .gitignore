@@ -27,6 +27,7 @@ desktop.ini
 .env
 .env.local
 .env.*.local
+# .env.example is committed on purpose — do NOT ignore it
 
 # Testing
 .pytest_cache/

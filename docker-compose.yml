@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "8015:8015"
     environment:
       - PLAYBOX_DATABASE_URL=postgresql://playbox:playbox@db:5432/playbox
       - PLAYBOX_DEBUG=true

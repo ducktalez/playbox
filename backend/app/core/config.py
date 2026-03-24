@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     media_dir: str = "./media"
     max_media_size_mb: int = 50
 
-    model_config = {"env_prefix": "PLAYBOX_", "env_file": ".env"}
+    model_config = {"env_prefix": "PLAYBOX_", "env_file": "../.env"}
 
 
 settings = Settings()

@@ -3,7 +3,7 @@
 import random
 import uuid
 
-from app.games.piccolo.schemas import ChallengeOut, SessionOut
+from app.games.piccolo.schemas import ChallengeOut, ChallengeTemplateOut, SessionOut
 
 # In-memory session storage
 _sessions: dict[uuid.UUID, dict] = {}
@@ -42,6 +42,27 @@ class PiccoloService:
     def get_categories(self) -> list[str]:
         """Return unique challenge categories."""
         return sorted({c["category"] for c in _CHALLENGES})
+
+    def get_challenges(
+        self,
+        category: str | None = None,
+        intensity: str | None = None,
+    ) -> list[ChallengeTemplateOut]:
+        """Return challenge templates, optionally filtered by category and/or intensity."""
+        result = _CHALLENGES
+        if category:
+            result = [c for c in result if c["category"].lower() == category.lower()]
+        if intensity:
+            result = [c for c in result if c["intensity"].lower() == intensity.lower()]
+        return [
+            ChallengeTemplateOut(
+                text=c["text"],
+                category=c["category"],
+                intensity=c["intensity"],
+                target_count=c["target_count"],
+            )
+            for c in result
+        ]
 
     def create_session(
         self,
