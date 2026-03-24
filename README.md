@@ -2,6 +2,9 @@
 
 > A collection of small browser-based party & quiz games — PWA-installable, shared infrastructure.
 
+## Ablage/TODOs
+
+- Mehrere Sprachen (Deutsch, Englisch)
 ## Games
 
 | Game | Description | Status | Priority |

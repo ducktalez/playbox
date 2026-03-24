@@ -36,8 +36,8 @@
 
 ## Phase 1 — Imposter MVP
 
-- Done: core backend flow is available (`words`, `report`, `session`, reveal endpoint).
-- Open: expand seed data, add missing frontend flow, and complete medium-priority UX options.
+- Done: core backend flow is available (`words`, `report`, `session`, reveal endpoint), and the frontend now supports player setup, pass-and-play reveals, a discussion timer, and a post-round report flow.
+- Open: expand seed data, add offline support, and complete medium-priority UX options.
 
 ### High Priority
 
@@ -46,11 +46,11 @@
 - [x] Backend: `GET /api/v1/imposter/words`
 - [x] Backend: `POST /api/v1/imposter/words/{id}/report`
 - [x] Backend: `POST /api/v1/imposter/session` (create game, assign imposter)
-- [ ] Frontend: player name entry screen
-- [ ] Frontend: pass-and-play word reveal screen (tap to reveal, tap to hide)
-- [ ] Frontend: imposter assignment (random player sees "Imposter")
-- [ ] Frontend: 5-minute discussion timer with alert
-- [ ] Frontend: "report word" button
+- [x] Frontend: player name entry screen
+- [x] Frontend: pass-and-play word reveal screen (tap to reveal, tap to hide)
+- [x] Frontend: imposter assignment (random player sees "Imposter")
+- [x] Frontend: 5-minute discussion timer with alert
+- [x] Frontend: "report word" button
 - [ ] Offline support: cache word list in Service Worker
 
 ### Medium Priority

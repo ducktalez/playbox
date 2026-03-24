@@ -1,32 +1,29 @@
-import { Outlet, Link } from "react-router-dom";
+import { NavLink, Outlet } from "react-router-dom";
 
 export function Layout() {
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg-base)", color: "var(--text-primary)" }}>
-      <nav
-        style={{
-          padding: "1rem 1.5rem",
-          background: "var(--bg-surface)",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-          display: "flex",
-          gap: "1.5rem",
-          alignItems: "center",
-          flexWrap: "wrap",
-          position: "sticky",
-          top: 0,
-          zIndex: 10,
-        }}
-      >
-        <Link to="/" style={{ color: "var(--text-primary)", textDecoration: "none", fontWeight: "bold", fontSize: "1.2rem" }}>
+    <div className="app-shell">
+      <nav className="top-nav">
+        <NavLink to="/" className="top-nav__brand">
           🎮 PlayBox
-        </Link>
-        <Link to="/imposter" style={{ color: "var(--text-muted)", textDecoration: "none" }}>Imposter</Link>
-        <Link to="/piccolo"  style={{ color: "var(--text-muted)", textDecoration: "none" }}>Piccolo</Link>
-        <Link to="/quiz"     style={{ color: "var(--text-muted)", textDecoration: "none" }}>Quiz</Link>
-        <Link to="/chess"    style={{ color: "var(--text-muted)", textDecoration: "none" }}>Chess</Link>
+        </NavLink>
+        <NavLink to="/imposter" className={({ isActive }) => `top-nav__link${isActive ? " top-nav__link--active" : ""}`}>
+          Imposter
+        </NavLink>
+        <NavLink to="/piccolo" className={({ isActive }) => `top-nav__link${isActive ? " top-nav__link--active" : ""}`}>
+          Piccolo
+        </NavLink>
+        <NavLink to="/quiz" className={({ isActive }) => `top-nav__link${isActive ? " top-nav__link--active" : ""}`}>
+          Quiz
+        </NavLink>
+        <NavLink to="/chess" className={({ isActive }) => `top-nav__link${isActive ? " top-nav__link--active" : ""}`}>
+          Chess
+        </NavLink>
       </nav>
-      <main style={{ flex: 1, padding: "2rem", background: "var(--bg-base)" }}>
-        <Outlet />
+      <main className="page-main">
+        <div className="page-container">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

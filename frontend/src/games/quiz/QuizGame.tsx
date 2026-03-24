@@ -1,10 +1,16 @@
+import { GamePlaceholder } from "../../core/GamePlaceholder";
+
 export default function QuizGame() {
   return (
-    <div>
-      <h1>🧠 Wer wird Elite-Hater?</h1>
-      <p>Quiz mit ELO-System — teste dein Wissen über die Lore!</p>
-      <p>Modi: Wer wird Millionär · Quizduell</p>
-      <p style={{ color: "var(--text-muted)" }}><em>Implementierung folgt in Phase 3.</em></p>
-    </div>
+    <GamePlaceholder
+      emoji="🧠"
+      title="Wer wird Elite-Hater?"
+      description="Quiz mit ELO-System — teste dein Wissen über die Lore."
+      phaseLabel="Phase 3"
+      details={[
+        "Modi: Wer wird Millionär · Quizduell",
+        "Die UI folgt nach den priorisierten Backend-Schritten.",
+      ]}
+    />
   );
 }

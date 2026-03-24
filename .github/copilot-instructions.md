@@ -7,6 +7,7 @@ PlayBox is a multi-game PWA — party games (Imposter, Piccolo) and a quiz game 
 The project is in early development. Only implement what is **technically necessary right now**.
 - **Security, auth, caching, monitoring, styling polish**: deferred. Mark placeholders with `# TODO: post-dev`.
 - **No speculative features or database columns.** If it's not needed for the current task, don't build it.
+- **During development, avoid PostgreSQL where possible and prefer in-memory SQLite or other in-memory storage.** Keep PostgreSQL only where it is technically required today (currently the quiz module).
 - Priority order: **Imposter → Piccolo → Quiz → Chess (lowest).**
 - Within each game: **Backend API → Tests → Seed data → Frontend (minimal).**
 

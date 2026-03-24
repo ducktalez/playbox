@@ -35,47 +35,19 @@ export function Home() {
 	return (
 		<div>
 			<h1>🎮 PlayBox</h1>
-			<p style={{ color: "var(--text-muted)" }}>Wähle ein Spiel:</p>
-			<div
-				style={{
-					display: "grid",
-					gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-					gap: "1.5rem",
-					marginTop: "1.5rem",
-				}}
-			>
+			<p className="muted-text">Wähle ein Spiel:</p>
+			<div className="game-grid">
 				{games.map((game) => (
-					<Link
-						key={game.path}
-						to={game.path}
-						style={{
-							display: "block",
-							padding: "1.5rem",
-							borderRadius: "var(--radius)",
-							background: "var(--bg-surface)",
-							border: "1px solid rgba(255, 255, 255, 0.08)",
-							boxShadow: "0 10px 30px rgba(0, 0, 0, 0.2)",
-							color: "var(--text-primary)",
-							textDecoration: "none",
-							transition: "transform var(--transition), border-color var(--transition)",
-						}}
-						>
+					<Link key={game.path} to={game.path} className="surface-card">
 						<div style={{ fontSize: "2rem" }}>{game.emoji}</div>
 						<h2 style={{ margin: "0.5rem 0", color: "var(--text-primary)" }}>
 							{game.name}
 						</h2>
-						<p style={{ color: "var(--text-muted)", margin: 0 }}>
+						<p className="muted-text" style={{ margin: 0 }}>
 							{game.description}
 						</p>
 						{game.status === "coming soon" && (
-							<span
-								style={{
-									color: "var(--warning)",
-									fontSize: "0.8rem",
-									marginTop: "0.5rem",
-									display: "inline-block",
-								}}
-							>
+							<span className="status-badge">
 								Coming Soon
 							</span>
 						)}
