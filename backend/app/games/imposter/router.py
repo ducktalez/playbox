@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from app.games.imposter.schemas import (
     SessionCreateIn,
     SessionOut,
+    WordOut,
     WordReportIn,
     WordReportOut,
 )
@@ -17,7 +18,7 @@ service = ImposterService()
 
 
 @router.get("/words")
-async def get_words(category: str | None = None) -> list[dict]:
+async def get_words(category: str | None = None) -> list[WordOut]:
     """Get available words, optionally filtered by category."""
     return service.get_words(category=category)
 

@@ -2,6 +2,7 @@
 
 import random
 import uuid
+from collections import defaultdict
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
@@ -51,11 +52,16 @@ class QuizService:
         tag: str | None = None,
         elo_min: float | None = None,
         elo_max: float | None = None,
+        balanced_categories: bool = False,
         limit: int = 20,
         offset: int = 0,
     ) -> QuestionListOut:
         """List questions with optional filters."""
-        query = select(Question).where(Question.deleted_at.is_(None))
+        query = (
+            select(Question)
+            .where(Question.deleted_at.is_(None))
+            .order_by(Question.created_at.asc(), Question.id.asc())
+        )
 
         if category_id:
             query = query.where(Question.category_id == category_id)
@@ -67,12 +73,37 @@ class QuizService:
             query = query.join(QuestionTag).join(Tag).where(Tag.name == tag)
 
         total = self.db.scalar(select(func.count()).select_from(query.subquery()))
-        questions = self.db.execute(query.offset(offset).limit(limit)).scalars().all()
+
+        if balanced_categories and category_id is None:
+            filtered_questions = self.db.execute(query).scalars().all()
+            questions = self._balance_questions_by_category(filtered_questions)[offset : offset + limit]
+        else:
+            questions = self.db.execute(query.offset(offset).limit(limit)).scalars().all()
 
         return QuestionListOut(
             items=[self._question_to_out(q) for q in questions],
             total=total or 0,
         )
+
+    def _balance_questions_by_category(self, questions: list[Question]) -> list[Question]:
+        """Interleave questions by category so one large category does not dominate the list."""
+        buckets: dict[str, list[Question]] = defaultdict(list)
+        category_order: list[str] = []
+
+        for question in questions:
+            category_name = question.category.name if question.category else "__uncategorized__"
+            if category_name not in buckets:
+                category_order.append(category_name)
+            buckets[category_name].append(question)
+
+        balanced: list[Question] = []
+        while any(buckets.values()):
+            for category_name in category_order:
+                bucket = buckets[category_name]
+                if bucket:
+                    balanced.append(bucket.pop(0))
+
+        return balanced
 
     def create_question(self, data: QuestionCreateIn) -> QuestionOut:
         """Create a new question with answers and tags."""
@@ -246,14 +277,37 @@ class QuizService:
 
         self.db.commit()
         self.db.refresh(session)
-        return SessionOut(id=session.id, mode=session.mode, player_id=session.player_id, score=session.score)
+        return self._session_to_out(session)
 
     def get_session(self, session_id: uuid.UUID) -> SessionOut:
         """Get a session by ID."""
         session = self.db.get(GameSession, session_id)
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
-        return SessionOut(id=session.id, mode=session.mode, player_id=session.player_id, score=session.score)
+        return self._session_to_out(session)
+
+    def finish_session(self, session_id: uuid.UUID) -> SessionOut:
+        """Finish a session and persist its final score."""
+        session = self.db.get(GameSession, session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        correct_attempts = self.db.scalar(
+            select(func.count())
+            .select_from(QuestionAttempt)
+            .where(
+                QuestionAttempt.session_id == session_id,
+                QuestionAttempt.answered_correctly.is_(True),
+            )
+        )
+
+        session.score = correct_attempts or 0
+        if session.finished_at is None:
+            session.finished_at = datetime.now(timezone.utc)
+
+        self.db.commit()
+        self.db.refresh(session)
+        return self._session_to_out(session)
 
     # --- Leaderboard ---
 
@@ -295,5 +349,15 @@ class QuizService:
             elo_score=player.elo_score,
             games_played=player.games_played,
             correct_count=player.correct_count,
+        )
+
+    def _session_to_out(self, session: GameSession) -> SessionOut:
+        """Convert a GameSession model to SessionOut schema."""
+        return SessionOut(
+            id=session.id,
+            mode=session.mode,
+            player_id=session.player_id,
+            score=session.score,
+            finished_at=session.finished_at,
         )
 

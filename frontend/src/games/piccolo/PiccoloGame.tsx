@@ -1,16 +1,349 @@
-import { GamePlaceholder } from "../../core/GamePlaceholder";
+import { useEffect, useState } from "react";
 
-export default function PiccoloGame() {
-  return (
-    <GamePlaceholder
-      emoji="🎉"
-      title="Piccolo"
-      description="Party-Challenges, Dares und Fragen für die ganze Runde."
-      phaseLabel="Phase 2"
-      details={[
-        "Geplant sind Spielerauswahl, Kategorien und Intensitätsstufen.",
-      ]}
-    />
-  );
+import { PlayerNameFields } from "../../core/PlayerNameFields";
+import { normalizePlayerNames } from "../../core/playerRegistration";
+
+const API_BASE = "/api/v1/piccolo";
+const MIN_PLAYERS = 2;
+const MAX_PLAYERS = 20;
+const INTENSITY_OPTIONS = [
+  { value: "mild", label: "Mild", description: "Thinker version without drinking pressure." },
+  { value: "medium", label: "Medium", description: "Classic drinking-game mode for regular rounds." },
+  { value: "spicy", label: "Spicy", description: "Wildcard mode for louder and wilder parties." },
+] as const;
+
+const CATEGORY_LABELS: Record<string, string> = {
+  dare: "Dare",
+  question: "Question",
+  group: "Group",
+  vote: "Vote",
+  versus: "Versus",
+  automarken: "Automarken",
+  "koffer packen": "Koffer packen",
+  "ich habe schon mal": "Ich habe schon mal",
+  trinkregeln: "Trinkregeln",
+};
+
+const CATEGORY_COLOR_CLASSES: Record<string, string> = {
+  dare: "piccolo-card--dare",
+  question: "piccolo-card--question",
+  group: "piccolo-card--group",
+  vote: "piccolo-card--vote",
+  versus: "piccolo-card--versus",
+  automarken: "piccolo-card--automarken",
+  "koffer packen": "piccolo-card--koffer-packen",
+  "ich habe schon mal": "piccolo-card--ich-habe-schon-mal",
+  trinkregeln: "piccolo-card--trinkregeln",
+};
+
+type SessionResponse = {
+  id: string;
+  player_names: string[];
+  intensity: string;
+  total_challenges: number;
+};
+
+type ChallengeResponse = {
+  text: string;
+  category: string;
+  intensity: string;
+  targets: string[];
+};
+
+type ApiError = {
+  detail?: string;
+  error?: string;
+};
+
+async function parseApiResponse<T>(response: Response): Promise<T> {
+  const payload = (await response.json().catch(() => ({}))) as T & ApiError;
+
+  if (!response.ok) {
+    throw new Error(payload.detail ?? payload.error ?? "Request failed.");
+  }
+
+  return payload as T;
 }
 
+export default function PiccoloGame() {
+  const [playerNames, setPlayerNames] = useState<string[]>(["", ""]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [categoriesError, setCategoriesError] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [intensity, setIntensity] = useState<(typeof INTENSITY_OPTIONS)[number]["value"]>("medium");
+  const [session, setSession] = useState<SessionResponse | null>(null);
+  const [currentChallenge, setCurrentChallenge] = useState<ChallengeResponse | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isStarting, setIsStarting] = useState(false);
+  const [isLoadingChallenge, setIsLoadingChallenge] = useState(false);
+
+  const selectedIntensity = INTENSITY_OPTIONS.find((option) => option.value === intensity);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadCategories() {
+      try {
+        const response = await fetch(`${API_BASE}/categories`);
+        const payload = await parseApiResponse<string[]>(response);
+
+        if (!ignore) {
+          setCategories(payload);
+          setCategoriesError("");
+        }
+      } catch (error) {
+        if (!ignore) {
+          setCategoriesError(
+            error instanceof Error ? error.message : "Could not load categories.",
+          );
+        }
+      }
+    }
+
+    void loadCategories();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  function updatePlayerName(index: number, value: string) {
+    setPlayerNames((current) =>
+      current.map((playerName, currentIndex) =>
+        currentIndex === index ? value : playerName,
+      ),
+    );
+  }
+
+  function addPlayerField() {
+    if (playerNames.length >= MAX_PLAYERS) {
+      return;
+    }
+
+    setPlayerNames((current) => [...current, ""]);
+  }
+
+  function removePlayerField(index: number) {
+    if (playerNames.length <= MIN_PLAYERS) {
+      return;
+    }
+
+    setPlayerNames((current) => current.filter((_, currentIndex) => currentIndex !== index));
+  }
+
+  function toggleCategory(category: string) {
+    setSelectedCategories((current) =>
+      current.includes(category)
+        ? current.filter((entry) => entry !== category)
+        : [...current, category],
+    );
+  }
+
+  function resetGame() {
+    setSession(null);
+    setCurrentChallenge(null);
+    setErrorMessage("");
+  }
+
+  async function loadNextChallenge(sessionId: string) {
+    setIsLoadingChallenge(true);
+    setErrorMessage("");
+
+    try {
+      const response = await fetch(`${API_BASE}/session/${sessionId}/next`);
+      const payload = await parseApiResponse<ChallengeResponse>(response);
+
+      if (payload.category === "error") {
+        throw new Error(payload.text);
+      }
+
+      setCurrentChallenge(payload);
+    } catch (error) {
+      setCurrentChallenge(null);
+      setErrorMessage(error instanceof Error ? error.message : "Could not load the next challenge.");
+    } finally {
+      setIsLoadingChallenge(false);
+    }
+  }
+
+  async function startGame() {
+    const players = normalizePlayerNames(playerNames);
+
+    if (players.length < MIN_PLAYERS) {
+      setErrorMessage("Please enter at least two player names.");
+      return;
+    }
+
+    setIsStarting(true);
+    setErrorMessage("");
+    setCurrentChallenge(null);
+
+    try {
+      const response = await fetch(`${API_BASE}/session`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          player_names: players,
+          intensity,
+          categories: selectedCategories.length > 0 ? selectedCategories : null,
+        }),
+      });
+
+      const payload = await parseApiResponse<SessionResponse>(response);
+      setPlayerNames(players);
+
+      if (payload.total_challenges === 0) {
+        setErrorMessage("No challenges available for the selected filters.");
+        return;
+      }
+
+      setSession(payload);
+      await loadNextChallenge(payload.id);
+    } catch (error) {
+      setSession(null);
+      setErrorMessage(error instanceof Error ? error.message : "Could not create the Piccolo session.");
+    } finally {
+      setIsStarting(false);
+    }
+  }
+
+  if (!session) {
+    return (
+      <section className="placeholder-page stack-lg">
+        <p className="placeholder-kicker">Phase 2</p>
+        <h1>🎉 Piccolo</h1>
+        <p>Build a local party round with players, category filters and the next challenge flow.</p>
+
+        <div className="surface-panel stack-lg">
+          <PlayerNameFields
+            playerNames={playerNames}
+            minPlayers={MIN_PLAYERS}
+            maxPlayers={MAX_PLAYERS}
+            helperText="Empty names automatically become Player 1, Player 2, ... for faster testing."
+            onUpdatePlayerName={updatePlayerName}
+            onAddPlayerField={addPlayerField}
+            onRemovePlayerField={removePlayerField}
+          />
+
+          <div className="stack-md">
+            <div>
+              <p className="helper-text">Intensity</p>
+              <div className="choice-chips">
+                {INTENSITY_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`choice-chip${intensity === option.value ? " choice-chip--selected" : ""}`}
+                    onClick={() => setIntensity(option.value)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              {selectedIntensity && (
+                <p className="helper-text" style={{ marginTop: "0.6rem" }}>
+                  {selectedIntensity.description}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <p className="helper-text">Categories (optional)</p>
+              {categories.length > 0 ? (
+                <div className="choice-chips">
+                  {categories.map((category) => (
+                    <button
+                      key={category}
+                      type="button"
+                      className={`choice-chip${selectedCategories.includes(category) ? " choice-chip--selected" : ""}`}
+                      onClick={() => toggleCategory(category)}
+                    >
+                      {CATEGORY_LABELS[category] ?? category}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="helper-text">{categoriesError || "Loading categories..."}</p>
+              )}
+            </div>
+          </div>
+
+          {errorMessage && <p className="alert-text">{errorMessage}</p>}
+
+          <div className="button-row">
+            <button
+              type="button"
+              className="button button--primary"
+              onClick={() => void startGame()}
+              disabled={isStarting}
+            >
+              {isStarting ? "Creating round..." : "Start Piccolo"}
+            </button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="piccolo-fullscreen" aria-label="Piccolo fullscreen challenge view">
+      <button
+        type="button"
+        className="button button--ghost piccolo-fullscreen__exit"
+        onClick={resetGame}
+      >
+        ←
+      </button>
+
+      <button
+        type="button"
+        className={`piccolo-fullscreen__surface ${currentChallenge ? CATEGORY_COLOR_CLASSES[currentChallenge.category] ?? "piccolo-card--default" : "piccolo-card--default"}`}
+        onClick={() => {
+          if (!isLoadingChallenge) {
+            void loadNextChallenge(session.id);
+          }
+        }}
+        disabled={isLoadingChallenge}
+      >
+        <div className="piccolo-fullscreen__content stack-lg">
+          <p className="placeholder-kicker">Piccolo round</p>
+
+          <div className="inline-meta">
+            <span>Players: {session.player_names.length}</span>
+            <span>Intensity: {selectedIntensity?.label ?? session.intensity}</span>
+            <span>Available challenges: {session.total_challenges}</span>
+          </div>
+
+          {selectedIntensity && <p className="helper-text">{selectedIntensity.description}</p>}
+
+          {currentChallenge ? (
+            <>
+              <div className="choice-chips">
+                <span className="choice-chip choice-chip--selected">
+                  {CATEGORY_LABELS[currentChallenge.category] ?? currentChallenge.category}
+                </span>
+                <span className="choice-chip">{currentChallenge.intensity}</span>
+              </div>
+
+              <div className="piccolo-fullscreen__challenge reveal-display">{currentChallenge.text}</div>
+
+              {currentChallenge.targets.length > 0 && (
+                <p className="muted-text">Targets: {currentChallenge.targets.join(", ")}</p>
+              )}
+
+              <p className="helper-text piccolo-card__hint">
+                {isLoadingChallenge ? "Loading next challenge..." : "Tap anywhere for the next challenge"}
+              </p>
+            </>
+          ) : (
+            <p className="helper-text">No challenge loaded yet.</p>
+          )}
+
+          {errorMessage && <p className="alert-text">{errorMessage}</p>}
+        </div>
+      </button>
+    </section>
+  );
+}

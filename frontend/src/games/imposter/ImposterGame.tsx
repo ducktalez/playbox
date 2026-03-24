@@ -1,4 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+import { PlayerNameFields } from "../../core/PlayerNameFields";
+import { countEnteredPlayerNames, normalizePlayerNames } from "../../core/playerRegistration";
 
 const API_BASE = "/api/v1/imposter";
 const MIN_PLAYERS = 3;
@@ -33,6 +36,7 @@ type SessionResponse = {
   id: string;
   player_names: string[];
   word: string;
+  word_details: WordResponse;
   imposter_index: number;
   timer_seconds: number;
 };
@@ -47,6 +51,9 @@ type WordResponse = {
   id: string;
   text: string;
   category: string;
+  source: string;
+  uploaded_by: string | null;
+  description: string | null;
 };
 
 type ApiError = {
@@ -96,6 +103,8 @@ function buildReportReason(reason: ReportReason, notes: string): string {
 }
 
 export default function ImposterGame() {
+  const bubbleRef = useRef<HTMLDivElement | null>(null);
+
   const [step, setStep] = useState<Step>("setup");
   const [playerNames, setPlayerNames] = useState<string[]>(["", "", ""]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -109,10 +118,7 @@ export default function ImposterGame() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isStarting, setIsStarting] = useState(false);
   const [isRevealing, setIsRevealing] = useState(false);
-  const [resolvedWord, setResolvedWord] = useState<WordResponse | null>(null);
-  const [wordInfoError, setWordInfoError] = useState("");
   const [isWordInfoOpen, setIsWordInfoOpen] = useState(false);
-  const [isLoadingWordInfo, setIsLoadingWordInfo] = useState(false);
   const [reportReason, setReportReason] = useState<ReportReason>("NO_REASON");
   const [reportNotes, setReportNotes] = useState("");
   const [reportMessage, setReportMessage] = useState("");
@@ -120,12 +126,12 @@ export default function ImposterGame() {
   const [endReason, setEndReason] = useState<EndReason>("");
   const [imposterFate, setImposterFate] = useState<ImposterFate>("");
 
-  const normalizedPlayers = useMemo(
-    () => playerNames.map((player) => player.trim()).filter(Boolean),
+  const enteredPlayerCount = useMemo(
+    () => countEnteredPlayerNames(playerNames),
     [playerNames],
   );
 
-  const resolvedCategory = resolvedWord?.category ?? (selectedCategory || "Random");
+  const resolvedCategory = session?.word_details.category ?? (selectedCategory || "Random");
 
   useEffect(() => {
     let ignore = false;
@@ -175,49 +181,30 @@ export default function ImposterGame() {
   }, [step, timeLeft]);
 
   useEffect(() => {
-    let ignore = false;
+    if (!isWordInfoOpen) {
+      return undefined;
+    }
 
-    async function loadResolvedWord() {
-      if (!session) {
-        setResolvedWord(null);
-        setWordInfoError("");
-        return;
-      }
-
-      setIsLoadingWordInfo(true);
-
-      try {
-        const wordsUrl = selectedCategory
-          ? `${API_BASE}/words?category=${encodeURIComponent(selectedCategory)}`
-          : `${API_BASE}/words`;
-        const response = await fetch(wordsUrl);
-        const words = await parseApiResponse<WordResponse[]>(response);
-        const matchedWord = words.find((word) => word.text === session.word) ?? null;
-
-        if (!ignore) {
-          setResolvedWord(matchedWord);
-          setWordInfoError(matchedWord ? "" : "Word details are not available for this round.");
-        }
-      } catch (error) {
-        if (!ignore) {
-          setResolvedWord(null);
-          setWordInfoError(
-            error instanceof Error ? error.message : "Could not load word details.",
-          );
-        }
-      } finally {
-        if (!ignore) {
-          setIsLoadingWordInfo(false);
-        }
+    function handlePointerDown(event: MouseEvent) {
+      if (!bubbleRef.current?.contains(event.target as Node)) {
+        setIsWordInfoOpen(false);
       }
     }
 
-    void loadResolvedWord();
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsWordInfoOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      ignore = true;
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [session, selectedCategory]);
+  }, [isWordInfoOpen]);
 
   function updatePlayerName(index: number, value: string) {
     setPlayerNames((current) =>
@@ -250,8 +237,6 @@ export default function ImposterGame() {
     setCurrentReveal(null);
     setTimeLeft(0);
     setErrorMessage("");
-    setResolvedWord(null);
-    setWordInfoError("");
     setIsWordInfoOpen(false);
     setReportReason("NO_REASON");
     setReportNotes("");
@@ -273,17 +258,16 @@ export default function ImposterGame() {
   }
 
   async function startGame(nextPlayers?: string[]) {
-    const players = (nextPlayers ?? playerNames).map((player) => player.trim()).filter(Boolean);
+    const sourcePlayers = nextPlayers ?? playerNames;
+    const players = nextPlayers ?? normalizePlayerNames(playerNames);
 
-    if (players.length < MIN_PLAYERS) {
+    if (sourcePlayers.length < MIN_PLAYERS) {
       setErrorMessage("Please enter at least three player names.");
       return;
     }
 
     setIsStarting(true);
     setErrorMessage("");
-    setResolvedWord(null);
-    setWordInfoError("");
     setIsWordInfoOpen(false);
     setReportReason("NO_REASON");
     setReportNotes("");
@@ -356,7 +340,7 @@ export default function ImposterGame() {
   }
 
   async function reportCurrentWord() {
-    if (!resolvedWord) {
+    if (!session) {
       setReportMessage("Word details are not available yet.");
       return;
     }
@@ -365,7 +349,7 @@ export default function ImposterGame() {
     setReportMessage("");
 
     try {
-      const response = await fetch(`${API_BASE}/words/${resolvedWord.id}/report`, {
+      const response = await fetch(`${API_BASE}/words/${session.word_details.id}/report`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -411,41 +395,15 @@ export default function ImposterGame() {
         </p>
 
         <div className="surface-panel stack-lg">
-          <div className="stack-md">
-            {playerNames.map((playerName, index) => (
-              <div key={index} className="player-row">
-                <input
-                  className="text-input"
-                  type="text"
-                  value={playerName}
-                  placeholder={`Player ${index + 1}`}
-                  onChange={(event) => updatePlayerName(index, event.target.value)}
-                />
-                <button
-                  type="button"
-                  className="button button--secondary"
-                  onClick={() => removePlayerField(index)}
-                  disabled={playerNames.length <= MIN_PLAYERS}
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <div className="button-row">
-            <button
-              type="button"
-              className="button button--secondary"
-              onClick={addPlayerField}
-              disabled={playerNames.length >= MAX_PLAYERS}
-            >
-              Add player
-            </button>
-            <span className="helper-text">
-              {normalizedPlayers.length} / {MAX_PLAYERS} players ready
-            </span>
-          </div>
+          <PlayerNameFields
+            playerNames={playerNames}
+            minPlayers={MIN_PLAYERS}
+            maxPlayers={MAX_PLAYERS}
+            helperText={`${enteredPlayerCount} names entered manually — empty slots become Player 1, Player 2, ...`}
+            onUpdatePlayerName={updatePlayerName}
+            onAddPlayerField={addPlayerField}
+            onRemovePlayerField={removePlayerField}
+          />
 
           <div
             className="form-grid"
@@ -610,7 +568,7 @@ export default function ImposterGame() {
 
         <div className="word-title-row">
           <div className="reveal-display">{session.word}</div>
-          <div className="bubble-anchor">
+          <div className="bubble-anchor" ref={bubbleRef}>
             <button
               type="button"
               className="icon-button"
@@ -641,17 +599,18 @@ export default function ImposterGame() {
                     <strong>Category:</strong> {resolvedCategory}
                   </li>
                   <li>
-                    <strong>Uploaded by:</strong> PlayBox bundled seed list
+                    <strong>Uploaded by:</strong> {session.word_details.uploaded_by ?? "Unknown"}
                   </li>
-                  {!resolvedWord && !isLoadingWordInfo && (
+                  {session.word_details.description && (
                     <li>
-                      <strong>Meaning:</strong> No additional description available yet.
+                      <strong>Meaning:</strong> {session.word_details.description}
                     </li>
                   )}
                 </ul>
 
-                {isLoadingWordInfo && <p className="helper-text">Loading word details...</p>}
-                {wordInfoError && <p className="helper-text">{wordInfoError}</p>}
+                <p className="helper-text">
+                  Source: {session.word_details.source}
+                </p>
 
                 <div className="meta-block">
                   <p className="helper-text">Report this word</p>
@@ -684,7 +643,7 @@ export default function ImposterGame() {
                       type="button"
                       className="button button--danger"
                       onClick={() => void reportCurrentWord()}
-                      disabled={isReporting || isLoadingWordInfo}
+                      disabled={isReporting}
                     >
                       {isReporting ? "Reporting..." : "Send report"}
                     </button>

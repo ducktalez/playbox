@@ -370,6 +370,11 @@ a:hover {
   border-color: rgba(255, 255, 255, 0.18);
 }
 
+.icon-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.22);
+}
+
 .bubble-anchor {
   position: relative;
   display: inline-flex;
@@ -387,6 +392,10 @@ a:hover {
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
   z-index: 20;
+}
+
+.info-bubble:focus-within {
+  border-color: rgba(126, 119, 255, 0.4);
 }
 
 .info-bubble::before {
@@ -453,6 +462,123 @@ a:hover {
   gap: 0.5rem;
 }
 
+.piccolo-card {
+  width: 100%;
+  text-align: left;
+  padding: 1.5rem;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  background: linear-gradient(180deg, rgba(40, 40, 72, 0.95), rgba(26, 26, 46, 0.98));
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.26);
+  transition: transform var(--transition), border-color var(--transition), filter var(--transition);
+}
+
+.piccolo-card:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.2);
+  filter: brightness(1.03);
+}
+
+.piccolo-card:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.25), 0 18px 45px rgba(0, 0, 0, 0.26);
+}
+
+.piccolo-card:disabled {
+  cursor: progress;
+}
+
+.piccolo-card__hint {
+  margin-top: 1rem;
+}
+
+.piccolo-card--default {
+  background: linear-gradient(180deg, rgba(40, 40, 72, 0.95), rgba(26, 26, 46, 0.98));
+}
+
+.piccolo-card--dare {
+  background: linear-gradient(180deg, rgba(124, 52, 92, 0.95), rgba(56, 20, 46, 0.98));
+}
+
+.piccolo-card--question {
+  background: linear-gradient(180deg, rgba(44, 88, 132, 0.95), rgba(20, 38, 66, 0.98));
+}
+
+.piccolo-card--group {
+  background: linear-gradient(180deg, rgba(44, 118, 112, 0.95), rgba(18, 54, 58, 0.98));
+}
+
+.piccolo-card--vote {
+  background: linear-gradient(180deg, rgba(118, 96, 40, 0.95), rgba(56, 44, 18, 0.98));
+}
+
+.piccolo-card--versus {
+  background: linear-gradient(180deg, rgba(106, 52, 136, 0.95), rgba(45, 20, 60, 0.98));
+}
+
+.piccolo-card--automarken {
+  background: linear-gradient(180deg, rgba(66, 92, 136, 0.95), rgba(22, 34, 62, 0.98));
+}
+
+.piccolo-card--koffer-packen {
+  background: linear-gradient(180deg, rgba(56, 110, 78, 0.95), rgba(20, 48, 34, 0.98));
+}
+
+.piccolo-card--ich-habe-schon-mal {
+  background: linear-gradient(180deg, rgba(118, 64, 104, 0.95), rgba(48, 20, 40, 0.98));
+}
+
+.piccolo-card--trinkregeln {
+  background: linear-gradient(180deg, rgba(126, 82, 34, 0.95), rgba(58, 34, 14, 0.98));
+}
+
+.piccolo-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(8, 8, 18, 0.98);
+}
+
+.piccolo-fullscreen__exit {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  z-index: 2;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  padding: 0.4rem 0.7rem;
+  font-size: 1.05rem;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.piccolo-fullscreen__surface {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  color: var(--text-primary);
+  text-align: left;
+  padding: 4.75rem 1.25rem 1.5rem;
+  background: linear-gradient(180deg, rgba(40, 40, 72, 0.95), rgba(26, 26, 46, 0.98));
+}
+
+.piccolo-fullscreen__content {
+  width: min(900px, 100%);
+  margin: 0 auto;
+  min-height: 100%;
+  align-content: center;
+}
+
+.piccolo-fullscreen__challenge {
+  min-height: 38vh;
+  display: grid;
+  align-items: center;
+}
+
+.piccolo-fullscreen .choice-chip {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 @media (max-width: 640px) {
   .page-main {
     padding: 1rem;
@@ -471,6 +597,14 @@ a:hover {
   .info-bubble::before {
     left: 1rem;
     right: auto;
+  }
+
+  .piccolo-fullscreen__surface {
+    padding: 4.25rem 1rem 1.25rem;
+  }
+
+  .piccolo-fullscreen__challenge {
+    min-height: 46vh;
   }
 }
 

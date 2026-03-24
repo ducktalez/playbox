@@ -32,6 +32,9 @@ def test_create_session() -> None:
     assert len(session.player_names) == 3
     assert 0 <= session.imposter_index < 3
     assert session.word != ""
+    assert session.word_details.text == session.word
+    assert session.word_details.source == "BUNDLED"
+    assert session.word_details.description is not None
     assert session.timer_seconds == 300
 
 
@@ -40,6 +43,25 @@ def test_create_session_custom_timer() -> None:
     service = ImposterService()
     session = service.create_session(player_names=["A", "B", "C"], timer_seconds=120)
     assert session.timer_seconds == 120
+
+
+def test_create_session_category_filter_is_reflected_in_word_details() -> None:
+    """Selected category should match the returned word details."""
+    service = ImposterService()
+    session = service.create_session(
+        player_names=["Alice", "Bob", "Charlie"],
+        category="Tiere",
+    )
+    assert session.word_details.category == "Tiere"
+
+
+def test_get_words_includes_metadata() -> None:
+    """Bundled words should expose metadata required by the frontend."""
+    service = ImposterService()
+    word = service.get_words()[0]
+    assert word["source"] == "BUNDLED"
+    assert word["uploaded_by"] == "PlayBox seed list"
+    assert word["description"]
 
 
 def test_reveal_player_word() -> None:
@@ -52,7 +74,7 @@ def test_reveal_player_word() -> None:
         if i == session.imposter_index:
             assert "IMPOSTER" in result["display"]
         else:
-            assert result["display"] == session.word
+            assert result["display"] == session.word_details.text
 
 
 def test_report_word() -> None:

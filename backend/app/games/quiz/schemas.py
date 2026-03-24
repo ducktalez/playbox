@@ -1,5 +1,6 @@
 """Quiz — Pydantic schemas for API request/response."""
 
+from datetime import datetime
 import uuid
 
 from pydantic import BaseModel, Field
@@ -140,6 +141,7 @@ class SessionOut(BaseModel):
     mode: str
     player_id: uuid.UUID
     score: int
+    finished_at: datetime | None = None
 
 
 # --- Leaderboard ---

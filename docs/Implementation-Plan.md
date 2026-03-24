@@ -3,7 +3,7 @@
 ## Current Status
 
 **Phase:** Execution in Progress
-**Last Updated:** 2026-03-23
+**Last Updated:** 2026-03-24
 
 ## Roadmap
 
@@ -62,8 +62,8 @@
 
 ## Phase 2 — Piccolo MVP
 
-- Done: in-memory challenge pool and session-based gameplay are implemented.
-- Open: add missing `GET /api/v1/piccolo/challenges`, backend tests, and frontend MVP screens.
+- Done: in-memory challenge pool, session-based gameplay, backend challenge endpoints, tests, a minimal frontend setup/next-challenge flow, and category-balanced session ordering are implemented.
+- Open: add offline support, richer challenge pools, and medium-priority UX polish.
 
 ### High Priority
 
@@ -71,10 +71,10 @@
 - [x] Backend: `GET /api/v1/piccolo/challenges`
 - [x] Backend: `POST /api/v1/piccolo/session`
 - [x] Backend: `GET /api/v1/piccolo/session/{id}/next`
-- [ ] Frontend: player name entry
-- [ ] Frontend: challenge display with player name insertion
-- [ ] Frontend: category selection
-- [ ] Intensity level selector (mild / medium / spicy)
+- [x] Frontend: player name entry
+- [x] Frontend: challenge display with player name insertion
+- [x] Frontend: category selection
+- [x] Intensity level selector (mild / medium / spicy)
 - [ ] Offline support
 
 ### Medium Priority
@@ -85,8 +85,8 @@
 
 ## Phase 3 — Quiz MVP ("Wer wird Elite-Hater?")
 
-- Done: PostgreSQL models, Alembic scaffolding, and most core backend endpoints are present.
-- Open: complete missing session finish behavior, frontend game modes, and full endpoint test coverage.
+- Done: PostgreSQL models, Alembic scaffolding, the session finish flow, and most core backend endpoints are present.
+- Open: complete the remaining frontend game modes and full endpoint test coverage.
 
 ### High Priority
 
@@ -95,7 +95,7 @@
 - [ ] Backend: question CRUD (`GET/POST /api/v1/quiz/questions`)
 - [x] Backend: answer submission (`POST /api/v1/quiz/questions/{id}/attempt`)
 - [x] Backend: category and tag endpoints
-- [ ] Backend: session management (start, state, finish)
+- [x] Backend: session management (start, state, finish)
 - [ ] Frontend: "Wer wird Millionär" mode — escalating difficulty, single player
 - [ ] Frontend: "Quizduell" mode — 1v1, category selection, alternating turns
 - [ ] Frontend: question submission form (text, correct answer, wrong answers, category, tags)
@@ -105,6 +105,7 @@
 ### Medium Priority
 
 - [x] Leaderboard (`GET /api/v1/quiz/leaderboard`)
+- [x] Balanced general question listing across categories
 - [ ] Player profile page with stats
 - [ ] Tag-based quiz creation (play questions filtered by tag)
 - [ ] Lifelines in Millionär mode (50:50, audience, phone)
@@ -153,8 +154,8 @@
 
 ### Medium Priority
 
-- [ ] Implement minimal Imposter frontend flow (name entry + reveal + timer)
-- [ ] Implement minimal Piccolo frontend flow (name entry + category/intensity + next challenge)
+- [x] Implement minimal Imposter frontend flow (name entry + reveal + timer)
+- [x] Implement minimal Piccolo frontend flow (name entry + category/intensity + next challenge)
 - [ ] Add Quiz seed script for initial question set (minimal, file-based)
 - [ ] Add/update API error payloads to consistently include `{ detail, code }`
 
@@ -200,4 +201,7 @@
 - Imposter and Piccolo are the quickest wins — fully offline, minimal backend
 - Quiz is the most complex game — plan for iterative development
 - Chess is explicitly lowest priority — implement only after the other three are stable
+
+
+
 

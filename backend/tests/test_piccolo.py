@@ -12,6 +12,7 @@ def test_get_categories() -> None:
     categories = service.get_categories()
     assert len(categories) > 0
     assert len(categories) == len(set(categories))
+    assert {"automarken", "koffer packen", "ich habe schon mal", "trinkregeln"}.issubset(set(categories))
 
 
 def test_get_challenges_all() -> None:
@@ -74,6 +75,34 @@ def test_create_session_with_category_filter() -> None:
     service = PiccoloService()
     session = service.create_session(player_names=["A", "B"], categories=["dare"])
     assert session.total_challenges > 0
+
+
+def test_create_session_with_new_category_filter() -> None:
+    """Newly added planning categories should be available for sessions."""
+    service = PiccoloService()
+    session = service.create_session(
+        player_names=["A", "B"],
+        categories=["automarken", "trinkregeln"],
+        intensity="spicy",
+    )
+    assert session.total_challenges > 0
+
+
+def test_create_session_balances_categories_in_rotation() -> None:
+    """Balanced session order should not front-load one category when several are available."""
+    service = PiccoloService()
+    session = service.create_session(
+        player_names=["A", "B", "C"],
+        categories=["dare", "automarken", "trinkregeln"],
+        intensity="spicy",
+    )
+
+    first_three_categories = [
+        service.next_challenge(session.id).category
+        for _ in range(3)
+    ]
+
+    assert set(first_three_categories) == {"dare", "automarken", "trinkregeln"}
 
 
 def test_next_challenge() -> None:
@@ -148,6 +177,15 @@ def test_api_get_challenges_filter(client) -> None:
     assert resp.status_code == 200
     data = resp.json()
     assert all(c["category"] == "dare" and c["intensity"] == "mild" for c in data)
+
+
+def test_api_get_challenges_new_category_filter(client) -> None:
+    """GET /api/v1/piccolo/challenges should expose the newly added categories."""
+    resp = client.get("/api/v1/piccolo/challenges?category=automarken")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) > 0
+    assert all(c["category"] == "automarken" for c in data)
 
 
 def test_api_create_session(client) -> None:

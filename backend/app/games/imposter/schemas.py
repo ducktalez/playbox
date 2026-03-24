@@ -11,6 +11,9 @@ class WordOut(BaseModel):
     id: uuid.UUID
     text: str
     category: str
+    source: str
+    uploaded_by: str | None = None
+    description: str | None = None
 
 
 class WordReportIn(BaseModel):
@@ -41,6 +44,7 @@ class SessionOut(BaseModel):
     id: uuid.UUID
     player_names: list[str]
     word: str
+    word_details: WordOut
     imposter_index: int
     timer_seconds: int
 

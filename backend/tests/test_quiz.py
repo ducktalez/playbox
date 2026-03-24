@@ -135,6 +135,30 @@ def test_list_questions(quiz_client) -> None:
     assert len(data["items"]) >= 1
 
 
+def test_list_questions_balances_categories(quiz_client) -> None:
+    """Balanced question listing should not let one large category crowd out the others."""
+    cat_a = quiz_client.post("/api/v1/quiz/categories", json={"name": "Cat A"}).json()["id"]
+    cat_b = quiz_client.post("/api/v1/quiz/categories", json={"name": "Cat B"}).json()["id"]
+
+    for index in range(4):
+        payload = _create_question_payload(category_id=cat_a)
+        payload["text"] = f"Category A Question {index}"
+        payload["tags"] = [f"cat-a-{index}"]
+        quiz_client.post("/api/v1/quiz/questions", json=payload)
+
+    payload = _create_question_payload(category_id=cat_b)
+    payload["text"] = "Category B Question"
+    payload["tags"] = ["cat-b"]
+    quiz_client.post("/api/v1/quiz/questions", json=payload)
+
+    resp = quiz_client.get("/api/v1/quiz/questions?balanced_categories=true&limit=2")
+    assert resp.status_code == 200
+    data = resp.json()
+    categories = [item["category"] for item in data["items"]]
+    assert len(categories) == 2
+    assert set(categories) == {"Cat A", "Cat B"}
+
+
 # --- Tags ---
 
 
@@ -265,6 +289,56 @@ def test_get_session(quiz_client) -> None:
     resp = quiz_client.get(f"/api/v1/quiz/sessions/{sid}")
     assert resp.status_code == 200
     assert resp.json()["mode"] == "duel"
+
+
+def test_finish_session(quiz_client) -> None:
+    """POST /api/v1/quiz/sessions/{id}/finish should set finished_at and final score."""
+    player_resp = quiz_client.post("/api/v1/quiz/players", json={"name": "Finisher"})
+    player_id = player_resp.json()["id"]
+    sess_resp = quiz_client.post(
+        "/api/v1/quiz/sessions",
+        json={"mode": "millionaire", "player_id": player_id},
+    )
+    session_id = sess_resp.json()["id"]
+
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    q_data = q_resp.json()
+    qid = q_data["id"]
+    correct_answer_id = next(a["id"] for a in q_data["answers"] if a["is_correct"])
+
+    quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/attempt",
+        json={"answer_id": correct_answer_id, "player_id": player_id, "session_id": session_id},
+    )
+
+    resp = quiz_client.post(f"/api/v1/quiz/sessions/{session_id}/finish")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["score"] == 1
+    assert data["finished_at"] is not None
+
+
+def test_finish_session_is_idempotent(quiz_client) -> None:
+    """Finishing the same session twice should keep the same finished_at timestamp."""
+    player_resp = quiz_client.post("/api/v1/quiz/players", json={"name": "Again"})
+    player_id = player_resp.json()["id"]
+    sess_resp = quiz_client.post(
+        "/api/v1/quiz/sessions",
+        json={"mode": "duel", "player_id": player_id},
+    )
+    session_id = sess_resp.json()["id"]
+
+    first = quiz_client.post(f"/api/v1/quiz/sessions/{session_id}/finish")
+    second = quiz_client.post(f"/api/v1/quiz/sessions/{session_id}/finish")
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert first.json()["finished_at"] == second.json()["finished_at"]
+
+
+def test_finish_session_not_found(quiz_client) -> None:
+    """POST /api/v1/quiz/sessions/{id}/finish should return 404 for unknown session."""
+    resp = quiz_client.post(f"/api/v1/quiz/sessions/{uuid.uuid4()}/finish")
+    assert resp.status_code == 404
 
 
 def test_get_session_not_found(quiz_client) -> None:

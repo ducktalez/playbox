@@ -4,7 +4,9 @@
 
 ## Ablage/TODOs
 
-- Mehrere Sprachen (Deutsch, Englisch)
+- Plan: Mehrere Sprachen (Deutsch, Englisch). Vorrangig einheitlich, starten mit english. 
+- Piccolo: Schätz-fragen 
+
 ## Games
 
 | Game | Description | Status | Priority |
@@ -24,37 +26,26 @@
 | Deployment | Docker, PWA |
 | CI/CD | GitHub Actions |
 
-## Project Structure
+## Repository Overview
 
 ```
 playbox/
 ├── backend/
-│   ├── app/
-│   │   ├── core/              # Shared: app factory, config, DB
-│   │   ├── games/
-│   │   │   ├── imposter/      # Imposter game
-│   │   │   ├── piccolo/       # Piccolo game
-│   │   │   ├── quiz/          # Quiz game
-│   │   │   └── chess/         # Chess variants
-│   │   └── main.py            # Unified server
-│   ├── alembic/               # DB migrations
-│   └── requirements.txt
+│   └── app/                   # FastAPI app and game modules
 ├── frontend/
-│   ├── src/
-│   │   ├── core/              # Shared PWA shell
-│   │   ├── games/             # Game UIs
-│   │   └── main.tsx
-│   ├── public/media/          # Quiz media assets
-│   ├── package.json
-│   └── vite.config.ts
+│   └── src/                   # React app and game UIs
 ├── .github/
-│   └── copilot-instructions.md
+│   ├── copilot-instructions.md
+│   └── instructions/
+│       └── ...                # Layer and game-specific instructions
 ├── .run/                      # Shared PyCharm run configurations
-├── Architecture.md
-├── Implementation-Plan.md
+├── docs/
+│   └── ...                    # Architecture, roadmap, and game docs
 ├── pyproject.toml
 └── README.md
 ```
+
+Detailed system architecture, data model notes, and longer design decisions live in [`docs/Architecture.md`](docs/Architecture.md).
 
 ## Getting Started
 
@@ -78,7 +69,7 @@ python setup.py
 ```
 
 This single command:
-1. Creates `backend/.env` from `backend/.env.example` if it doesn't exist yet.
+1. Creates `.env` from `.env.example` if it doesn't exist yet.
 2. Generates (or updates) the PyCharm run configurations in `.run/`.
 3. Starts backend (uvicorn) and frontend (vite) together.
 
@@ -167,8 +158,9 @@ Custom chess variants inspired by LiChess — primarily chess with fewer rows (6
 
 ## Documentation
 
-- [Architecture.md](Architecture.md) — system architecture
-- [Implementation-Plan.md](Implementation-Plan.md) — roadmap and task tracking
+- [docs/Architecture.md](docs/Architecture.md) — system architecture
+- [docs/Implementation-Plan.md](docs/Implementation-Plan.md) — roadmap and task tracking
+- [docs/games/piccolo.md](docs/games/piccolo.md) — Piccolo flow, challenge categories, and extension notes
 
 ## Meta-Repo
 

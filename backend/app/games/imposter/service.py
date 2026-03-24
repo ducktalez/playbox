@@ -4,7 +4,7 @@ import random
 import uuid
 from datetime import datetime, timezone
 
-from app.games.imposter.schemas import SessionOut, WordReportOut
+from app.games.imposter.schemas import SessionOut, WordOut, WordReportOut
 
 
 # In-memory storage for sessions (no persistence needed)
@@ -251,11 +251,49 @@ _WORDS: list[dict] = [
 class ImposterService:
     """Business logic for the Imposter game."""
 
+    def _default_description(self, word: dict) -> str:
+        """Build a short bundled-word description for the info bubble."""
+        category = word["category"]
+        text = word["text"]
+
+        category_templates = {
+            "Tiere": f"A bundled animal prompt centred on '{text}', useful for everyday guessing rounds.",
+            "Essen": f"A bundled food prompt about '{text}', chosen for quick and familiar party play.",
+            "Orte": f"A bundled location prompt featuring '{text}', designed for easy discussion clues.",
+            "Aktivitäten": f"A bundled activity prompt about '{text}', intended for expressive clue-giving.",
+            "Gegenstände": f"A bundled object prompt focused on '{text}', simple enough for local party rounds.",
+            "Berufe": f"A bundled profession prompt featuring '{text}', selected for broad recognisability.",
+            "Sport": f"A bundled sports prompt about '{text}', intended for fast and playful hints.",
+            "Filme & Serien": f"A bundled film or TV prompt built around '{text}', suitable for pop-culture rounds.",
+            "Länder & Städte": f"A bundled geography prompt featuring '{text}', meant for familiar associations.",
+            "Musik": f"A bundled music prompt about '{text}', chosen for accessible clue-based play.",
+        }
+
+        return category_templates.get(
+            category,
+            f"A bundled prompt about '{text}' from the '{category}' category.",
+        )
+
+    def _normalize_word(self, word: dict) -> dict:
+        """Return a word payload with stable metadata fields."""
+        return {
+            "id": word["id"],
+            "text": word["text"],
+            "category": word["category"],
+            "source": word.get("source", "BUNDLED"),
+            "uploaded_by": word.get("uploaded_by", "PlayBox seed list"),
+            "description": word.get("description") or self._default_description(word),
+        }
+
     def get_words(self, category: str | None = None) -> list[dict]:
         """Return words, optionally filtered by category."""
         if category:
-            return [w for w in _WORDS if w["category"].lower() == category.lower()]
-        return _WORDS
+            return [
+                self._normalize_word(w)
+                for w in _WORDS
+                if w["category"].lower() == category.lower()
+            ]
+        return [self._normalize_word(word) for word in _WORDS]
 
     def get_categories(self) -> list[str]:
         """Return unique categories."""
@@ -292,6 +330,7 @@ class ImposterService:
             "id": session_id,
             "player_names": player_names,
             "word": word["text"],
+            "word_details": WordOut(**word),
             "imposter_index": imposter_index,
             "timer_seconds": timer_seconds,
         }

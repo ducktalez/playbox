@@ -40,13 +40,20 @@ async def list_questions(
     tag: str | None = None,
     elo_min: float | None = None,
     elo_max: float | None = None,
+    balanced_categories: bool = Query(default=False),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     service: QuizService = Depends(get_service),
 ) -> QuestionListOut:
     """List questions with optional filters."""
     return service.list_questions(
-        category_id=category_id, tag=tag, elo_min=elo_min, elo_max=elo_max, limit=limit, offset=offset
+        category_id=category_id,
+        tag=tag,
+        elo_min=elo_min,
+        elo_max=elo_max,
+        balanced_categories=balanced_categories,
+        limit=limit,
+        offset=offset,
     )
 
 
@@ -126,6 +133,12 @@ async def create_session(body: SessionCreateIn, service: QuizService = Depends(g
 async def get_session(session_id: uuid.UUID, service: QuizService = Depends(get_service)) -> SessionOut:
     """Get session state."""
     return service.get_session(session_id=session_id)
+
+
+@router.post("/sessions/{session_id}/finish", response_model=SessionOut)
+async def finish_session(session_id: uuid.UUID, service: QuizService = Depends(get_service)) -> SessionOut:
+    """Finish a quiz session and return its final state."""
+    return service.finish_session(session_id=session_id)
 
 
 # --- Leaderboard ---
