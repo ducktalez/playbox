@@ -29,6 +29,11 @@ These instructions apply to both backend and frontend files for the Quiz game.
 - Media support should stay URL/file-based only.
 - Quizduell questions may later be linked to Piccolo quiz-style prompts, but that relationship should be introduced only when there is a concrete gameplay need.
 
+## Research Documentation
+- Store non-runtime quiz research under `docs/games/quiz/`.
+- Keep English index/navigation files there, but preserve original-language source material when archival accuracy matters.
+- Use language suffixes such as `.de.md` for original research dossiers.
+
 
 
 

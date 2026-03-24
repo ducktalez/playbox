@@ -186,6 +186,7 @@ Custom chess variants inspired by LiChess — primarily chess with fewer rows (6
 - [docs/Architecture.md](docs/Architecture.md) — system architecture
 - [docs/Implementation-Plan.md](docs/Implementation-Plan.md) — roadmap and task tracking
 - [docs/games/piccolo.md](docs/games/piccolo.md) — Piccolo flow, challenge categories, and extension notes
+- [docs/games/quiz/README.md](docs/games/quiz/README.md) — Quiz research notes and source dossier index
 
 ## Meta-Repo
 
