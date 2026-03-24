@@ -3,7 +3,7 @@ export default function ChessGame() {
     <div>
       <h1>♟️ Chess Variants</h1>
       <p>Schach mit weniger Reihen und anderen Varianten.</p>
-      <p><em>Coming Soon — niedrige Priorität.</em></p>
+      <p style={{ color: "var(--text-muted)" }}><em>Coming Soon — niedrige Priorität.</em></p>
     </div>
   );
 }

@@ -3,7 +3,7 @@ export default function PiccoloGame() {
     <div>
       <h1>🎉 Piccolo</h1>
       <p>Party-Challenges, Dares und Fragen für die ganze Runde!</p>
-      <p><em>Implementierung folgt in Phase 2.</em></p>
+      <p style={{ color: "var(--text-muted)" }}><em>Implementierung folgt in Phase 2.</em></p>
     </div>
   );
 }

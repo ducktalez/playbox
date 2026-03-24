@@ -1,8 +1,13 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import "./index.css";
 import { Layout } from "./core/Layout";
 import { Home } from "./core/Home";
+
+const Fallback = () => (
+  <div style={{ color: "var(--text-muted)", padding: "2rem" }}>Laden…</div>
+);
 
 // Lazy load game modules
 const ImposterGame = React.lazy(() => import("./games/imposter/ImposterGame"));
@@ -19,7 +24,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route
             path="imposter/*"
             element={
-              <React.Suspense fallback={<div>Loading...</div>}>
+              <React.Suspense fallback={<Fallback />}>
                 <ImposterGame />
               </React.Suspense>
             }
@@ -27,7 +32,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route
             path="piccolo/*"
             element={
-              <React.Suspense fallback={<div>Loading...</div>}>
+              <React.Suspense fallback={<Fallback />}>
                 <PiccoloGame />
               </React.Suspense>
             }
@@ -35,7 +40,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route
             path="quiz/*"
             element={
-              <React.Suspense fallback={<div>Loading...</div>}>
+              <React.Suspense fallback={<Fallback />}>
                 <QuizGame />
               </React.Suspense>
             }
@@ -43,7 +48,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route
             path="chess/*"
             element={
-              <React.Suspense fallback={<div>Loading...</div>}>
+              <React.Suspense fallback={<Fallback />}>
                 <ChessGame />
               </React.Suspense>
             }

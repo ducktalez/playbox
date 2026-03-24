@@ -1,0 +1,75 @@
+/* ============================================================
+   PlayBox — Global Dark Mode Styles
+   ============================================================ */
+
+:root {
+  --bg-base:     #0d0d1a;   /* page background */
+  --bg-surface:  #1a1a2e;   /* cards, nav, panels */
+  --bg-elevated: #242440;   /* hover, active states */
+
+  --text-primary: #e8e8f0;
+  --text-muted:   #8888aa;
+  --text-dim:     #555577;
+
+  --accent:       #6c63ff;
+  --accent-hover: #7e77ff;
+  --warning:      #f0a500;
+
+  --radius: 12px;
+  --transition: 0.18s ease;
+}
+
+/* Reset & base ------------------------------------------------ */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+  background: var(--bg-base);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0 0 0.5rem;
+  line-height: 1.25;
+}
+
+p {
+  margin: 0 0 0.75rem;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--accent-hover);
+}
+
+::selection {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+/* Scrollbar --------------------------------------------------- */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-surface); }
+::-webkit-scrollbar-thumb { background: var(--bg-elevated); border-radius: 4px; }
+
+
