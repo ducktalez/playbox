@@ -1,6 +1,7 @@
 """PlayBox — Database setup."""
 
 from collections.abc import Generator
+from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -8,8 +9,13 @@ from sqlmodel import SQLModel
 
 from app.core.config import settings
 
-# PostgreSQL engine (Quiz game)
-pg_engine = create_engine(settings.database_url, echo=settings.debug)
+# Ensure data directory exists for SQLite
+_data_dir = Path(__file__).resolve().parents[2] / "data"
+_data_dir.mkdir(exist_ok=True)
+
+# PostgreSQL engine (Quiz game) - Supports SQLite fallback
+pg_connect_args = {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
+pg_engine = create_engine(settings.database_url, echo=settings.debug, connect_args=pg_connect_args)
 PgSessionLocal = sessionmaker(bind=pg_engine, class_=Session, expire_on_commit=False)
 
 # SQLite engine (Imposter/Piccolo local data)

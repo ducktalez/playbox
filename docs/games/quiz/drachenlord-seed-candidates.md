@@ -5,8 +5,9 @@ This file converts safe-core research into draft quiz questions.
 ## Scope
 
 - These entries are **draft candidates**, not runtime seed data.
-- Each candidate should be re-checked against the dossier and stronger public sources before moving into `seed_questions.json`.
+- Each candidate should be re-checked against the dossier and stronger public sources before moving into `seed_questions.yaml`.
 - The structure below is intentionally close to the quiz seed shape in `backend/app/games/quiz/seed.py`, but it stays human-readable for review.
+- Authored runtime seeds should use YAML and the compact answer structure `answers: [correct_answer, [wrong_answer, ...]]`.
 
 ## Status vocabulary
 
@@ -160,10 +161,12 @@ These facts are useful, but are better suited to a second review wave before dra
 
 ## Minimum promotion checklist before runtime seeding
 
-Before moving any entry from this file into real seed JSON, confirm:
+Before moving any entry from this file into the real runtime seed YAML, confirm:
 1. the answer is unambiguous
 2. the distractors do not accidentally become partly true
 3. the fact is backed by at least one strong dossier anchor and preferably one stronger public source
 4. the player-facing wording is clear outside scene jargon
 5. the category and tags still fit the balancing rules in `drachenlord-topic-map.md`
+
+
 

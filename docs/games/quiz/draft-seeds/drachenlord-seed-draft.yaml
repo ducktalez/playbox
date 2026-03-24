@@ -1,0 +1,61 @@
+categories:
+  - name: Drachenlord Basics
+    description: Introductory questions about identity, place, and basic orientation.
+  - name: Drachenlord Timeline
+    description: Major events and turning points in the timeline.
+  - name: Drachenlord Media
+    description: Documentaries, podcasts, and public media framing.
+  - name: Drachenlord Legal
+    description: Authorities, regulation, and legal milestones.
+  - name: Drachenlord Terms
+    description: Key terms and concepts relevant to the case.
+
+questions:
+  - text: Under which online alias did Rainer Winkler become widely known?
+    category: Drachenlord Basics
+    tier: 1
+    tags: [drachenlord, identity, alias, safe-core]
+    created_by: PlayBox draft seed (research-derived)
+    created_at: ""
+    answers: [Drachenlord, [Drachenmeister, Drachenkönig, Drachenritter]]
+
+  - text: Which documentary format does the dossier describe as an important breakthrough in broader public awareness in 2016?
+    category: Drachenlord Media
+    tier: 2
+    tags: [drachenlord, media, documentary, y-kollektiv, safe-core]
+    created_by: PlayBox draft seed (research-derived)
+    created_at: ""
+    answers: [Y-Kollektiv, [Spiegel TV, STRG_F, ZDF Magazin Royale]]
+
+  - text: In which year did the event known as the "Schanzenfest" take place according to the dossier?
+    category: Drachenlord Timeline
+    tier: 2
+    tags: [drachenlord, timeline, schanzenfest, 2018, safe-core]
+    created_by: PlayBox draft seed (research-derived)
+    created_at: ""
+    answers: ["2018", ["2016", "2019", "2022"]]
+
+  - text: Which authority prohibited the livestream "Drache_Offiziell" in March 2019 because it lacked a broadcasting licence?
+    category: Drachenlord Legal
+    tier: 2
+    tags: [drachenlord, legal, blm, regulation, 2019, safe-core]
+    created_by: PlayBox draft seed (research-derived)
+    created_at: ""
+    answers: [Bayerische Landeszentrale für neue Medien (BLM), [Bayerischer Rundfunk, Bundesnetzagentur, Landesmedienanstalt NRW]]
+
+  - text: What is the title of the major 2022 podcast reconstruction highlighted in the dossier?
+    category: Drachenlord Media
+    tier: 2
+    tags: [drachenlord, media, podcast, cui-bono, 2022, safe-core]
+    created_by: PlayBox draft seed (research-derived)
+    created_at: ""
+    answers: [Cui Bono: Wer hat Angst vorm Drachenlord?, [Fest & Flauschig, Baywatch Berlin, Lage der Nation]]
+
+  - text: What is the term for abusing emergency calls in order to trigger a real police or emergency response?
+    category: Drachenlord Terms
+    tier: 2
+    tags: [drachenlord, terms, swatting, escalation, safe-core]
+    created_by: PlayBox draft seed (research-derived)
+    created_at: ""
+    answers: [Swatting, [Doxing, Brigading, Shadow banning]]
+

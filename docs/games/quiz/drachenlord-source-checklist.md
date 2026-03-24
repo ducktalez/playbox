@@ -17,13 +17,13 @@ The goal is to prevent:
 - `drachenlord-fact-pool.md` — normalized fact candidates
 - `drachenlord-topic-map.md` — category and balancing guide
 - `drachenlord-seed-candidates.md` — draft question layer
-- `backend/app/games/quiz/seed.py` — runtime seed structure (`SeedQuestionIn`, `QuizSeedFile`)
+- `backend/app/games/quiz/seed.py` — runtime seed structure (`SeedQuestionIn`, `QuizSeedFile`) and YAML normalization rules
 
 ## Ready-state vocabulary
 
 - `DRAFT` — not checked yet
 - `RECHECK` — partially checked, still blocked
-- `READY-FOR-SEED` — safe to convert into seed JSON
+- `READY-FOR-SEED` — safe to convert into the runtime seed YAML
 - `HOLD` — do not seed yet
 
 ## Per-question review checklist
@@ -144,4 +144,5 @@ Seed-shape ok: yes/no
 Final status:
 Notes:
 ```
+
 

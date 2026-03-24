@@ -3,7 +3,7 @@
 ## Current Status
 
 **Phase:** Execution in Progress
-**Last Updated:** 2026-03-24
+**Last Updated:** 2026-03-25
 
 ## Roadmap
 
@@ -85,6 +85,84 @@
 
 ## Phase 3 — Quiz MVP ("Wer wird Elite-Hater?")
 
+**STORY — Three Game Modes, One Shared Core:**
+
+### "Wer wird Elite-Haider" (Millionär Mode)
+- Solo player selects this mode from the game selection screen
+- Auto-generated "Gast" player (no names required)
+- 15 questions with escalating difficulty (ELO-based)
+- Each question shows 4 possible answers in 2×2 grid (WWM diamond-shaped)
+- Prize ladder (€50 → €1 Million) displayed on left side
+- Safety marks at level 5 (€500) and level 10 (€16,000)
+- Three jokers: 50:50, Audience Poll, Phone (Drachenlord)
+- WWM-style dark blue gradient UI with animations
+- Sound effects served from `/media/sounds/wwm/` at key moments
+- Game ends when: player gets wrong OR all 15 answered
+- Wrong answer → falls back to last safety mark prize
+- Results screen: final prize, ELO, option to play again
+
+### "Quizduell" (1v1 — Future)
+- Solo player (MVP) or real 1v1 duel (future via WebSocket)
+- 10 questions (alternating if 1v1)
+- Optional category selection (future refinement)
+- Same Q&A flow as Millionär
+- Tracks: correct count per player
+- Winner: most correct answers
+- Results: show winner, final ELO, replay option
+
+### "Quizduell Speed" (Solo Speed Mode) ✨ NEW
+- Solo player races against 20-second countdown timer
+- Each question: 20-second limit to answer
+- Display: question + 4 answers + **COUNTDOWN TIMER** (red if ≤5s)
+- User selects answer within time → submit immediately
+- If timeout → auto-submit as wrong (counts as incorrect attempt)
+- Show feedback: "Richtig!" / "Falsch!" + ELO change (1-2 seconds)
+- **Auto-advance** to next question after feedback (no manual "Next" button)
+- Play 10 rapid-fire questions (2-3 minutes total game time)
+- Game ends: all 10 answered (correct or timeout)
+- Results: final ELO vs. starting ELO, points scored, replay option
+
+### Shared Implementation Core
+```
+┌─────────────────────────────────────────────┐
+│ 1. Mode Selection (Setup Screen)            │
+│ 2. Auto Create Player ("Gast")              │
+│ 3. Create Session (mode + player_id)        │
+│ 4. Fetch Questions (balanced by category)   │
+│ 5. Question Loop:                           │
+│    - Load question + 4 answers              │
+│    - User selects answer                    │
+│    - Submit attempt → get ELO delta         │
+│    - Show feedback (correct/wrong, ELO)     │
+│    - Next button → load next question       │
+│ 6. Finish Session (update player ELO/stats) │
+│ 7. Results Screen (final ELO, replay)       │
+└─────────────────────────────────────────────┘
+```
+
+**Shared API Contracts:**
+- `POST /api/v1/quiz/players` — Create guest player
+- `POST /api/v1/quiz/sessions` — Create session (mode + player_id)
+- `GET /api/v1/quiz/questions?limit=N&balanced_categories=true` — Fetch questions
+- `GET /api/v1/quiz/questions/{id}?num_answers=4` — Get question with 4 answers
+- `POST /api/v1/quiz/questions/{id}/attempt` — Submit answer + get ELO update
+- `POST /api/v1/quiz/sessions/{id}/finish` — Finish session + return final state
+
+**Game-Specific Differences:**
+
+| Aspekt | Millionär | Quizduell 1v1 | QD Speed |
+|--------|-----------|-----------|-----------|
+| Players | 1 (solo) | 2 (vs) | 1 (solo) |
+| Question Count | 15 | 10 each | 10 |
+| Time Limit/Question | None | None | 20s |
+| Difficulty | Ascending ELO | Random/balanced | Random/balanced |
+| Category | Auto (balanced) | Player choice | Auto (balanced) |
+| Answer Control | Manual | Manual | Manual or Timeout |
+| Lifelines | 50:50, Audience, Phone | None | None |
+| Auto-Advance | No | No | No |
+| Leaderboard | Yes (ELO) | Yes (wins) | Yes (ELO) |
+| Leaderboard | Yes | Yes (wins/loss) |
+
 - Done: PostgreSQL models, Alembic scaffolding, the session finish flow, and most core backend endpoints are present.
 - Open: complete the remaining frontend game modes, expand the starter question set, and standardize API error payloads.
 
@@ -96,10 +174,14 @@
 - [x] Backend: answer submission (`POST /api/v1/quiz/questions/{id}/attempt`)
 - [x] Backend: category and tag endpoints
 - [x] Backend: session management (start, state, finish)
-- [ ] Frontend: "Wer wird Millionär" mode — escalating difficulty, single player
-- [ ] Frontend: "Quizduell" mode — 1v1, category selection, alternating turns
-- [ ] Frontend: question submission form (text, correct answer, wrong answers, category, tags)
-- [ ] Seed initial Drachenlord question set (~50+ questions)
+- [x] Frontend: Mode selection screen (three buttons: Millionär, 1v1, Speed)
+- [x] Frontend: Auto player creation ("Gast")
+- [x] Frontend: Question loop (display Q + 4 answers, submit, show feedback)
+- [x] Frontend: Results screen (final ELO, play again)
+- [x] Frontend: Quizduell Speed mode (20-second timer, 10 questions, auto-advance)
+- [ ] Frontend: Quizduell 1v1 mode — alternating turns (requires opponent logic)
+- [x] Frontend: question submission form (text, correct answer, wrong answers, category, tags)
+- [x] Seed initial Drachenlord question set (~50+ questions)
 - [x] Player creation (name + UUID, no auth)
 
 ### Medium Priority
@@ -107,9 +189,48 @@
 - [x] Leaderboard (`GET /api/v1/quiz/leaderboard`)
 - [x] Balanced general question listing across categories
 - [ ] Player profile page with stats
+- [ ] Quizduell 1v1 real-time via WebSocket (requires opponent matchmaking)
 - [ ] Tag-based quiz creation (play questions filtered by tag)
-- [ ] Lifelines in Millionär mode (50:50, audience, phone)
+- [x] Lifelines in Millionär mode (50:50, audience, phone)
 - [x] Randomized wrong answer selection from pool
+- [ ] Authentication system (replace "Gast" with real accounts)
+
+## Phase 3.5 — WWM Immersion & Drachenlord AI (Planned)
+
+> These features add atmosphere and entertainment value but are deferred until the core game loop is stable.
+
+### Sound & Atmosphere
+
+- [ ] Audience clapping at correct answers (timed applause samples)
+- [ ] Dynamic audience murmuring in background (ambient loop)
+- [ ] Drachenlord samples injected every few seconds during gameplay
+- [x] Level-appropriate background music (low/mid/high/million question music)
+- [x] Sound effects: lock-in sound, suspense build, reveal sting
+- [x] Real WWM MP3 sound files served from `/media/sounds/wwm/`
+- [x] Tier-appropriate correct/wrong/safety/win stings
+- [x] Joker sound effects (50:50, audience, phone)
+
+### Drachenlord AI Moderator
+
+- [ ] AI-generated commentary reacting to player answers
+- [ ] Emotional responses: excitement on correct, disappointment on wrong
+- [ ] Melancholic / nostalgic reactions when questions touch his life story
+- [ ] Spontaneous outbursts and catchphrases ("Meddl Leude!", "Etzala!")
+- [ ] Commentary adapts to current prize level (more nervous at high stakes)
+
+### Question Tier / Difficulty Model
+
+- [ ] Evaluate whether `tier` field on Question model needs expansion for WWM difficulty curve
+- [x] Map tiers to prize ladder levels (tier 1 = €50–€500, tier 2 = €1k–€16k, tier 3 = €32k+)
+- [x] ELO-based question ordering: serve easier questions first, harder later
+- [ ] Category-balanced difficulty progression within a single game
+
+### Visual Enhancements
+
+- [ ] Animated spotlight / lens flare effects between questions
+- [x] Dramatic pause before revealing correct answer (1.8-second delay with orange-gold pulsing)
+- [ ] Confetti / particle effects on reaching safety marks
+- [ ] Full-screen celebration on winning €1 Million
 
 ## Phase 4 — Quiz ELO + Media
 
@@ -120,7 +241,7 @@
 
 - [x] ELO calculation engine (K=32, base 1200)
 - [x] ELO update on each question attempt (player + question)
-- [ ] Question ordering by ELO in Millionär mode
+- [x] Question ordering by ELO in Millionär mode
 - [ ] Media upload endpoint (clips, images, documents)
 - [ ] Media display in question UI (video player, image viewer)
 - [ ] Media type support: `image`, `video`, `document`
@@ -188,8 +309,12 @@
 - Quiz core backend endpoints with ELO integration
 - Quiz file-based starter seed importer (`python -m app.games.quiz.seed`)
 - Shared test fixtures in `conftest.py`
-- Backend tests: `test_imposter.py` (7), `test_piccolo.py` (18), `test_quiz.py` (20), `test_elo.py` (8)
 - Shared PyCharm run configurations (`.run/`) and local IDE copies via `setup.py`
+- Drachenlord seed question set (50+ questions across 8 categories, tier-based ELO)
+- ELO-based question ordering for Millionär mode (ascending difficulty)
+- Backend tests: `test_imposter.py` (7), `test_piccolo.py` (18), `test_quiz.py` (45), `test_elo.py` (8)
+- WWM sound system: 25 MP3 files, tier-appropriate bg music, lock-in sting, 1.8s reveal delay, joker/safety/win sounds
+- WWM visual: orange-gold lock-in color, pulsing reveal animation, diamond answer buttons
 
 ## Dependencies
 

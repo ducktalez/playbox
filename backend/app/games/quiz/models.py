@@ -48,6 +48,7 @@ class Question(SQLModel, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     text: str = Field(max_length=1000)
+    explanation: str | None = Field(default=None, max_length=2000)
     category_id: uuid.UUID | None = Field(default=None, foreign_key="categories.id")
     elo_score: float = Field(default=1200.0)
     media_url: str | None = Field(default=None, max_length=500)
@@ -96,7 +97,7 @@ class GameSession(SQLModel, table=True):
     __tablename__ = "game_sessions"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    mode: str = Field(max_length=50)  # "millionaire" or "duel"
+    mode: str = Field(max_length=50)  # "millionaire", "duel", or "speed"
     player_id: uuid.UUID = Field(foreign_key="players.id")
     score: int = Field(default=0)
     started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

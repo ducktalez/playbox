@@ -15,7 +15,9 @@ These instructions apply to both backend and frontend files for the Quiz game.
 - Do not access detached ORM entities after commit/close.
 - Any new question/attempt/session endpoint must have backend tests.
 - Prefer category-balanced question selection when listing general question pools so large categories do not crowd out the smaller ones.
-- Keep quiz starter seed data file-based for now; use `python -m app.games.quiz.seed` with `backend/app/games/quiz/seed_questions.json` for minimal local data imports.
+- Keep quiz starter seed data file-based for now; use `python -m app.games.quiz.seed` with `backend/app/games/quiz/seed_questions.yaml` for minimal local data imports.
+- Prefer YAML over JSON for quiz seed files.
+- Prefer the compact seed answer structure `answers: [correct_answer, [wrong_answer, ...]]` for authored quiz seed data.
 
 ## Frontend Rules
 - Prioritize core game modes over styling polish.
@@ -31,6 +33,8 @@ These instructions apply to both backend and frontend files for the Quiz game.
 
 ## Research Documentation
 - Store non-runtime quiz research under `docs/games/quiz/`.
+- Keep machine-readable draft seed files for review under `docs/games/quiz/draft-seeds/` until they are ready for the runtime seed path.
+- Prefer YAML for those draft seed files as well.
 - Keep English index/navigation files there, but preserve original-language source material when archival accuracy matters.
 - Use language suffixes such as `.de.md` for original research dossiers.
 

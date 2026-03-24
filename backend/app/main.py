@@ -7,16 +7,24 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+from app.core.database import init_pg_db, init_sqlite_db
 from app.games.imposter.router import router as imposter_router
 from app.games.piccolo.router import router as piccolo_router
 from app.games.quiz.router import router as quiz_router
+from app.games.quiz.seed import seed_questions
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan: startup and shutdown events."""
     # Startup
-    # TODO: init databases, seed data if needed
+    init_pg_db()
+    init_sqlite_db()
+    # Seed quiz questions if database is empty
+    try:
+        seed_questions()
+    except Exception as e:
+        print(f"Warning: Could not seed questions: {e}")
     yield
     # Shutdown
 

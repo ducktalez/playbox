@@ -17,6 +17,7 @@ The project is in early development. Only implement what is **technically necess
 
 ## Coding Conventions
 - All code, comments, docstrings, and documentation in **English**.
+- **Tests must be implemented for all new features and must pass successfully before a task is considered complete.**
 - Every new endpoint **must** have tests in `backend/tests/` (`test_{game}.py`).
 - Shared test fixtures live in `conftest.py`.
 - New models → `models.py`, schemas → `schemas.py`, routes → `games/{game}/router.py` (register in `main.py`).

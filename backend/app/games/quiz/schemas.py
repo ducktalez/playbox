@@ -29,6 +29,7 @@ class QuestionCreateIn(BaseModel):
     """Request to create a new question."""
 
     text: str = Field(..., max_length=1000)
+    explanation: str | None = Field(default=None, max_length=2000)
     category_id: uuid.UUID | None = None
     tags: list[str] = Field(default_factory=list)
     answers: list[AnswerIn] = Field(..., min_length=2)
@@ -42,6 +43,7 @@ class QuestionOut(BaseModel):
 
     id: uuid.UUID
     text: str
+    explanation: str | None = None
     category: str | None = None
     tags: list[str] = []
     elo_score: float
@@ -73,6 +75,7 @@ class AttemptOut(BaseModel):
 
     correct: bool
     correct_answer_id: uuid.UUID
+    explanation: str | None = None
     player_elo_before: float
     player_elo_after: float
     question_elo_before: float
@@ -130,7 +133,7 @@ class PlayerOut(BaseModel):
 class SessionCreateIn(BaseModel):
     """Request to start a quiz session."""
 
-    mode: str = Field(..., pattern="^(millionaire|duel)$")
+    mode: str = Field(..., pattern="^(millionaire|duel|speed)$")
     player_id: uuid.UUID
 
 
@@ -156,3 +159,44 @@ class LeaderboardEntry(BaseModel):
     games_played: int
     correct_count: int
 
+
+# --- Jokers (Millionaire lifelines) ---
+
+
+class FiftyFiftyIn(BaseModel):
+    """Request for 50:50 joker — pass the currently displayed answer IDs."""
+
+    displayed_answer_ids: list[uuid.UUID] = Field(..., min_length=3, max_length=6)
+
+
+class FiftyFiftyOut(BaseModel):
+    """Result of 50:50 joker — two wrong answer IDs to hide."""
+
+    remove: list[uuid.UUID]
+
+
+class AudiencePollEntry(BaseModel):
+    """A single answer in the audience poll result."""
+
+    answer_id: uuid.UUID
+    percentage: int
+
+
+class AudiencePollIn(BaseModel):
+    """Request for audience poll joker."""
+
+    displayed_answer_ids: list[uuid.UUID] = Field(..., min_length=2, max_length=6)
+
+
+class AudiencePollOut(BaseModel):
+    """Result of audience poll joker — percentage distribution."""
+
+    results: list[AudiencePollEntry]
+
+
+class PhoneJokerOut(BaseModel):
+    """Result of phone joker — Drachenlord's hint."""
+
+    hint_answer_id: uuid.UUID
+    confidence: int
+    message: str

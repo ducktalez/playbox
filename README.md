@@ -4,8 +4,12 @@
 
 ## Ablage/TODOs
 
+- "Story mode" für Winklerfragen (Jeden Tag zehn Versuche. Schaltet ein Legacy-Winkel-Video frei) 
+  - Am Anfang: 6 Antworten
+- Option: Mehr als eine richtige Antwort
 - Plan: Mehrere Sprachen (Deutsch, Englisch). Vorrangig einheitlich, starten mit english. 
 - Piccolo: Schätz-fragen 
+- Keine Ports in python-files -> .env
 
 ## Games
 
@@ -82,7 +86,7 @@ cd backend
 python -m app.games.quiz.seed
 ```
 
-This imports the file-based starter questions from `backend/app/games/quiz/seed_questions.json`.
+This imports the file-based starter questions from `backend/app/games/quiz/seed_questions.yaml`.
 
 **PyCharm alternative (after first `python setup.py` run)**
 

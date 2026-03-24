@@ -24,9 +24,15 @@ from app.games.quiz.schemas import (
     AnswerOut,
     AttemptIn,
     AttemptOut,
+    AudiencePollEntry,
+    AudiencePollIn,
+    AudiencePollOut,
     CategoryIn,
     CategoryOut,
+    FiftyFiftyIn,
+    FiftyFiftyOut,
     LeaderboardEntry,
+    PhoneJokerOut,
     PlayerCreateIn,
     PlayerOut,
     QuestionCreateIn,
@@ -53,15 +59,25 @@ class QuizService:
         elo_min: float | None = None,
         elo_max: float | None = None,
         balanced_categories: bool = False,
+        order_by_elo: str | None = None,
         limit: int = 20,
         offset: int = 0,
     ) -> QuestionListOut:
-        """List questions with optional filters."""
-        query = (
-            select(Question)
-            .where(Question.deleted_at.is_(None))
-            .order_by(Question.created_at.asc(), Question.id.asc())
-        )
+        """List questions with optional filters.
+
+        Args:
+            order_by_elo: "asc" for ascending ELO (easy→hard, Millionär mode),
+                          "desc" for descending. None keeps default ordering.
+        """
+        query = select(Question).where(Question.deleted_at.is_(None))
+
+        # Apply ordering
+        if order_by_elo == "asc":
+            query = query.order_by(Question.elo_score.asc(), Question.id.asc())
+        elif order_by_elo == "desc":
+            query = query.order_by(Question.elo_score.desc(), Question.id.asc())
+        else:
+            query = query.order_by(Question.created_at.asc(), Question.id.asc())
 
         if category_id:
             query = query.where(Question.category_id == category_id)
@@ -109,11 +125,12 @@ class QuizService:
         """Create a new question with answers and tags."""
         # Validate: at least one correct answer
         correct_count = sum(1 for a in data.answers if a.is_correct)
-        if correct_count != 1:
-            raise HTTPException(status_code=422, detail="Exactly one answer must be marked as correct")
+        if correct_count < 1:
+            raise HTTPException(status_code=422, detail="At least one answer must be marked as correct")
 
         question = Question(
             text=data.text,
+            explanation=data.explanation,
             category_id=data.category_id,
             media_url=data.media_url,
             media_type=data.media_type,
@@ -149,15 +166,18 @@ class QuizService:
         correct = [a for a in question.answers if a.is_correct]
         wrong = [a for a in question.answers if not a.is_correct]
 
-        # Select random wrong answers
+        # Pick one correct answer randomly (model may store multiple)
+        selected_correct = [random.choice(correct)]  # noqa: S311
+        # Fill remaining slots with wrong answers
         num_wrong = min(num_answers - 1, len(wrong))
         selected_wrong = random.sample(wrong, num_wrong)  # noqa: S311
 
         # Combine and shuffle
-        selected = correct + selected_wrong
+        selected = selected_correct + selected_wrong
         random.shuffle(selected)  # noqa: S311
 
         out = self._question_to_out(question)
+        out.explanation = None  # Hide explanation during gameplay
         out.answers = [AnswerOut(id=a.id, text=a.text) for a in selected]  # Hide is_correct
         return out
 
@@ -206,6 +226,7 @@ class QuizService:
         return AttemptOut(
             correct=answer.is_correct,
             correct_answer_id=correct_answer.id,
+            explanation=question.explanation,
             player_elo_before=player_elo_before,
             player_elo_after=new_player_elo,
             question_elo_before=question_elo_before,
@@ -326,6 +347,82 @@ class QuizService:
             for i, p in enumerate(players)
         ]
 
+    # --- Jokers (Millionaire lifelines) ---
+
+    def fifty_fifty(self, question_id: uuid.UUID, data: FiftyFiftyIn) -> FiftyFiftyOut:
+        """Return 2 wrong answer IDs from the displayed set for 50:50 joker."""
+        question = self.db.get(Question, question_id)
+        if not question:
+            raise HTTPException(status_code=404, detail="Question not found")
+
+        displayed_ids = set(data.displayed_answer_ids)
+        wrong_displayed = [a for a in question.answers if a.id in displayed_ids and not a.is_correct]
+
+        to_remove = random.sample(wrong_displayed, min(2, len(wrong_displayed)))  # noqa: S311
+        return FiftyFiftyOut(remove=[a.id for a in to_remove])
+
+    def audience_poll(self, question_id: uuid.UUID, data: AudiencePollIn) -> AudiencePollOut:
+        """Generate fake audience poll results biased toward the correct answer."""
+        question = self.db.get(Question, question_id)
+        if not question:
+            raise HTTPException(status_code=404, detail="Question not found")
+
+        displayed_ids = set(data.displayed_answer_ids)
+        displayed = [a for a in question.answers if a.id in displayed_ids]
+
+        correct_ids = {a.id for a in displayed if a.is_correct}
+        correct_pct = random.randint(45, 72)  # noqa: S311
+        remaining = 100 - correct_pct
+        wrong_displayed = [a for a in displayed if not a.is_correct]
+
+        results: list[AudiencePollEntry] = []
+        for a in displayed:
+            if a.id in correct_ids:
+                results.append(AudiencePollEntry(answer_id=a.id, percentage=correct_pct))
+            elif a is wrong_displayed[-1]:
+                results.append(AudiencePollEntry(answer_id=a.id, percentage=remaining))
+            else:
+                pct = random.randint(0, max(0, remaining))  # noqa: S311
+                remaining -= pct
+                results.append(AudiencePollEntry(answer_id=a.id, percentage=pct))
+
+        return AudiencePollOut(results=results)
+
+    def phone_joker(self, question_id: uuid.UUID, data: AudiencePollIn) -> PhoneJokerOut:
+        """Drachenlord phone joker — gives a hint with varying confidence."""
+        question = self.db.get(Question, question_id)
+        if not question:
+            raise HTTPException(status_code=404, detail="Question not found")
+
+        displayed_ids = set(data.displayed_answer_ids)
+        displayed = [a for a in question.answers if a.id in displayed_ids]
+
+        correct = [a for a in displayed if a.is_correct]
+        wrong = [a for a in displayed if not a.is_correct]
+
+        messages_correct = [
+            "Isch schwör dir, des is {answer}!",
+            "Hör mal, des muss {answer} sein, etzala!",
+            "Des is doch klar, {answer}!",
+            "Isch weiß des, des is {answer}, Mann!",
+        ]
+        messages_wrong = [
+            "Ähm... isch glaub des is {answer}... oder?",
+            "Puh, schwierig... isch sag mal {answer}.",
+            "Keine Ahnung ehrlich gesagt, vielleicht {answer}?",
+        ]
+
+        if random.random() < 0.7 and correct:  # noqa: S311
+            hint = random.choice(correct)  # noqa: S311
+            confidence = random.randint(65, 92)  # noqa: S311
+            msg = random.choice(messages_correct).format(answer=hint.text)  # noqa: S311
+        else:
+            hint = random.choice(wrong) if wrong else correct[0]  # noqa: S311
+            confidence = random.randint(25, 55)  # noqa: S311
+            msg = random.choice(messages_wrong).format(answer=hint.text)  # noqa: S311
+
+        return PhoneJokerOut(hint_answer_id=hint.id, confidence=confidence, message=msg)
+
     # --- Helpers ---
 
     def _question_to_out(self, question: Question) -> QuestionOut:
@@ -333,6 +430,7 @@ class QuizService:
         return QuestionOut(
             id=question.id,
             text=question.text,
+            explanation=question.explanation,
             category=question.category.name if question.category else None,
             tags=[t.name for t in question.tags] if question.tags else [],
             elo_score=question.elo_score,
