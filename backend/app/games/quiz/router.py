@@ -25,7 +25,7 @@ GAME MODES:
      - Track cumulative ELO delta from attempts
 
 QUESTION FEATURES:
-  - Optional explanation: shown after answering (hidden during gameplay)
+  - Optional background: shown after answering (hidden during gameplay)
   - ELO score per question: tracks difficulty
   - Media attachments: images, video, documents (URL-referenced)
 
@@ -38,12 +38,19 @@ SHARED CORE FLOW:
   │ 5. QUESTION LOOP:                                              │
   │    - Display question + 4 answers (A/B/C/D colored)            │
   │    - Player selects answer (or timeout in speed mode)          │
-  │    - Submit attempt → get ELO delta + result + explanation     │
-  │    - Show feedback (correct/wrong, ELO, explanation if any)    │
+  │    - Submit attempt → get ELO delta + result + background      │
+  │    - Show feedback (correct/wrong, ELO, background if any)     │
   │    - Player taps "Nächste Frage" to advance                    │
   │ 6. END GAME            → finish session, show final ELO/score  │
   │ 7. RESULTS             → show stats, leaderboard, play again   │
   └─────────────────────────────────────────────────────────────────┘
+
+SHARED API CONTRACTS:
+  POST   /api/v1/quiz/players              → Create guest/temp player
+  POST   /api/v1/quiz/sessions             → Create session (mode + player_id)
+  GET    /api/v1/quiz/questions            → List / filter / order questions
+  GET    /api/v1/quiz/questions/{id}       → Get question + randomized answers (background hidden)
+  POST   /api/v1/quiz/questions/{id}/attempt → Submit answer + get ELO update + background
 
 SHARED API CONTRACTS:
   POST   /api/v1/quiz/players              → Create guest/temp player

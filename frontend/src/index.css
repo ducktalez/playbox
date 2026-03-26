@@ -579,6 +579,22 @@ a:hover {
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* Challenge transition animation */
+.piccolo-challenge-slide {
+  animation: piccolo-slide-in 0.35s ease-out;
+}
+
+@keyframes piccolo-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 @media (max-width: 640px) {
   .page-main {
     padding: 1rem;
@@ -946,6 +962,20 @@ a:hover {
   border-color: var(--accent-hover);
 }
 
+.quiz-tag-filter {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.quiz-tag-filter__label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
 /* --- Result screen --- */
 
 .quiz-result {
@@ -999,6 +1029,96 @@ a:hover {
     font-size: 0.75rem;
     flex-shrink: 0;
   }
+}
+
+/* --- Duel 1v1 Mode --- */
+
+.duel-handover-name {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--accent);
+  margin: 0.5rem 0;
+}
+
+.duel-score-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+
+.duel-score--active {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.duel-score-divider {
+  color: var(--text-dim);
+}
+
+.duel-turn-badge {
+  background: rgba(108, 99, 255, 0.15);
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.duel-live-score {
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  min-width: 3rem;
+  text-align: center;
+}
+
+.duel-result-scores {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin: 1rem 0;
+}
+
+.duel-result-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1rem 1.25rem;
+  background: var(--bg-surface);
+  border-radius: var(--radius);
+  border: 2px solid transparent;
+  min-width: 120px;
+}
+
+.duel-result-player--winner {
+  border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(108, 99, 255, 0.25);
+}
+
+.duel-result-player__name {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.duel-result-player__score {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.duel-result-player__elo {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.duel-result-vs {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-dim);
 }
 
 /* --- Question Form --- */
@@ -1117,6 +1237,110 @@ a:hover {
   background: rgba(76, 175, 80, 0.1);
   border-radius: 8px;
   margin: 0;
+}
+
+/* --- Leaderboard --- */
+
+.leaderboard {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.leaderboard__title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.leaderboard__subtitle {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.leaderboard__status {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.leaderboard__table {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--bg-elevated);
+}
+
+.leaderboard__header {
+  display: flex;
+  align-items: center;
+  padding: 0.6rem 0.75rem;
+  background: var(--bg-elevated);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.leaderboard__row {
+  display: flex;
+  align-items: center;
+  padding: 0.7rem 0.75rem;
+  background: var(--bg-surface);
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background var(--transition);
+}
+
+.leaderboard__row:hover {
+  background: var(--bg-elevated);
+}
+
+.leaderboard__row--top {
+  background: rgba(108, 99, 255, 0.06);
+}
+
+.leaderboard__col--rank {
+  width: 2.5rem;
+  flex-shrink: 0;
+  text-align: center;
+  font-weight: 700;
+}
+
+.leaderboard__col--name {
+  flex: 1;
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leaderboard__col--elo {
+  width: 3.5rem;
+  text-align: right;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.leaderboard__col--games,
+.leaderboard__col--correct {
+  width: 3.5rem;
+  text-align: right;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 480px) {
+  .leaderboard__col--games {
+    display: none;
+  }
 }
 
 /* ============================================================
@@ -1280,7 +1504,13 @@ a:hover {
   max-width: 700px;
   margin: 0 auto;
   width: 100%;
-  animation: quiz-slide-in 0.35s ease-out;
+  animation: wwm-question-enter 0.45s ease-out;
+}
+
+@keyframes wwm-question-enter {
+  0%   { opacity: 0; transform: translateY(14px) scale(0.98); filter: brightness(1.6); }
+  40%  { filter: brightness(1.15); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: brightness(1); }
 }
 
 /* --- Phone Bubble --- */
@@ -1584,6 +1814,91 @@ a:hover {
 
 .wwm-result__actions {
   margin-top: 1rem;
+}
+
+/* Win prize golden glow animation */
+.wwm-result__prize--win {
+  animation: wwm-prize-win 1.8s ease-in-out infinite;
+}
+
+@keyframes wwm-prize-win {
+  0%, 100% { text-shadow: 0 0 20px rgba(240, 165, 0, 0.4); transform: scale(1); }
+  50% { text-shadow: 0 0 50px rgba(240, 165, 0, 0.9), 0 0 80px rgba(240, 165, 0, 0.5); transform: scale(1.05); }
+}
+
+/* --- Safety Celebration Overlay --- */
+.wwm-safety-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  animation: wwm-overlay-in-out 2.6s ease forwards;
+  pointer-events: none;
+}
+
+@keyframes wwm-overlay-in-out {
+  0%   { opacity: 0; }
+  12%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.wwm-safety-overlay__content {
+  text-align: center;
+  animation: wwm-safety-zoom 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes wwm-safety-zoom {
+  from { transform: scale(0.2) rotate(-6deg); opacity: 0; }
+  to   { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+.wwm-safety-overlay__icon {
+  font-size: 4.5rem;
+  line-height: 1;
+  margin-bottom: 0.4rem;
+  filter: drop-shadow(0 0 18px rgba(245, 166, 35, 0.7));
+}
+
+.wwm-safety-overlay__amount {
+  font-size: 3.2rem;
+  font-weight: 900;
+  color: #f5a623;
+  text-shadow: 0 0 30px rgba(245, 166, 35, 0.8);
+  letter-spacing: 0.02em;
+}
+
+.wwm-safety-overlay__label {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-top: 0.2rem;
+}
+
+/* --- Confetti Particles --- */
+.wwm-confetti {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 201;
+}
+
+.wwm-confetti__particle {
+  position: absolute;
+  top: -20px;
+  animation: wwm-confetti-fall linear forwards;
+}
+
+@keyframes wwm-confetti-fall {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translateY(105vh) rotate(800deg); opacity: 0; }
 }
 
 .wwm-loading {

@@ -29,7 +29,7 @@ class QuestionCreateIn(BaseModel):
     """Request to create a new question."""
 
     text: str = Field(..., max_length=1000)
-    explanation: str | None = Field(default=None, max_length=2000)
+    note: str | None = Field(default=None, max_length=2000)
     category_id: uuid.UUID | None = None
     tags: list[str] = Field(default_factory=list)
     answers: list[AnswerIn] = Field(..., min_length=2)
@@ -43,7 +43,7 @@ class QuestionOut(BaseModel):
 
     id: uuid.UUID
     text: str
-    explanation: str | None = None
+    note: str | None = None
     category: str | None = None
     tags: list[str] = []
     elo_score: float
@@ -75,7 +75,7 @@ class AttemptOut(BaseModel):
 
     correct: bool
     correct_answer_id: uuid.UUID
-    explanation: str | None = None
+    note: str | None = None
     player_elo_before: float
     player_elo_after: float
     question_elo_before: float

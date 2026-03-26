@@ -25,7 +25,7 @@ type CategoryOut = {
 export default function QuestionForm({ onBack }: { onBack: () => void }) {
   // Form state
   const [text, setText] = useState("");
-  const [explanation, setExplanation] = useState("");
+  const [note, setNote] = useState("");
   const [correctAnswer, setCorrectAnswer] = useState("");
   const [wrongAnswers, setWrongAnswers] = useState(["", "", ""]);
   const [categoryId, setCategoryId] = useState<string>("");
@@ -88,8 +88,8 @@ export default function QuestionForm({ onBack }: { onBack: () => void }) {
       answers,
       tags,
     };
-    if (explanation.trim()) {
-      payload.explanation = explanation.trim();
+    if (note.trim()) {
+      payload.note = note.trim();
     }
     if (categoryId) {
       payload.category_id = categoryId;
@@ -110,7 +110,7 @@ export default function QuestionForm({ onBack }: { onBack: () => void }) {
       setSuccessMsg("✓ Frage erfolgreich hinzugefügt!");
       // Reset form
       setText("");
-      setExplanation("");
+      setNote("");
       setCorrectAnswer("");
       setWrongAnswers(["", "", ""]);
       setTagsInput("");
@@ -178,13 +178,13 @@ export default function QuestionForm({ onBack }: { onBack: () => void }) {
             ))}
           </fieldset>
 
-          {/* Explanation (optional) */}
+          {/* Note / Hinweis (optional) */}
           <label className="quiz-form__label">
-            Erklärung (optional)
+            Hinweis (optional)
             <textarea
               className="quiz-form__textarea"
-              value={explanation}
-              onChange={(e) => setExplanation(e.target.value)}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
               placeholder="Wird nach Beantwortung angezeigt"
               rows={2}
               maxLength={2000}

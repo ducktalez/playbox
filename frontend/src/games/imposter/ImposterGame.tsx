@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 
 import { PlayerNameFields } from "../../core/PlayerNameFields";
 import { countEnteredPlayerNames, normalizePlayerNames } from "../../core/playerRegistration";
@@ -83,6 +83,37 @@ function formatDuration(totalSeconds: number): string {
   return `${minutes}:${seconds}`;
 }
 
+/** Play a short alarm beep and vibrate the device when the timer ends. */
+function triggerTimerAlarm() {
+  // Vibrate (3 short bursts)
+  if (navigator.vibrate) {
+    navigator.vibrate([200, 100, 200, 100, 400]);
+  }
+
+  // Web Audio API alarm beep
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "square";
+    osc.frequency.value = 880;
+    gain.gain.value = 0.3;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    // Beep pattern: on-off-on
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.setValueAtTime(0, ctx.currentTime + 0.2);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime + 0.35);
+    gain.gain.setValueAtTime(0, ctx.currentTime + 0.55);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime + 0.7);
+    osc.stop(ctx.currentTime + 1);
+    setTimeout(() => ctx.close(), 1200);
+  } catch {
+    // Audio not available — vibration alone is fine
+  }
+}
+
 function buildReportReason(reason: ReportReason, notes: string): string {
   const option = REPORT_REASON_OPTIONS.find((entry) => entry.value === reason);
   const trimmedNotes = notes.trim();
@@ -125,6 +156,7 @@ export default function ImposterGame() {
   const [isReporting, setIsReporting] = useState(false);
   const [endReason, setEndReason] = useState<EndReason>("");
   const [imposterFate, setImposterFate] = useState<ImposterFate>("");
+  const [roundCount, setRoundCount] = useState(0);
 
   const enteredPlayerCount = useMemo(
     () => countEnteredPlayerNames(playerNames),
@@ -166,6 +198,7 @@ export default function ImposterGame() {
     }
 
     if (timeLeft <= 0) {
+      triggerTimerAlarm();
       setEndReason((current) => current || "TIME_OVER");
       setStep("result");
       return undefined;
@@ -294,6 +327,7 @@ export default function ImposterGame() {
       setCurrentPlayerIndex(0);
       setCurrentReveal(null);
       setTimeLeft(payload.timer_seconds);
+      setRoundCount((c) => c + 1);
       setStep("reveal");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Could not create the round.");
@@ -564,6 +598,7 @@ export default function ImposterGame() {
         <div className="inline-meta">
           <span>Category: {resolvedCategory}</span>
           <span>Timer: {formatDuration(session.timer_seconds)}</span>
+          <span>Round: {roundCount}</span>
         </div>
 
         <div className="word-title-row">

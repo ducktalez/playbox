@@ -11,6 +11,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import MillionaireGame from "./MillionaireGame";
+import DuelGame from "./DuelGame";
+import LeaderboardView from "./LeaderboardView";
 import QuestionForm from "./QuestionForm";
 
 const API_BASE =
@@ -46,7 +48,7 @@ type QuestionOut = {
 type AttemptOut = {
   correct: boolean;
   correct_answer_id: string;
-  explanation: string | null;
+  note: string | null;
   player_elo_before: number;
   player_elo_after: number;
   question_elo_before: number;
@@ -58,6 +60,8 @@ const ANSWER_LABELS = ["A", "B", "C", "D"] as const;
 export default function QuizGame() {
   const [step, setStep] = useState<Step>("setup");
   const [millionaireActive, setMillionaireActive] = useState(false);
+  const [duelActive, setDuelActive] = useState(false);
+  const [leaderboardActive, setLeaderboardActive] = useState(false);
   const [questionFormActive, setQuestionFormActive] = useState(false);
   const [player, setPlayer] = useState<PlayerOut | null>(null);
   const [session, setSession] = useState<SessionOut | null>(null);
@@ -75,6 +79,10 @@ export default function QuizGame() {
   const [correctCount, setCorrectCount] = useState(0);
   const [startElo, setStartElo] = useState(1200);
 
+  // Tag filter for speed mode
+  const [availableTags, setAvailableTags] = useState<{ id: string; name: string; question_count: number }[]>([]);
+  const [selectedTag, setSelectedTag] = useState<string>("");
+
   // Slide animation key — changes per question to re-trigger animation
   const [slideKey, setSlideKey] = useState(0);
 
@@ -84,6 +92,16 @@ export default function QuizGame() {
   const [timedOut, setTimedOut] = useState(false);
 
   const isSpeedMode = duelMode === "duel-speed";
+
+  // --- Load available tags ---
+  useEffect(() => {
+    let ignore = false;
+    fetch(`${API_BASE}/tags`)
+      .then((r) => r.json())
+      .then((data) => { if (!ignore) setAvailableTags(data); })
+      .catch(() => {});
+    return () => { ignore = true; };
+  }, []);
 
   // --- Timer countdown ---
   useEffect(() => {
@@ -122,6 +140,12 @@ export default function QuizGame() {
       return;
     }
 
+    // Duel 1v1 has its own dedicated component
+    if (selectedMode === "duel") {
+      setDuelActive(true);
+      return;
+    }
+
     setDuelMode(selectedMode);
     const modeForBackend = selectedMode === "duel-speed" ? "speed" : selectedMode;
 
@@ -148,8 +172,9 @@ export default function QuizGame() {
       setSession(sData);
 
       const limit = selectedMode === "millionaire" ? 15 : 10;
+      const tagParam = selectedTag ? `&tag=${encodeURIComponent(selectedTag)}` : "";
       const qRes = await fetch(
-        `${API_BASE}/questions?balanced_categories=true&limit=${limit}`,
+        `${API_BASE}/questions?balanced_categories=true&limit=${limit}${tagParam}`,
       );
       if (!qRes.ok)
         throw new Error(`Question fetch failed: ${qRes.status}`);
@@ -249,6 +274,8 @@ export default function QuizGame() {
   const reset = () => {
     setStep("setup");
     setMillionaireActive(false);
+    setDuelActive(false);
+    setLeaderboardActive(false);
     setQuestionFormActive(false);
     setPlayer(null);
     setSession(null);
@@ -266,6 +293,16 @@ export default function QuizGame() {
   // --- MILLIONAIRE (dedicated component) ---
   if (millionaireActive) {
     return <MillionaireGame onBack={reset} />;
+  }
+
+  // --- DUEL 1v1 (dedicated component) ---
+  if (duelActive) {
+    return <DuelGame onBack={reset} />;
+  }
+
+  // --- LEADERBOARD ---
+  if (leaderboardActive) {
+    return <LeaderboardView onBack={reset} />;
   }
 
   // --- QUESTION FORM ---
@@ -300,7 +337,39 @@ export default function QuizGame() {
           >
             ⚡ Single Player
           </button>
+
+          {availableTags.length > 0 && (
+            <div className="quiz-tag-filter">
+              <p className="quiz-tag-filter__label">🏷️ Tag-Filter (optional)</p>
+              <div className="choice-chips" style={{ justifyContent: "center" }}>
+                {selectedTag && (
+                  <button
+                    className="choice-chip choice-chip--selected"
+                    onClick={() => setSelectedTag("")}
+                  >
+                    ✕ Alle
+                  </button>
+                )}
+                {availableTags.map((t) => (
+                  <button
+                    key={t.id}
+                    className={`choice-chip${selectedTag === t.name ? " choice-chip--selected" : ""}`}
+                    onClick={() => setSelectedTag(selectedTag === t.name ? "" : t.name)}
+                  >
+                    {t.name} ({t.question_count})
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <hr style={{ width: "100%", border: "1px solid #333", margin: "0.5rem 0" }} />
+          <button
+            className="quiz-mode-btn"
+            onClick={() => setLeaderboardActive(true)}
+          >
+            🏆 Leaderboard
+          </button>
           <button
             className="quiz-mode-btn"
             onClick={() => setQuestionFormActive(true)}
@@ -336,6 +405,12 @@ export default function QuizGame() {
             onClick={reset}
           >
             Nochmal spielen
+          </button>
+          <button
+            className="quiz-mode-btn"
+            onClick={() => { setStep("setup"); setLeaderboardActive(true); }}
+          >
+            🏆 Leaderboard
           </button>
         </div>
       </div>
@@ -433,10 +508,10 @@ export default function QuizGame() {
                 {Math.round(attempt.player_elo_after)}
               </p>
 
-              {attempt.explanation && (
+              {attempt.note && (
                 <div className="quiz-explanation">
-                  <div className="quiz-explanation__title">💡 Erklärung</div>
-                  {attempt.explanation}
+                  <div className="quiz-explanation__title">💡 Hinweis</div>
+                  {attempt.note}
                 </div>
               )}
 

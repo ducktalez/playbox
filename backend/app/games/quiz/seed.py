@@ -18,11 +18,13 @@ DEFAULT_SEED_PATH = Path(__file__).with_name("seed_questions.yaml")
 DEFAULT_CREATED_BY = "PlayBox quiz seed"
 
 # Map tier → starting ELO score for seeded questions.
+# All tiers start at the same BASE_ELO (1200) so the ELO system self-calibrates
+# naturally through gameplay rather than relying on pre-seeded difficulty offsets.
 # Tier 1 = easy (WWM levels 1-5), Tier 2 = medium (6-10), Tier 3 = hard (11-15).
 TIER_ELO_MAP: dict[int, float] = {
-    1: 1000.0,
+    1: 1200.0,
     2: 1200.0,
-    3: 1500.0,
+    3: 1200.0,
 }
 
 
@@ -44,7 +46,7 @@ class SeedQuestionIn(BaseModel):
     """A question definition inside the quiz seed file."""
 
     text: str = Field(..., max_length=1000)
-    explanation: str | None = Field(default=None, max_length=2000)
+    note: str | None = Field(default=None, max_length=2000)
     category: str | None = None
     tier: int | None = Field(default=None, ge=1)
     tags: list[str] = Field(default_factory=list)
@@ -173,7 +175,7 @@ def seed_quiz_dataset(db: Session, dataset: QuizSeedFile) -> QuizSeedResult:
 
         question = Question(
             text=question_data.text,
-            explanation=question_data.explanation,
+            note=question_data.note,
             category_id=category_id,
             elo_score=elo_score,
             media_url=question_data.media_url,

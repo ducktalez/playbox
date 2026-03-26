@@ -76,6 +76,7 @@ export default function PiccoloGame() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isStarting, setIsStarting] = useState(false);
   const [isLoadingChallenge, setIsLoadingChallenge] = useState(false);
+  const [slideKey, setSlideKey] = useState(0);
 
   const selectedIntensity = INTENSITY_OPTIONS.find((option) => option.value === intensity);
 
@@ -158,6 +159,7 @@ export default function PiccoloGame() {
       }
 
       setCurrentChallenge(payload);
+      setSlideKey((k) => k + 1);
     } catch (error) {
       setCurrentChallenge(null);
       setErrorMessage(error instanceof Error ? error.message : "Could not load the next challenge.");
@@ -319,7 +321,7 @@ export default function PiccoloGame() {
           {selectedIntensity && <p className="helper-text">{selectedIntensity.description}</p>}
 
           {currentChallenge ? (
-            <>
+            <div key={slideKey} className="piccolo-challenge-slide">
               <div className="choice-chips">
                 <span className="choice-chip choice-chip--selected">
                   {CATEGORY_LABELS[currentChallenge.category] ?? currentChallenge.category}
@@ -336,7 +338,7 @@ export default function PiccoloGame() {
               <p className="helper-text piccolo-card__hint">
                 {isLoadingChallenge ? "Loading next challenge..." : "Tap anywhere for the next challenge"}
               </p>
-            </>
+            </div>
           ) : (
             <p className="helper-text">No challenge loaded yet.</p>
           )}

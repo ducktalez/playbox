@@ -9,7 +9,7 @@
  * - Sound effects served from /media/sounds/wwm/
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 
 const API_BASE =
   typeof window !== "undefined"
@@ -125,6 +125,47 @@ function getWrongSfx(level: number): HTMLAudioElement {
 
 const ANSWER_LABELS = ["A", "B", "C", "D"] as const;
 
+// --- Confetti Particles (pure CSS, no dependencies) ---
+const CONFETTI_COLORS = ["#f5a623", "#22c55e", "#3b82f6", "#ef4444", "#a855f7", "#facc15", "#06b6d4"];
+
+function ConfettiParticles({ count = 35 }: { count?: number }) {
+  const particles = useMemo(
+    () =>
+      Array.from({ length: count }, (_, i) => ({
+        id: i,
+        x: Math.random() * 100,
+        delay: Math.random() * 1.2,
+        duration: 1.8 + Math.random() * 1.5,
+        color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+        size: 7 + Math.random() * 9,
+        isRect: Math.random() > 0.5,
+        rotate: Math.random() * 360,
+      })),
+    [count],
+  );
+
+  return (
+    <div className="wwm-confetti" aria-hidden>
+      {particles.map((p) => (
+        <div
+          key={p.id}
+          className="wwm-confetti__particle"
+          style={{
+            left: `${p.x}%`,
+            width: `${p.size}px`,
+            height: p.isRect ? `${p.size * 0.45}px` : `${p.size}px`,
+            background: p.color,
+            borderRadius: p.isRect ? "2px" : "50%",
+            animationDelay: `${p.delay}s`,
+            animationDuration: `${p.duration}s`,
+            transform: `rotate(${p.rotate}deg)`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 // --- Types ---
 type PlayerOut = { id: string; name: string; elo_score: number };
 type SessionOut = { id: string; mode: string; player_id: string; score: number };
@@ -133,7 +174,7 @@ type QuestionOut = {
   answers: { id: string; text: string }[];
 };
 type AttemptOut = {
-  correct: boolean; correct_answer_id: string; explanation: string | null;
+  correct: boolean; correct_answer_id: string; note: string | null;
   player_elo_before: number; player_elo_after: number;
   question_elo_before: number; question_elo_after: number;
 };
@@ -165,6 +206,16 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
 
   // Reveal delay state — mimics WWM suspense pause
   const [revealing, setRevealing] = useState(false);
+
+  // Safety / Win celebration overlay
+  const [celebratingSafety, setCelebratingSafety] = useState<5 | 10 | null>(null);
+
+  // Auto-dismiss safety celebration after 2.5 s
+  useEffect(() => {
+    if (!celebratingSafety) return;
+    const t = setTimeout(() => setCelebratingSafety(null), 2500);
+    return () => clearTimeout(t);
+  }, [celebratingSafety]);
 
   // --- Current level (1-indexed) ---
   const currentLevel = currentIdx + 1;
@@ -281,6 +332,7 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
           } else if (SAFETY_LEVELS.has(currentLevel)) {
             const safetySfx = currentLevel === 5 ? sfx.safety1 : sfx.safety2;
             setTimeout(() => playSfx(safetySfx), 1500);
+            setCelebratingSafety(currentLevel as 5 | 10);
           }
         } else {
           // Phone joker second chance
@@ -389,11 +441,14 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
       : getSafetyPrize();
     return (
       <div className="wwm-container">
+        {gameWon && <ConfettiParticles count={60} />}
         <div className="wwm-result">
           <h1 className="wwm-result__title">
             {gameWon ? "🏆 ELITE-HAIDER!" : "Leider verloren!"}
           </h1>
-          <div className="wwm-result__prize">{finalPrize}</div>
+          <div className={`wwm-result__prize${gameWon ? " wwm-result__prize--win" : ""}`}>
+            {finalPrize}
+          </div>
           {!gameWon && (
             <p className="wwm-result__safety">
               Gesichert bei: {getSafetyPrize()}
@@ -419,6 +474,20 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="wwm-container">
+      {/* Safety mark celebration overlay */}
+      {celebratingSafety && (
+        <div className="wwm-safety-overlay" aria-live="assertive">
+          <ConfettiParticles count={30} />
+          <div className="wwm-safety-overlay__content">
+            <div className="wwm-safety-overlay__icon">🛡️</div>
+            <div className="wwm-safety-overlay__amount">
+              {celebratingSafety === 5 ? "€500" : "€16.000"}
+            </div>
+            <div className="wwm-safety-overlay__label">GESICHERT!</div>
+          </div>
+        </div>
+      )}
+
       {/* Header: Back + Jokers */}
       <div className="wwm-header">
         <button className="wwm-back" onClick={onBack} title="Zurück">←</button>
@@ -548,10 +617,10 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
                       <p className="wwm-feedback__text wwm-feedback__text--correct">
                         ✓ Richtig! {PRIZE_LADDER[currentIdx]?.prize} gesichert!
                       </p>
-                      {attempt.explanation && (
+                      {attempt.note && (
                         <div className="wwm-explanation">
-                          <div className="wwm-explanation__title">💡 Erklärung</div>
-                          {attempt.explanation}
+                          <div className="wwm-explanation__title">💡 Hinweis</div>
+                          {attempt.note}
                         </div>
                       )}
                       <button className="wwm-btn wwm-btn--primary" onClick={nextQuestion}>
@@ -572,10 +641,10 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
                       <p className="wwm-feedback__text wwm-feedback__text--wrong">
                         ✗ Leider falsch!
                       </p>
-                      {attempt.explanation && (
+                      {attempt.note && (
                         <div className="wwm-explanation">
-                          <div className="wwm-explanation__title">💡 Erklärung</div>
-                          {attempt.explanation}
+                          <div className="wwm-explanation__title">💡 Hinweis</div>
+                          {attempt.note}
                         </div>
                       )}
                       <p className="wwm-feedback__safety">

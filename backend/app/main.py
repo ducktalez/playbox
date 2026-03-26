@@ -3,11 +3,14 @@
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import settings
 from app.core.database import init_pg_db, init_sqlite_db
+from app.core.errors import AppError, STATUS_CODE_MAP
 from app.games.imposter.router import router as imposter_router
 from app.games.piccolo.router import router as piccolo_router
 from app.games.quiz.router import router as quiz_router
@@ -57,6 +60,36 @@ def create_app() -> FastAPI:
     @application.get("/health", tags=["System"])
     async def health_check() -> dict[str, str]:
         return {"status": "ok"}
+
+    # --- Standardized error responses: { "detail": "...", "code": "..." } ---
+
+    @application.exception_handler(AppError)
+    async def app_error_handler(_request: Request, exc: AppError) -> JSONResponse:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail, "code": exc.code},
+        )
+
+    @application.exception_handler(HTTPException)
+    async def http_exception_handler(_request: Request, exc: HTTPException) -> JSONResponse:
+        code = STATUS_CODE_MAP.get(exc.status_code, "ERROR")
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": str(exc.detail), "code": code},
+        )
+
+    @application.exception_handler(SQLAlchemyError)
+    async def sqlalchemy_error_handler(_request: Request, exc: SQLAlchemyError) -> JSONResponse:
+        """Catch unhandled DB errors (e.g. schema drift, missing column) and return 500.
+
+        Prevents raw tracebacks from crashing the ASGI app.
+        In development, the detail includes the raw error to aid debugging.
+        TODO: post-dev — strip internal detail from production responses.
+        """
+        return JSONResponse(
+            status_code=500,
+            content={"detail": str(exc).splitlines()[0], "code": "DATABASE_ERROR"},
+        )
 
     return application
 

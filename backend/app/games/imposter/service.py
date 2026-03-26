@@ -4,6 +4,7 @@ import random
 import uuid
 from datetime import datetime, timezone
 
+from app.core.errors import AppError
 from app.games.imposter.schemas import SessionOut, WordOut, WordReportOut
 
 
@@ -342,10 +343,10 @@ class ImposterService:
         """Reveal what a player sees — word or IMPOSTER."""
         session = _sessions.get(session_id)
         if not session:
-            return {"error": "Session not found"}
+            raise AppError(404, "Session not found", "SESSION_NOT_FOUND")
 
         if player_index < 0 or player_index >= len(session["player_names"]):
-            return {"error": "Invalid player index"}
+            raise AppError(422, "Invalid player index", "INVALID_PLAYER_INDEX")
 
         is_imposter = player_index == session["imposter_index"]
         return {

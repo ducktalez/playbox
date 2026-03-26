@@ -57,15 +57,18 @@ def test_get_player(quiz_client) -> None:
 
 
 def test_get_player_not_found(quiz_client) -> None:
-    """GET /api/v1/quiz/players/{id} should return 404 for unknown player."""
+    """GET /api/v1/quiz/players/{id} should return 404 with error code."""
     resp = quiz_client.get(f"/api/v1/quiz/players/{uuid.uuid4()}")
     assert resp.status_code == 404
+    data = resp.json()
+    assert "detail" in data
+    assert data["code"] == "PLAYER_NOT_FOUND"
 
 
 # --- Question endpoints ---
 
 
-def _create_question_payload(category_id: str | None = None, explanation: str | None = None) -> dict:
+def _create_question_payload(category_id: str | None = None, note: str | None = None) -> dict:
     """Helper: build a valid question creation payload."""
     payload: dict = {
         "text": "Wie heißt der Drachenlord mit bürgerlichem Namen?",
@@ -79,8 +82,8 @@ def _create_question_payload(category_id: str | None = None, explanation: str | 
     }
     if category_id:
         payload["category_id"] = category_id
-    if explanation:
-        payload["explanation"] = explanation
+    if note:
+        payload["note"] = note
     return payload
 
 
@@ -138,9 +141,11 @@ def test_get_question(quiz_client) -> None:
 
 
 def test_get_question_not_found(quiz_client) -> None:
-    """GET /api/v1/quiz/questions/{id} should return 404 for unknown question."""
+    """GET /api/v1/quiz/questions/{id} should return 404 with error code."""
     resp = quiz_client.get(f"/api/v1/quiz/questions/{uuid.uuid4()}")
     assert resp.status_code == 404
+    data = resp.json()
+    assert data["code"] == "QUESTION_NOT_FOUND"
 
 
 def test_list_questions(quiz_client) -> None:
@@ -322,40 +327,41 @@ def test_submit_attempt_invalid_answer(quiz_client) -> None:
         json={"answer_id": str(uuid.uuid4()), "player_id": player_id, "session_id": session_id},
     )
     assert resp.status_code == 422
+    assert resp.json()["code"] == "INVALID_ANSWER"
 
 
-# --- Explanation ---
+# --- note ---
 
 
-def test_create_question_with_explanation(quiz_client) -> None:
-    """POST /api/v1/quiz/questions with explanation should store it."""
-    payload = _create_question_payload(explanation="Rainer Winkler ist der bürgerliche Name des Drachenlords.")
+def test_create_question_with_note(quiz_client) -> None:
+    """POST /api/v1/quiz/questions with note should store it."""
+    payload = _create_question_payload(note="Rainer Winkler ist der bürgerliche Name des Drachenlords.")
     resp = quiz_client.post("/api/v1/quiz/questions", json=payload)
     assert resp.status_code == 200
     data = resp.json()
-    assert data["explanation"] == "Rainer Winkler ist der bürgerliche Name des Drachenlords."
+    assert data["note"] == "Rainer Winkler ist der bürgerliche Name des Drachenlords."
 
 
-def test_create_question_without_explanation(quiz_client) -> None:
-    """POST /api/v1/quiz/questions without explanation should default to None."""
+def test_create_question_without_note(quiz_client) -> None:
+    """POST /api/v1/quiz/questions without note should default to None."""
     resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
     assert resp.status_code == 200
-    assert resp.json()["explanation"] is None
+    assert resp.json()["note"] is None
 
 
-def test_get_question_hides_explanation(quiz_client) -> None:
-    """GET /api/v1/quiz/questions/{id} should hide explanation during gameplay."""
-    payload = _create_question_payload(explanation="This should be hidden.")
+def test_get_question_hides_note(quiz_client) -> None:
+    """GET /api/v1/quiz/questions/{id} should hide note during gameplay."""
+    payload = _create_question_payload(note="This should be hidden.")
     create_resp = quiz_client.post("/api/v1/quiz/questions", json=payload)
     qid = create_resp.json()["id"]
     resp = quiz_client.get(f"/api/v1/quiz/questions/{qid}")
     assert resp.status_code == 200
-    assert resp.json()["explanation"] is None
+    assert resp.json()["note"] is None
 
 
-def test_submit_attempt_returns_explanation(quiz_client) -> None:
-    """POST attempt should include the question explanation in the response."""
-    player_resp = quiz_client.post("/api/v1/quiz/players", json={"name": "ExplainTester"})
+def test_submit_attempt_returns_note(quiz_client) -> None:
+    """POST attempt should include the question note in the response."""
+    player_resp = quiz_client.post("/api/v1/quiz/players", json={"name": "NoteTester"})
     player_id = player_resp.json()["id"]
     sess_resp = quiz_client.post(
         "/api/v1/quiz/sessions",
@@ -363,7 +369,7 @@ def test_submit_attempt_returns_explanation(quiz_client) -> None:
     )
     session_id = sess_resp.json()["id"]
 
-    payload = _create_question_payload(explanation="Das ist die Erklärung.")
+    payload = _create_question_payload(note="Das ist die Anmerkung.")
     q_resp = quiz_client.post("/api/v1/quiz/questions", json=payload)
     q_data = q_resp.json()
     qid = q_data["id"]
@@ -374,12 +380,12 @@ def test_submit_attempt_returns_explanation(quiz_client) -> None:
         json={"answer_id": correct_answer_id, "player_id": player_id, "session_id": session_id},
     )
     assert resp.status_code == 200
-    assert resp.json()["explanation"] == "Das ist die Erklärung."
+    assert resp.json()["note"] == "Das ist die Anmerkung."
 
 
-def test_submit_attempt_returns_null_explanation_when_absent(quiz_client) -> None:
-    """POST attempt without question explanation should return null."""
-    player_resp = quiz_client.post("/api/v1/quiz/players", json={"name": "NoExplain"})
+def test_submit_attempt_returns_null_note_when_absent(quiz_client) -> None:
+    """POST attempt without question note should return null."""
+    player_resp = quiz_client.post("/api/v1/quiz/players", json={"name": "NoNote"})
     player_id = player_resp.json()["id"]
     sess_resp = quiz_client.post(
         "/api/v1/quiz/sessions",
@@ -397,7 +403,7 @@ def test_submit_attempt_returns_null_explanation_when_absent(quiz_client) -> Non
         json={"answer_id": correct_answer_id, "player_id": player_id, "session_id": session_id},
     )
     assert resp.status_code == 200
-    assert resp.json()["explanation"] is None
+    assert resp.json()["note"] is None
 
 
 # --- Jokers ---
@@ -418,12 +424,13 @@ def test_fifty_fifty_returns_two_wrong_answers(quiz_client) -> None:
 
 
 def test_fifty_fifty_not_found(quiz_client) -> None:
-    """POST fifty-fifty for unknown question should return 404."""
+    """POST fifty-fifty for unknown question should return 404 with error code."""
     resp = quiz_client.post(
         f"/api/v1/quiz/questions/{uuid.uuid4()}/fifty-fifty",
         json={"displayed_answer_ids": [str(uuid.uuid4())] * 4},
     )
     assert resp.status_code == 404
+    assert resp.json()["code"] == "QUESTION_NOT_FOUND"
 
 
 def test_audience_poll_returns_percentages(quiz_client) -> None:
@@ -441,12 +448,13 @@ def test_audience_poll_returns_percentages(quiz_client) -> None:
 
 
 def test_audience_poll_not_found(quiz_client) -> None:
-    """POST audience-poll for unknown question should return 404."""
+    """POST audience-poll for unknown question should return 404 with error code."""
     resp = quiz_client.post(
         f"/api/v1/quiz/questions/{uuid.uuid4()}/audience-poll",
         json={"displayed_answer_ids": [str(uuid.uuid4())] * 4},
     )
     assert resp.status_code == 404
+    assert resp.json()["code"] == "QUESTION_NOT_FOUND"
 
 
 def test_phone_joker_returns_hint(quiz_client) -> None:
@@ -464,12 +472,13 @@ def test_phone_joker_returns_hint(quiz_client) -> None:
 
 
 def test_phone_joker_not_found(quiz_client) -> None:
-    """POST phone-joker for unknown question should return 404."""
+    """POST phone-joker for unknown question should return 404 with error code."""
     resp = quiz_client.post(
         f"/api/v1/quiz/questions/{uuid.uuid4()}/phone-joker",
         json={"displayed_answer_ids": [str(uuid.uuid4())] * 4},
     )
     assert resp.status_code == 404
+    assert resp.json()["code"] == "QUESTION_NOT_FOUND"
 
 
 # --- Sessions ---
@@ -553,15 +562,17 @@ def test_finish_session_is_idempotent(quiz_client) -> None:
 
 
 def test_finish_session_not_found(quiz_client) -> None:
-    """POST /api/v1/quiz/sessions/{id}/finish should return 404 for unknown session."""
+    """POST /api/v1/quiz/sessions/{id}/finish should return 404 with error code."""
     resp = quiz_client.post(f"/api/v1/quiz/sessions/{uuid.uuid4()}/finish")
     assert resp.status_code == 404
+    assert resp.json()["code"] == "SESSION_NOT_FOUND"
 
 
 def test_get_session_not_found(quiz_client) -> None:
-    """GET /api/v1/quiz/sessions/{id} should return 404 for unknown session."""
+    """GET /api/v1/quiz/sessions/{id} should return 404 with error code."""
     resp = quiz_client.get(f"/api/v1/quiz/sessions/{uuid.uuid4()}")
     assert resp.status_code == 404
+    assert resp.json()["code"] == "SESSION_NOT_FOUND"
 
 
 def test_create_session_millionaire_mode(quiz_client) -> None:
@@ -787,9 +798,10 @@ def test_seed_quiz_dataset_maps_tier_to_elo(db_session) -> None:
     ).scalars().all()
 
     assert len(questions) == 3
-    assert questions[0].elo_score == 1000.0  # tier 1
+    # All tiers now start at 1200 — ELO calibrates naturally through gameplay
+    assert questions[0].elo_score == 1200.0  # tier 1
     assert questions[1].elo_score == 1200.0  # tier 2
-    assert questions[2].elo_score == 1500.0  # tier 3
+    assert questions[2].elo_score == 1200.0  # tier 3
 
 
 # --- Health check ---
@@ -800,5 +812,4 @@ def test_health(client) -> None:
     resp = client.get("/health")
     assert resp.status_code == 200
     assert resp.json() == {"status": "ok"}
-
 

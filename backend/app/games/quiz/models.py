@@ -48,7 +48,7 @@ class Question(SQLModel, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     text: str = Field(max_length=1000)
-    explanation: str | None = Field(default=None, max_length=2000)
+    note: str | None = Field(default=None, max_length=2000)  # optional hint shown after answering
     category_id: uuid.UUID | None = Field(default=None, foreign_key="categories.id")
     elo_score: float = Field(default=1200.0)
     media_url: str | None = Field(default=None, max_length=500)

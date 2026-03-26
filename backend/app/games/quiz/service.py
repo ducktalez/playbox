@@ -5,7 +5,7 @@ import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
 
-from fastapi import HTTPException
+from app.core.errors import AppError
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -126,11 +126,11 @@ class QuizService:
         # Validate: at least one correct answer
         correct_count = sum(1 for a in data.answers if a.is_correct)
         if correct_count < 1:
-            raise HTTPException(status_code=422, detail="At least one answer must be marked as correct")
+            raise AppError(422, "At least one answer must be marked as correct", "NO_CORRECT_ANSWER")
 
         question = Question(
             text=data.text,
-            explanation=data.explanation,
+            note=data.note,
             category_id=data.category_id,
             media_url=data.media_url,
             media_type=data.media_type,
@@ -161,7 +161,7 @@ class QuizService:
         """Get a question with a randomized subset of answers (1 correct + N-1 wrong)."""
         question = self.db.get(Question, question_id)
         if not question or question.deleted_at is not None:
-            raise HTTPException(status_code=404, detail="Question not found")
+            raise AppError(404, "Question not found", "QUESTION_NOT_FOUND")
 
         correct = [a for a in question.answers if a.is_correct]
         wrong = [a for a in question.answers if not a.is_correct]
@@ -177,7 +177,7 @@ class QuizService:
         random.shuffle(selected)  # noqa: S311
 
         out = self._question_to_out(question)
-        out.explanation = None  # Hide explanation during gameplay
+        out.note = None  # Hide note during gameplay
         out.answers = [AnswerOut(id=a.id, text=a.text) for a in selected]  # Hide is_correct
         return out
 
@@ -185,15 +185,15 @@ class QuizService:
         """Submit an answer and update ELO scores."""
         question = self.db.get(Question, question_id)
         if not question:
-            raise HTTPException(status_code=404, detail="Question not found")
+            raise AppError(404, "Question not found", "QUESTION_NOT_FOUND")
 
         player = self.db.get(Player, data.player_id)
         if not player:
-            raise HTTPException(status_code=404, detail="Player not found")
+            raise AppError(404, "Player not found", "PLAYER_NOT_FOUND")
 
         answer = self.db.get(Answer, data.answer_id)
         if not answer or answer.question_id != question_id:
-            raise HTTPException(status_code=422, detail="Invalid answer for this question")
+            raise AppError(422, "Invalid answer for this question", "INVALID_ANSWER")
 
         # Calculate ELO
         player_elo_before = player.elo_score
@@ -226,7 +226,7 @@ class QuizService:
         return AttemptOut(
             correct=answer.is_correct,
             correct_answer_id=correct_answer.id,
-            explanation=question.explanation,
+            note=question.note,
             player_elo_before=player_elo_before,
             player_elo_after=new_player_elo,
             question_elo_before=question_elo_before,
@@ -279,7 +279,7 @@ class QuizService:
         """Get a player by ID."""
         player = self.db.get(Player, player_id)
         if not player:
-            raise HTTPException(status_code=404, detail="Player not found")
+            raise AppError(404, "Player not found", "PLAYER_NOT_FOUND")
         return self._player_to_out(player)
 
     # --- Sessions ---
@@ -288,7 +288,7 @@ class QuizService:
         """Start a new quiz session."""
         player = self.db.get(Player, data.player_id)
         if not player:
-            raise HTTPException(status_code=404, detail="Player not found")
+            raise AppError(404, "Player not found", "PLAYER_NOT_FOUND")
 
         session = GameSession(mode=data.mode, player_id=data.player_id)
         self.db.add(session)
@@ -304,14 +304,14 @@ class QuizService:
         """Get a session by ID."""
         session = self.db.get(GameSession, session_id)
         if not session:
-            raise HTTPException(status_code=404, detail="Session not found")
+            raise AppError(404, "Session not found", "SESSION_NOT_FOUND")
         return self._session_to_out(session)
 
     def finish_session(self, session_id: uuid.UUID) -> SessionOut:
         """Finish a session and persist its final score."""
         session = self.db.get(GameSession, session_id)
         if not session:
-            raise HTTPException(status_code=404, detail="Session not found")
+            raise AppError(404, "Session not found", "SESSION_NOT_FOUND")
 
         correct_attempts = self.db.scalar(
             select(func.count())
@@ -353,7 +353,7 @@ class QuizService:
         """Return 2 wrong answer IDs from the displayed set for 50:50 joker."""
         question = self.db.get(Question, question_id)
         if not question:
-            raise HTTPException(status_code=404, detail="Question not found")
+            raise AppError(404, "Question not found", "QUESTION_NOT_FOUND")
 
         displayed_ids = set(data.displayed_answer_ids)
         wrong_displayed = [a for a in question.answers if a.id in displayed_ids and not a.is_correct]
@@ -365,7 +365,7 @@ class QuizService:
         """Generate fake audience poll results biased toward the correct answer."""
         question = self.db.get(Question, question_id)
         if not question:
-            raise HTTPException(status_code=404, detail="Question not found")
+            raise AppError(404, "Question not found", "QUESTION_NOT_FOUND")
 
         displayed_ids = set(data.displayed_answer_ids)
         displayed = [a for a in question.answers if a.id in displayed_ids]
@@ -392,7 +392,7 @@ class QuizService:
         """Drachenlord phone joker — gives a hint with varying confidence."""
         question = self.db.get(Question, question_id)
         if not question:
-            raise HTTPException(status_code=404, detail="Question not found")
+            raise AppError(404, "Question not found", "QUESTION_NOT_FOUND")
 
         displayed_ids = set(data.displayed_answer_ids)
         displayed = [a for a in question.answers if a.id in displayed_ids]
@@ -430,7 +430,7 @@ class QuizService:
         return QuestionOut(
             id=question.id,
             text=question.text,
-            explanation=question.explanation,
+            note=question.note,
             category=question.category.name if question.category else None,
             tags=[t.name for t in question.tags] if question.tags else [],
             elo_score=question.elo_score,

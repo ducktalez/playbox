@@ -36,8 +36,8 @@
 
 ## Phase 1 — Imposter MVP
 
-- Done: core backend flow is available (`words`, `report`, `session`, reveal endpoint), and the frontend now supports player setup, pass-and-play reveals, a discussion timer, and a post-round report flow.
-- Open: expand seed data, add offline support, and complete medium-priority UX options.
+- Done: core backend flow is available (`words`, `report`, `session`, reveal endpoint), and the frontend now supports player setup, pass-and-play reveals, a discussion timer, a post-round report flow, category filters, configurable timer, sound/vibration alerts, and round history.
+- Open: offline support (requires PWA/Service Worker).
 
 ### High Priority
 
@@ -55,15 +55,15 @@
 
 ### Medium Priority
 
-- [ ] Category filter for word selection
-- [ ] Configurable timer duration
-- [ ] Sound/vibration on timer end
-- [ ] Round history (how many rounds played)
+- [x] Category filter for word selection
+- [x] Configurable timer duration
+- [x] Sound/vibration on timer end
+- [x] Round history (how many rounds played)
 
 ## Phase 2 — Piccolo MVP
 
-- Done: in-memory challenge pool, session-based gameplay, backend challenge endpoints, tests, a minimal frontend setup/next-challenge flow, and category-balanced session ordering are implemented.
-- Open: add offline support, richer challenge pools, and medium-priority UX polish.
+- Done: in-memory challenge pool, session-based gameplay, backend challenge endpoints, tests, a minimal frontend setup/next-challenge flow, category-balanced session ordering, and slide-in transitions between challenges are implemented.
+- Open: add offline support, richer challenge pools.
 
 ### High Priority
 
@@ -81,7 +81,7 @@
 
 - [x] Challenge types: dare, question, group, versus, vote
 - [x] Ensure no immediate repeat of challenges
-- [ ] Animations / transitions between challenges
+- [x] Animations / transitions between challenges
 
 ## Phase 3 — Quiz MVP ("Wer wird Elite-Hater?")
 
@@ -101,14 +101,17 @@
 - Wrong answer → falls back to last safety mark prize
 - Results screen: final prize, ELO, option to play again
 
-### "Quizduell" (1v1 — Future)
-- Solo player (MVP) or real 1v1 duel (future via WebSocket)
-- 10 questions (alternating if 1v1)
-- Optional category selection (future refinement)
-- Same Q&A flow as Millionär
+### "Quizduell" (1v1 — Local MVP ✓)
+- Two players on one device, pass-and-play
+- Name entry (falls back to "Spieler 1" / "Spieler 2")
+- 10 questions (alternating: odd → P1, even → P2)
+- Handover screen between turns ("Gib das Gerät an ...")
+- Live score display during gameplay
+- Same Q&A flow as other modes
 - Tracks: correct count per player
-- Winner: most correct answers
-- Results: show winner, final ELO, replay option
+- Winner: most correct answers (or draw)
+- Results: show winner, both ELOs, replay option
+- Future: real 1v1 duel via WebSocket
 
 ### "Quizduell Speed" (Solo Speed Mode) ✨ NEW
 - Solo player races against 20-second countdown timer
@@ -163,8 +166,8 @@
 | Leaderboard | Yes (ELO) | Yes (wins) | Yes (ELO) |
 | Leaderboard | Yes | Yes (wins/loss) |
 
-- Done: PostgreSQL models, Alembic scaffolding, the session finish flow, and most core backend endpoints are present.
-- Open: complete the remaining frontend game modes, expand the starter question set, and standardize API error payloads.
+- Done: PostgreSQL models, Alembic scaffolding, the session finish flow, all three game modes (Millionär, 1v1 local duel, Speed), question form, jokers, standardized error payloads, and most core backend endpoints are present.
+- Open: player profiles, tag-based quiz creation, and real-time 1v1 via WebSocket.
 
 ### High Priority
 
@@ -179,7 +182,7 @@
 - [x] Frontend: Question loop (display Q + 4 answers, submit, show feedback)
 - [x] Frontend: Results screen (final ELO, play again)
 - [x] Frontend: Quizduell Speed mode (20-second timer, 10 questions, auto-advance)
-- [ ] Frontend: Quizduell 1v1 mode — alternating turns (requires opponent logic)
+- [x] Frontend: Quizduell 1v1 mode — local pass-and-play duel (DuelGame component)
 - [x] Frontend: question submission form (text, correct answer, wrong answers, category, tags)
 - [x] Seed initial Drachenlord question set (~50+ questions)
 - [x] Player creation (name + UUID, no auth)
@@ -227,10 +230,10 @@
 
 ### Visual Enhancements
 
-- [ ] Animated spotlight / lens flare effects between questions
+- [x] Animated spotlight flash on question entry (brightness + slide-in CSS animation)
 - [x] Dramatic pause before revealing correct answer (1.8-second delay with orange-gold pulsing)
-- [ ] Confetti / particle effects on reaching safety marks
-- [ ] Full-screen celebration on winning €1 Million
+- [x] Confetti / particle effects on reaching safety marks (pure CSS, auto-dismiss overlay)
+- [x] Full-screen celebration on winning €1 Million (confetti rain + pulsing gold prize)
 
 ## Phase 4 — Quiz ELO + Media
 
@@ -278,7 +281,7 @@
 - [x] Implement minimal Imposter frontend flow (name entry + reveal + timer)
 - [x] Implement minimal Piccolo frontend flow (name entry + category/intensity + next challenge)
 - [x] Add Quiz seed script for initial question set (minimal, file-based)
-- [ ] Add/update API error payloads to consistently include `{ detail, code }`
+- [x] Add/update API error payloads to consistently include `{ detail, code }`
 
 ## Backlog (Unscheduled)
 
@@ -312,9 +315,15 @@
 - Shared PyCharm run configurations (`.run/`) and local IDE copies via `setup.py`
 - Drachenlord seed question set (50+ questions across 8 categories, tier-based ELO)
 - ELO-based question ordering for Millionär mode (ascending difficulty)
-- Backend tests: `test_imposter.py` (7), `test_piccolo.py` (18), `test_quiz.py` (45), `test_elo.py` (8)
+- Backend tests: `test_imposter.py` (9), `test_piccolo.py` (18), `test_quiz.py` (45), `test_elo.py` (8), `test_health` (1) — total 85
 - WWM sound system: 25 MP3 files, tier-appropriate bg music, lock-in sting, 1.8s reveal delay, joker/safety/win sounds
 - WWM visual: orange-gold lock-in color, pulsing reveal animation, diamond answer buttons
+- WWM visual: safety-mark confetti celebration overlay (Level 5/10), win confetti rain, spotlight flash between questions
+- ELO base unified at 1200 for all tiers — system self-calibrates through gameplay (TIER_ELO_MAP all 1200.0)
+- Imposter: category filter, configurable timer, sound/vibration on timer end, round history counter
+- Piccolo: slide-in animation transitions between challenges
+- Standardized API error payloads: `{ "detail": "...", "code": "MACHINE_READABLE_CODE" }` via `AppError` + global exception handlers
+- Quizduell 1v1: local pass-and-play duel mode (DuelGame component, two players, alternating turns, scores, winner)
 
 ## Dependencies
 

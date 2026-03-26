@@ -1,5 +1,10 @@
 """Tests for the Imposter game service."""
 
+import uuid
+
+import pytest
+
+from app.core.errors import AppError
 from app.games.imposter.service import ImposterService
 
 
@@ -81,7 +86,25 @@ def test_report_word() -> None:
     """Should create a report."""
     service = ImposterService()
     words = service.get_words()
-    import uuid
     report = service.report_word(word_id=uuid.UUID(words[0]["id"]), reason="test reason")
     assert report.reason == "test reason"
+
+
+def test_reveal_player_session_not_found() -> None:
+    """Reveal for unknown session should raise AppError with SESSION_NOT_FOUND."""
+    service = ImposterService()
+    with pytest.raises(AppError) as exc_info:
+        service.reveal_player(session_id=uuid.uuid4(), player_index=0)
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.code == "SESSION_NOT_FOUND"
+
+
+def test_reveal_player_invalid_index() -> None:
+    """Reveal with out-of-range player index should raise AppError with INVALID_PLAYER_INDEX."""
+    service = ImposterService()
+    session = service.create_session(player_names=["A", "B", "C"])
+    with pytest.raises(AppError) as exc_info:
+        service.reveal_player(session_id=session.id, player_index=99)
+    assert exc_info.value.status_code == 422
+    assert exc_info.value.code == "INVALID_PLAYER_INDEX"
 
