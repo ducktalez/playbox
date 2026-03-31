@@ -63,6 +63,12 @@ class SeedQuestionIn(BaseModel):
         if not isinstance(data, dict):
             return data
 
+        # Coerce tag values to strings (YAML parses bare years like 2011 as int)
+        tags = data.get("tags")
+        if isinstance(tags, list):
+            data = dict(data)
+            data["tags"] = [str(t) for t in tags]
+
         answers = data.get("answers")
         if not isinstance(answers, list):
             return data

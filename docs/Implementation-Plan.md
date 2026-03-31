@@ -3,7 +3,7 @@
 ## Current Status
 
 **Phase:** Execution in Progress
-**Last Updated:** 2026-03-25
+**Last Updated:** 2026-03-26
 
 ## Roadmap
 
@@ -315,7 +315,7 @@
 - Shared PyCharm run configurations (`.run/`) and local IDE copies via `setup.py`
 - Drachenlord seed question set (50+ questions across 8 categories, tier-based ELO)
 - ELO-based question ordering for Millionär mode (ascending difficulty)
-- Backend tests: `test_imposter.py` (9), `test_piccolo.py` (18), `test_quiz.py` (45), `test_elo.py` (8), `test_health` (1) — total 85
+- Backend tests: `test_imposter.py` (9), `test_piccolo.py` (18), `test_quiz.py` (45), `test_elo.py` (8), `test_smoke.py` (6), `test_health` (1) — total 91
 - WWM sound system: 25 MP3 files, tier-appropriate bg music, lock-in sting, 1.8s reveal delay, joker/safety/win sounds
 - WWM visual: orange-gold lock-in color, pulsing reveal animation, diamond answer buttons
 - WWM visual: safety-mark confetti celebration overlay (Level 5/10), win confetti rain, spotlight flash between questions
@@ -324,6 +324,9 @@
 - Piccolo: slide-in animation transitions between challenges
 - Standardized API error payloads: `{ "detail": "...", "code": "MACHINE_READABLE_CODE" }` via `AppError` + global exception handlers
 - Quizduell 1v1: local pass-and-play duel mode (DuelGame component, two players, alternating turns, scores, winner)
+- Seed YAML tag coercion fix (integer year tags like `2011` auto-converted to strings)
+- Smoke tests: `test_smoke.py` covers full Millionär game flow, jokers, leaderboard, and DB table creation from scratch
+- conftest.py `sys.path` fix ensures in-memory SQLite override works correctly for quiz tests
 
 ## Dependencies
 

@@ -262,7 +262,7 @@ questions:
   - text: What kind of legal outcome did Drachenlord face in 2021?
     category: Legal & Regulation
     tier: 2
-    tags: [legal, court, sentence, 2021, safe-core]
+    tags: [legal, court, sentence, "2021", safe-core]
     note: "In 2021, Drachenlord was sentenced in a first-instance court proceeding."
     created_by: PlayBox quiz seed
     answers: ["Verurteilung (erstinstanzlich)", ["Freispruch", "Einstellung des Verfahrens", "Geldstrafe ohne Bewährung"]]
