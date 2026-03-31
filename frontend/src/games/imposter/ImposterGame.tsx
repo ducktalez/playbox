@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { PlayerNameFields } from "../../core/PlayerNameFields";
 import { countEnteredPlayerNames, normalizePlayerNames } from "../../core/playerRegistration";
+import { cacheWordList, createOfflineSession, revealOffline } from "./offlineSession";
 
 const API_BASE = "/api/v1/imposter";
 const MIN_PLAYERS = 3;
@@ -157,6 +158,7 @@ export default function ImposterGame() {
   const [endReason, setEndReason] = useState<EndReason>("");
   const [imposterFate, setImposterFate] = useState<ImposterFate>("");
   const [roundCount, setRoundCount] = useState(0);
+  const [isOffline, setIsOffline] = useState(false);
 
   const enteredPlayerCount = useMemo(
     () => countEnteredPlayerNames(playerNames),
@@ -185,7 +187,20 @@ export default function ImposterGame() {
       }
     }
 
+    async function loadAndCacheWords() {
+      try {
+        const response = await fetch(`${API_BASE}/words`);
+        if (response.ok) {
+          const words = await response.json();
+          cacheWordList(words);
+        }
+      } catch {
+        // Offline or failed — cached words from previous session are still available
+      }
+    }
+
     void loadCategories();
+    void loadAndCacheWords();
 
     return () => {
       ignore = true;
@@ -328,9 +343,30 @@ export default function ImposterGame() {
       setCurrentReveal(null);
       setTimeLeft(payload.timer_seconds);
       setRoundCount((c) => c + 1);
+      setIsOffline(false);
       setStep("reveal");
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Could not create the round.");
+    } catch {
+      // Backend unreachable — try offline fallback
+      const offlineSession = createOfflineSession(
+        players,
+        selectedCategory || null,
+        timerSeconds,
+      );
+
+      if (offlineSession) {
+        setPlayerNames(players);
+        setSession(offlineSession as SessionResponse);
+        setCurrentPlayerIndex(0);
+        setCurrentReveal(null);
+        setTimeLeft(offlineSession.timer_seconds);
+        setRoundCount((c) => c + 1);
+        setIsOffline(true);
+        setStep("reveal");
+      } else {
+        setErrorMessage(
+          "Offline und keine gecachten Wörter vorhanden. Bitte einmal online spielen, um Wörter zu cachen.",
+        );
+      }
     } finally {
       setIsStarting(false);
     }
@@ -344,14 +380,27 @@ export default function ImposterGame() {
     setIsRevealing(true);
     setErrorMessage("");
 
+    // Offline mode — compute reveal locally
+    if (isOffline) {
+      setCurrentReveal(
+        revealOffline(session as Parameters<typeof revealOffline>[0], currentPlayerIndex),
+      );
+      setIsRevealing(false);
+      return;
+    }
+
     try {
       const response = await fetch(
         `${API_BASE}/session/${session.id}/reveal/${currentPlayerIndex}`,
       );
       const payload = await parseApiResponse<RevealResponse>(response);
       setCurrentReveal(payload);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Could not reveal the player view.");
+    } catch {
+      // Network failed mid-game — fall back to local reveal
+      setCurrentReveal(
+        revealOffline(session as Parameters<typeof revealOffline>[0], currentPlayerIndex),
+      );
+      setIsOffline(true);
     } finally {
       setIsRevealing(false);
     }
@@ -477,6 +526,9 @@ export default function ImposterGame() {
 
           {categoriesError && (
             <p className="helper-text">Categories are optional: {categoriesError}</p>
+          )}
+          {isOffline && (
+            <p className="helper-text">📴 Offline-Modus — Spiel läuft lokal mit gecachten Wörtern.</p>
           )}
           {errorMessage && <p className="alert-text">{errorMessage}</p>}
 

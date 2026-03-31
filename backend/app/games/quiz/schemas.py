@@ -138,6 +138,18 @@ class PlayerOut(BaseModel):
     correct_count: int
 
 
+class PlayerProfileOut(BaseModel):
+    """Extended player profile with session history."""
+
+    id: uuid.UUID
+    name: str
+    elo_score: float
+    games_played: int
+    correct_count: int
+    accuracy: float  # correct_count / total_attempts (0.0 if none)
+    recent_sessions: list["SessionOut"]
+
+
 # --- Sessions ---
 
 class SessionCreateIn(BaseModel):

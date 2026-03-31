@@ -13,6 +13,7 @@ import { useState, useEffect, useCallback } from "react";
 import MillionaireGame from "./MillionaireGame";
 import DuelGame from "./DuelGame";
 import LeaderboardView from "./LeaderboardView";
+import PlayerProfile from "./PlayerProfile";
 import QuestionForm from "./QuestionForm";
 
 const API_BASE =
@@ -62,6 +63,7 @@ export default function QuizGame() {
   const [millionaireActive, setMillionaireActive] = useState(false);
   const [duelActive, setDuelActive] = useState(false);
   const [leaderboardActive, setLeaderboardActive] = useState(false);
+  const [profileActive, setProfileActive] = useState(false);
   const [questionFormActive, setQuestionFormActive] = useState(false);
   const [player, setPlayer] = useState<PlayerOut | null>(null);
   const [session, setSession] = useState<SessionOut | null>(null);
@@ -305,6 +307,11 @@ export default function QuizGame() {
     return <LeaderboardView onBack={reset} />;
   }
 
+  // --- PLAYER PROFILE ---
+  if (profileActive && player) {
+    return <PlayerProfile playerId={player.id} onBack={() => setProfileActive(false)} />;
+  }
+
   // --- QUESTION FORM ---
   if (questionFormActive) {
     return <QuestionForm onBack={reset} />;
@@ -370,6 +377,14 @@ export default function QuizGame() {
           >
             🏆 Leaderboard
           </button>
+          {player && (
+            <button
+              className="quiz-mode-btn"
+              onClick={() => setProfileActive(true)}
+            >
+              👤 Mein Profil
+            </button>
+          )}
           <button
             className="quiz-mode-btn"
             onClick={() => setQuestionFormActive(true)}

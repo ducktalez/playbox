@@ -35,6 +35,7 @@ from app.games.quiz.schemas import (
     PhoneJokerOut,
     PlayerCreateIn,
     PlayerOut,
+    PlayerProfileOut,
     QuestionCreateIn,
     QuestionListOut,
     QuestionOut,
@@ -339,6 +340,51 @@ class QuizService:
         if not player:
             raise AppError(404, "Player not found", "PLAYER_NOT_FOUND")
         return self._player_to_out(player)
+
+    def get_player_profile(self, player_id: uuid.UUID) -> PlayerProfileOut:
+        """Get extended player profile including accuracy and recent sessions."""
+        player = self.db.get(Player, player_id)
+        if not player:
+            raise AppError(404, "Player not found", "PLAYER_NOT_FOUND")
+
+        # Compute accuracy from total attempts
+        total_attempts = self.db.scalar(
+            select(func.count(QuestionAttempt.id)).where(QuestionAttempt.player_id == player_id)
+        ) or 0
+        accuracy = (player.correct_count / total_attempts) if total_attempts > 0 else 0.0
+
+        # Recent sessions (last 10, newest first)
+        sessions = self.db.execute(
+            select(GameSession)
+            .where(GameSession.player_id == player_id)
+            .order_by(GameSession.started_at.desc())
+            .limit(10)
+        ).scalars().all()
+
+        return PlayerProfileOut(
+            id=player.id,
+            name=player.name,
+            elo_score=player.elo_score,
+            games_played=player.games_played,
+            correct_count=player.correct_count,
+            accuracy=round(accuracy, 4),
+            recent_sessions=[self._session_to_out(s) for s in sessions],
+        )
+
+    def get_player_sessions(self, player_id: uuid.UUID, limit: int = 20) -> list[SessionOut]:
+        """List sessions for a player (newest first)."""
+        player = self.db.get(Player, player_id)
+        if not player:
+            raise AppError(404, "Player not found", "PLAYER_NOT_FOUND")
+
+        sessions = self.db.execute(
+            select(GameSession)
+            .where(GameSession.player_id == player_id)
+            .order_by(GameSession.started_at.desc())
+            .limit(limit)
+        ).scalars().all()
+
+        return [self._session_to_out(s) for s in sessions]
 
     # --- Sessions ---
 

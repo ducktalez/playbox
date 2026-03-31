@@ -65,6 +65,90 @@ def test_get_player_not_found(quiz_client) -> None:
     assert data["code"] == "PLAYER_NOT_FOUND"
 
 
+def test_get_player_profile(quiz_client) -> None:
+    """GET /api/v1/quiz/players/{id}/profile should return profile with accuracy and sessions."""
+    # Create player
+    player_resp = quiz_client.post("/api/v1/quiz/players", json={"name": "Profiler"})
+    player_id = player_resp.json()["id"]
+
+    # Create a session and play a question
+    session_resp = quiz_client.post(
+        "/api/v1/quiz/sessions", json={"mode": "speed", "player_id": player_id}
+    )
+    session_id = session_resp.json()["id"]
+
+    # Create a question and submit a correct attempt
+    q_payload = _create_question_payload()
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=q_payload)
+    q_data = q_resp.json()
+    q_id = q_data["id"]
+
+    # Get the correct answer from the POST response (which includes is_correct)
+    correct_id = next(a["id"] for a in q_data["answers"] if a["is_correct"])
+
+    quiz_client.post(
+        f"/api/v1/quiz/questions/{q_id}/attempt",
+        json={"player_id": player_id, "session_id": session_id, "answer_id": correct_id},
+    )
+
+    # Finish session
+    quiz_client.post(f"/api/v1/quiz/sessions/{session_id}/finish")
+
+    # Get profile
+    resp = quiz_client.get(f"/api/v1/quiz/players/{player_id}/profile")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["name"] == "Profiler"
+    assert data["games_played"] == 1
+    assert data["correct_count"] == 1
+    assert data["accuracy"] == 1.0
+    assert len(data["recent_sessions"]) == 1
+    assert data["recent_sessions"][0]["id"] == session_id
+
+
+def test_get_player_profile_not_found(quiz_client) -> None:
+    """GET /api/v1/quiz/players/{id}/profile should return 404 for unknown player."""
+    resp = quiz_client.get(f"/api/v1/quiz/players/{uuid.uuid4()}/profile")
+    assert resp.status_code == 404
+    assert resp.json()["code"] == "PLAYER_NOT_FOUND"
+
+
+def test_get_player_profile_zero_accuracy(quiz_client) -> None:
+    """Player with no attempts should have accuracy 0.0."""
+    player_resp = quiz_client.post("/api/v1/quiz/players", json={"name": "NewGuy"})
+    player_id = player_resp.json()["id"]
+    resp = quiz_client.get(f"/api/v1/quiz/players/{player_id}/profile")
+    assert resp.status_code == 200
+    assert resp.json()["accuracy"] == 0.0
+    assert resp.json()["recent_sessions"] == []
+
+
+def test_get_player_sessions(quiz_client) -> None:
+    """GET /api/v1/quiz/players/{id}/sessions should list player's sessions."""
+    player_resp = quiz_client.post("/api/v1/quiz/players", json={"name": "SessionPlayer"})
+    player_id = player_resp.json()["id"]
+
+    # Create 3 sessions
+    for mode in ["speed", "millionaire", "speed"]:
+        quiz_client.post(
+            "/api/v1/quiz/sessions", json={"mode": mode, "player_id": player_id}
+        )
+
+    resp = quiz_client.get(f"/api/v1/quiz/players/{player_id}/sessions")
+    assert resp.status_code == 200
+    sessions = resp.json()
+    assert len(sessions) == 3
+    # Newest first
+    assert sessions[0]["mode"] == "speed"
+
+
+def test_get_player_sessions_not_found(quiz_client) -> None:
+    """GET /api/v1/quiz/players/{id}/sessions should return 404 for unknown player."""
+    resp = quiz_client.get(f"/api/v1/quiz/players/{uuid.uuid4()}/sessions")
+    assert resp.status_code == 404
+    assert resp.json()["code"] == "PLAYER_NOT_FOUND"
+
+
 # --- Question endpoints ---
 
 
@@ -445,6 +529,66 @@ def test_list_tags(quiz_client) -> None:
     tag_names = [t["name"] for t in data]
     assert "drachenlord" in tag_names
     assert "basics" in tag_names
+
+
+def test_list_questions_filter_by_tag(quiz_client) -> None:
+    """GET /api/v1/quiz/questions?tag=X should return only questions tagged with X."""
+    # Create two questions with different tags
+    payload_a = _create_question_payload()
+    payload_a["text"] = "Tagged A?"
+    payload_a["tags"] = ["alpha-tag"]
+    quiz_client.post("/api/v1/quiz/questions", json=payload_a)
+
+    payload_b = _create_question_payload()
+    payload_b["text"] = "Tagged B?"
+    payload_b["tags"] = ["beta-tag"]
+    quiz_client.post("/api/v1/quiz/questions", json=payload_b)
+
+    resp = quiz_client.get("/api/v1/quiz/questions?tag=alpha-tag")
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    assert len(items) >= 1
+    assert all("alpha-tag" in item["tags"] for item in items)
+    assert all("Tagged B?" != item["text"] for item in items)
+
+
+def test_list_questions_filter_by_unknown_tag(quiz_client) -> None:
+    """GET /api/v1/quiz/questions?tag=nonexistent should return empty list."""
+    quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    resp = quiz_client.get("/api/v1/quiz/questions?tag=nonexistent-tag-xyz")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["items"] == []
+    assert data["total"] == 0
+
+
+def test_list_questions_filter_by_tag_with_balanced_categories(quiz_client) -> None:
+    """Tag filter combined with balanced_categories should work without errors."""
+    cat_a = quiz_client.post("/api/v1/quiz/categories", json={"name": "TagCatA"}).json()["id"]
+    cat_b = quiz_client.post("/api/v1/quiz/categories", json={"name": "TagCatB"}).json()["id"]
+
+    # Create 4 questions: 2 per category, all with same tag
+    for i, cat_id in enumerate([cat_a, cat_a, cat_b, cat_b]):
+        payload = _create_question_payload(category_id=cat_id)
+        payload["text"] = f"Shared Tag Q{i}"
+        payload["tags"] = ["shared-tag", f"unique-{i}"]
+        quiz_client.post("/api/v1/quiz/questions", json=payload)
+
+    # Extra question WITHOUT shared-tag — should not appear
+    extra = _create_question_payload(category_id=cat_a)
+    extra["text"] = "No shared tag"
+    extra["tags"] = ["other-tag"]
+    quiz_client.post("/api/v1/quiz/questions", json=extra)
+
+    resp = quiz_client.get("/api/v1/quiz/questions?tag=shared-tag&balanced_categories=true&limit=4")
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    assert len(items) == 4
+    # All results should have the shared-tag
+    assert all("shared-tag" in item["tags"] for item in items)
+    # Balanced: first two should be from different categories
+    categories = [item["category"] for item in items]
+    assert categories[0] != categories[1], "Balanced tag filter should interleave categories"
 
 
 # --- Attempt / ELO ---

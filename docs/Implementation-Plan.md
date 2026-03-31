@@ -3,7 +3,7 @@
 ## Current Status
 
 **Phase:** Execution in Progress
-**Last Updated:** 2026-03-31
+**Last Updated:** 2026-04-01
 
 ## Roadmap
 
@@ -21,8 +21,8 @@
 
 ## Phase 0 — Scaffolding
 
-- Done: app factory, API mounting, `/health`, frontend Vite app, Docker, shared navigation, repo-root `.env` bootstrap, and PyCharm run configurations are in place.
-- Open: CI workflow and PWA shell are still missing.
+- Done: app factory, API mounting, `/health`, frontend Vite app, Docker, shared navigation, repo-root `.env` bootstrap, PyCharm run configurations, and **PWA shell** (manifest, Service Worker with Workbox runtime caching, SVG placeholder icons) are in place.
+- Open: CI workflow, proper PNG icons for production.
 
 - [ ] Initialize Git repo, push to GitHub
 - [x] Set up FastAPI backend with app factory pattern
@@ -30,14 +30,14 @@
 - [x] Docker Compose: backend + PostgreSQL + frontend dev server
 - [x] Production Dockerfile (backend serves built frontend)
 - [ ] GitHub Actions: lint + test pipeline
-- [ ] PWA basics: manifest.json, Service Worker shell
+- [x] PWA basics: manifest.json, Service Worker shell, Workbox runtime caching
 - [x] Shared layout / navigation between games
 - [x] Health endpoint `GET /health`
 
 ## Phase 1 — Imposter MVP
 
-- Done: core backend flow is available (`words`, `report`, `session`, reveal endpoint), and the frontend now supports player setup, pass-and-play reveals, a discussion timer, a post-round report flow, category filters, configurable timer, sound/vibration alerts, and round history.
-- Open: offline support (requires PWA/Service Worker).
+- Done: core backend flow is available (`words`, `report`, `session`, reveal endpoint), and the frontend now supports player setup, pass-and-play reveals, a discussion timer, a post-round report flow, category filters, configurable timer, sound/vibration alerts, round history, and **offline support** (client-side fallback with cached word list).
+- All Phase 1 items complete.
 
 ### High Priority
 
@@ -51,7 +51,7 @@
 - [x] Frontend: imposter assignment (random player sees "Imposter")
 - [x] Frontend: 5-minute discussion timer with alert
 - [x] Frontend: "report word" button
-- [ ] Offline support: cache word list in Service Worker
+- [x] Offline support: pre-cache word list via Service Worker (PWA shell ready)
 
 ### Medium Priority
 
@@ -62,8 +62,8 @@
 
 ## Phase 2 — Piccolo MVP
 
-- Done: in-memory challenge pool, session-based gameplay, backend challenge endpoints, tests, a minimal frontend setup/next-challenge flow, category-balanced session ordering, and slide-in transitions between challenges are implemented.
-- Open: add offline support, richer challenge pools.
+- Done: in-memory challenge pool, session-based gameplay, backend challenge endpoints, tests, a minimal frontend setup/next-challenge flow, category-balanced session ordering, slide-in transitions between challenges, and **offline support** (client-side fallback with cached challenge templates) are implemented.
+- All Phase 2 High Priority items complete.
 
 ### High Priority
 
@@ -75,7 +75,7 @@
 - [x] Frontend: challenge display with player name insertion
 - [x] Frontend: category selection
 - [x] Intensity level selector (mild / medium / spicy)
-- [ ] Offline support
+- [x] Offline support (PWA shell ready)
 
 ### Medium Priority
 
@@ -191,9 +191,9 @@
 
 - [x] Leaderboard (`GET /api/v1/quiz/leaderboard`)
 - [x] Balanced general question listing across categories
-- [ ] Player profile page with stats
+- [x] Player profile page with stats
 - [ ] Quizduell 1v1 real-time via WebSocket (requires opponent matchmaking)
-- [ ] Tag-based quiz creation (play questions filtered by tag)
+- [x] Tag-based quiz creation (play questions filtered by tag)
 - [x] Lifelines in Millionär mode (50:50, audience, phone)
 - [x] Randomized wrong answer selection from pool
 - [ ] Authentication system (replace "Gast" with real accounts)
@@ -223,7 +223,7 @@
 
 ### Question Tier / Difficulty Model
 
-- [ ] Evaluate whether `tier` field on Question model needs expansion for WWM difficulty curve
+- [x] Evaluate whether `tier` field on Question model needs expansion for WWM difficulty curve
 - [x] Map tiers to prize ladder levels (tier 1 = €50–€500, tier 2 = €1k–€16k, tier 3 = €32k+)
 - [x] ELO-based question ordering: serve easier questions first, harder later
 - [x] Category-balanced difficulty progression within a single game
@@ -270,18 +270,16 @@
 
 ### High Priority
 
-- [x] Add Piccolo endpoint `GET /api/v1/piccolo/challenges` (filterable by category/intensity)
-- [x] Add backend tests for Piccolo API in `backend/tests/test_piccolo.py`
-- [x] Add backend tests for Quiz API in `backend/tests/test_quiz.py`
-- [x] Complete Quiz session flow with explicit finish endpoint/state update
-- [x] Expand Imposter seed list to target at least 5-10 categories and 200+ words
+- [x] Evaluate whether `tier` field on Question model needs expansion for WWM difficulty curve
+  - **Result:** 3 tiers (1→1000, 2→1200, 3→1400) are sufficient. ELO self-calibrates through gameplay. Re-evaluate if question pool exceeds 500+.
+- [ ] Media upload endpoint (clips, images, documents) — Phase 4
+- [ ] Media display in question UI (video player, image viewer) — Phase 4
 
 ### Medium Priority
 
-- [x] Implement minimal Imposter frontend flow (name entry + reveal + timer)
-- [x] Implement minimal Piccolo frontend flow (name entry + category/intensity + next challenge)
-- [x] Add Quiz seed script for initial question set (minimal, file-based)
-- [x] Add/update API error payloads to consistently include `{ detail, code }`
+- [ ] Initialize Git repo, push to GitHub
+- [ ] GitHub Actions: lint + test pipeline
+- [ ] TODO: post-dev — generate proper PNG icons for PWA (replace SVG placeholders)
 
 ## Backlog (Unscheduled)
 
@@ -315,7 +313,7 @@
 - Shared PyCharm run configurations (`.run/`) and local IDE copies via `setup.py`
 - Drachenlord seed question set (75+ questions across 8 categories, tier-based ELO)
 - ELO-based question ordering for Millionär mode (ascending difficulty)
-- Backend tests: `test_imposter.py` (9), `test_piccolo.py` (18), `test_quiz.py` (56), `test_elo.py` (8), `test_smoke.py` (6), `test_health` (1) — total 102
+- Backend tests: `test_imposter.py` (9), `test_piccolo.py` (18), `test_quiz.py` (64), `test_elo.py` (8), `test_smoke.py` (6), `test_health` (1) — total 110 (all green)
 - WWM sound system: 25 MP3 files, tier-appropriate bg music, lock-in sting, 1.8s reveal delay, joker/safety/win sounds
 - WWM visual: orange-gold lock-in color, pulsing reveal animation, diamond answer buttons
 - WWM visual: safety-mark confetti celebration overlay (Level 5/10), win confetti rain, spotlight flash between questions
@@ -338,6 +336,13 @@
 - ELO-band balanced ordering: edge-case tests added (multi-category bands, single-category, fewer-than-band-size, empty DB)
 - Smoke test aligned with frontend: `test_full_millionaire_game_from_scratch` now uses `balanced_categories=true` matching MillionaireGame.tsx
 - Architecture.md updated with Question Ordering Strategy section and full Quiz API endpoint table
+- Tag-based quiz filtering: backend `?tag=` param + frontend tag chip selector tested end-to-end (3 new tests: filter, unknown tag, tag+balanced combo)
+- Player profile: `GET /players/{id}/profile` (accuracy + recent sessions), `GET /players/{id}/sessions` (history), frontend `PlayerProfile.tsx` component with "Mein Profil" button (5 new tests)
+- PWA shell: `vite-plugin-pwa` with Workbox runtime caching (NetworkFirst for API, CacheFirst for media), SPA navigation fallback, SVG placeholder icons, iOS PWA meta tags in `index.html`
+- Architecture.md updated with PWA Configuration section (caching strategies, offline capability per game)
+- Imposter offline support: client-side fallback with cached word list (localStorage), automatic offline session creation and reveal when backend unreachable, "Offline-Modus" indicator
+- Piccolo offline support: client-side fallback with cached challenge templates (localStorage), offline session with category-balanced challenge ordering, "Offline-Modus" indicator
+- Tier field evaluation: 3 tiers (1→1000, 2→1200, 3→1400) confirmed sufficient for current question pool size (~75). ELO self-calibrates; no model expansion needed.
 
 ## Dependencies
 

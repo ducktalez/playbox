@@ -1,7 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { PlayerNameFields } from "../../core/PlayerNameFields";
 import { normalizePlayerNames } from "../../core/playerRegistration";
+import {
+  cacheChallenges,
+  createOfflineSession,
+  nextOfflineChallenge,
+  type OfflineSession,
+} from "./offlineSession";
 
 const API_BASE = "/api/v1/piccolo";
 const MIN_PLAYERS = 2;
@@ -77,6 +83,8 @@ export default function PiccoloGame() {
   const [isStarting, setIsStarting] = useState(false);
   const [isLoadingChallenge, setIsLoadingChallenge] = useState(false);
   const [slideKey, setSlideKey] = useState(0);
+  const [isOffline, setIsOffline] = useState(false);
+  const offlineSessionRef = useRef<OfflineSession | null>(null);
 
   const selectedIntensity = INTENSITY_OPTIONS.find((option) => option.value === intensity);
 
@@ -101,7 +109,20 @@ export default function PiccoloGame() {
       }
     }
 
+    async function loadAndCacheChallenges() {
+      try {
+        const response = await fetch(`${API_BASE}/challenges`);
+        if (response.ok) {
+          const data = await response.json();
+          cacheChallenges(data);
+        }
+      } catch {
+        // Offline — cached challenges from previous session still available
+      }
+    }
+
     void loadCategories();
+    void loadAndCacheChallenges();
 
     return () => {
       ignore = true;
@@ -150,6 +171,19 @@ export default function PiccoloGame() {
     setIsLoadingChallenge(true);
     setErrorMessage("");
 
+    // Offline mode — compute challenge locally
+    if (isOffline && offlineSessionRef.current) {
+      const result = nextOfflineChallenge(offlineSessionRef.current);
+      if (result) {
+        setCurrentChallenge(result);
+        setSlideKey((k) => k + 1);
+      } else {
+        setErrorMessage("Keine Challenges mehr verfügbar.");
+      }
+      setIsLoadingChallenge(false);
+      return;
+    }
+
     try {
       const response = await fetch(`${API_BASE}/session/${sessionId}/next`);
       const payload = await parseApiResponse<ChallengeResponse>(response);
@@ -160,9 +194,21 @@ export default function PiccoloGame() {
 
       setCurrentChallenge(payload);
       setSlideKey((k) => k + 1);
-    } catch (error) {
-      setCurrentChallenge(null);
-      setErrorMessage(error instanceof Error ? error.message : "Could not load the next challenge.");
+    } catch {
+      // Network failed mid-game — try offline fallback
+      if (offlineSessionRef.current) {
+        const result = nextOfflineChallenge(offlineSessionRef.current);
+        if (result) {
+          setCurrentChallenge(result);
+          setSlideKey((k) => k + 1);
+          setIsOffline(true);
+        } else {
+          setErrorMessage("Could not load the next challenge.");
+        }
+      } else {
+        setCurrentChallenge(null);
+        setErrorMessage("Could not load the next challenge.");
+      }
     } finally {
       setIsLoadingChallenge(false);
     }
@@ -179,6 +225,7 @@ export default function PiccoloGame() {
     setIsStarting(true);
     setErrorMessage("");
     setCurrentChallenge(null);
+    offlineSessionRef.current = null;
 
     try {
       const response = await fetch(`${API_BASE}/session`, {
@@ -202,10 +249,39 @@ export default function PiccoloGame() {
       }
 
       setSession(payload);
+      setIsOffline(false);
       await loadNextChallenge(payload.id);
-    } catch (error) {
-      setSession(null);
-      setErrorMessage(error instanceof Error ? error.message : "Could not create the Piccolo session.");
+    } catch {
+      // Backend unreachable — try offline fallback
+      const offSession = createOfflineSession(
+        players,
+        intensity,
+        selectedCategories.length > 0 ? selectedCategories : null,
+      );
+
+      if (offSession) {
+        offlineSessionRef.current = offSession;
+        setPlayerNames(players);
+        setSession({
+          id: offSession.id,
+          player_names: offSession.player_names,
+          intensity: offSession.intensity,
+          total_challenges: offSession.total_challenges,
+        });
+        setIsOffline(true);
+
+        // Load first challenge offline
+        const first = nextOfflineChallenge(offSession);
+        if (first) {
+          setCurrentChallenge(first);
+          setSlideKey((k) => k + 1);
+        }
+      } else {
+        setSession(null);
+        setErrorMessage(
+          "Offline und keine gecachten Challenges vorhanden. Bitte einmal online spielen.",
+        );
+      }
     } finally {
       setIsStarting(false);
     }
@@ -273,6 +349,9 @@ export default function PiccoloGame() {
           </div>
 
           {errorMessage && <p className="alert-text">{errorMessage}</p>}
+          {isOffline && (
+            <p className="helper-text">📴 Offline-Modus — Spiel läuft lokal mit gecachten Challenges.</p>
+          )}
 
           <div className="button-row">
             <button

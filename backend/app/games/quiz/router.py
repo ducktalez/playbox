@@ -104,6 +104,7 @@ from app.games.quiz.schemas import (
     PhoneJokerOut,
     PlayerCreateIn,
     PlayerOut,
+    PlayerProfileOut,
     QuestionCreateIn,
     QuestionListOut,
     QuestionOut,
@@ -254,6 +255,22 @@ async def create_player(body: PlayerCreateIn, service: QuizService = Depends(get
 async def get_player(player_id: uuid.UUID, service: QuizService = Depends(get_service)) -> PlayerOut:
     """Get player profile and stats."""
     return service.get_player(player_id=player_id)
+
+
+@router.get("/players/{player_id}/profile", response_model=PlayerProfileOut)
+async def get_player_profile(player_id: uuid.UUID, service: QuizService = Depends(get_service)) -> PlayerProfileOut:
+    """Get extended player profile with accuracy and recent session history."""
+    return service.get_player_profile(player_id=player_id)
+
+
+@router.get("/players/{player_id}/sessions", response_model=list[SessionOut])
+async def get_player_sessions(
+    player_id: uuid.UUID,
+    limit: int = Query(default=20, ge=1, le=100),
+    service: QuizService = Depends(get_service),
+) -> list[SessionOut]:
+    """List sessions for a player (newest first)."""
+    return service.get_player_sessions(player_id=player_id, limit=limit)
 
 
 # --- Sessions ---

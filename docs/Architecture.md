@@ -213,6 +213,8 @@ As the community plays, question ELOs self-calibrate through the ELO update form
 | GET | `/tags` | List tags with question counts |
 | POST | `/players` | Create a player (guest) |
 | GET | `/players/{id}` | Player profile + stats |
+| GET | `/players/{id}/profile` | Extended profile with accuracy + recent sessions |
+| GET | `/players/{id}/sessions` | List player's sessions (newest first) |
 | POST | `/sessions` | Start a quiz session (mode: millionaire / duel / speed) |
 | GET | `/sessions/{id}` | Get session state |
 | POST | `/sessions/{id}/finish` | Finish session, persist score |
@@ -238,6 +240,30 @@ As the community plays, question ELOs self-calibrate through the ELO update form
 - **Optional lightweight player identity** for Quiz — player creates a name, gets a UUID, used for ELO tracking
 - No passwords, no OAuth — purely identification, not authentication
 - If a central identity system is later introduced via meta-repo, the player model can be migrated
+
+## PWA Configuration
+
+PlayBox is delivered as a Progressive Web App via `vite-plugin-pwa` (Workbox under the hood).
+
+| Aspect | Value | Notes |
+|--------|-------|-------|
+| Update strategy | `autoUpdate` | New SW activates immediately, no prompt |
+| Manifest | Inline in `vite.config.ts` | Generated as `manifest.webmanifest` at build |
+| Icons | SVG placeholders (`icon-512.svg`, `maskable-icon-512.svg`) | TODO: post-dev — generate PNG icons via `pwa-asset-generator` |
+| Precaching | All Vite build assets (JS, CSS, HTML) | Automatic via Workbox |
+| Navigation fallback | `/index.html` for all non-API routes | Enables SPA deep-link support offline |
+
+### Runtime Caching Strategies
+
+| URL Pattern | Strategy | Cache Name | TTL | Purpose |
+|-------------|----------|------------|-----|---------|
+| `/api/v1/*` | NetworkFirst | `api-cache` | 5 min, 50 entries | API responses — fresh when online, cached fallback offline |
+| `/media/*` | CacheFirst | `media-cache` | 30 days, 100 entries | Sound files, images — rarely change |
+
+**Offline capability per game:**
+- **Imposter / Piccolo**: word lists and challenge pools are cached via the `api-cache` strategy after the first fetch. Fully playable offline once cached.
+- **Quiz**: requires online for ELO updates. Questions are cached briefly but new games need network.
+- **Chess**: TBD.
 
 ## Deployment & Infrastructure
 
