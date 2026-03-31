@@ -76,8 +76,8 @@ def test_full_millionaire_game_from_scratch(seeded_quiz_client) -> None:
     assert session["mode"] == "millionaire"
     assert session["score"] == 0
 
-    # 3. Load 15 questions ordered by ELO (exactly like MillionaireGame.tsx)
-    q_list_resp = c.get("/api/v1/quiz/questions?order_by_elo=asc&limit=15")
+    # 3. Load 15 questions ordered by ELO with category balancing (exactly like MillionaireGame.tsx)
+    q_list_resp = c.get("/api/v1/quiz/questions?order_by_elo=asc&balanced_categories=true&limit=15")
     assert q_list_resp.status_code == 200, f"List questions failed: {q_list_resp.text}"
     q_list = q_list_resp.json()
     question_ids = [q["id"] for q in q_list["items"]]

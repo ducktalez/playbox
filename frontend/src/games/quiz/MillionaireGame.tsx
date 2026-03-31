@@ -257,7 +257,7 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
         if (!sRes.ok) throw new Error(`Session: ${sRes.status}`);
         setSession(await sRes.json());
 
-        const qRes = await fetch(`${API_BASE}/questions?order_by_elo=asc&limit=15`);
+        const qRes = await fetch(`${API_BASE}/questions?order_by_elo=asc&balanced_categories=true&limit=15`);
         if (!qRes.ok) throw new Error(`Questions: ${qRes.status}`);
         const qData = await qRes.json();
         const ids = qData.items.map((q: { id: string }) => q.id);

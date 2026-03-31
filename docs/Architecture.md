@@ -140,6 +140,33 @@ If player answers wrong:
 Base ELO for new questions: **1200**
 Base ELO for new players: **1200**
 
+### Question Ordering Strategy (Millionär Mode)
+
+Millionär mode needs 15 questions sorted easy→hard, but must avoid long runs of the same category. The API uses **ELO-band category balancing**:
+
+```
+Input:  ELO-sorted questions (ascending)
+
+Step 1: Split into bands of 5 questions each
+        Band 1 (levels 1-5):   easy questions
+        Band 2 (levels 6-10):  medium questions
+        Band 3 (levels 11-15): hard questions
+
+Step 2: Within each band, interleave by category
+        (round-robin: pick one question per category, repeat)
+
+Step 3: Concatenate bands → final question list
+```
+
+This is triggered via `GET /api/v1/quiz/questions?order_by_elo=asc&balanced_categories=true&limit=15`. The `_balance_within_elo_bands(band_size=5)` service method implements this.
+
+**Seeded tier ELO offsets** ensure a natural difficulty curve on fresh databases:
+- Tier 1 (easy): ELO 1000
+- Tier 2 (medium): ELO 1200
+- Tier 3 (hard): ELO 1400
+
+As the community plays, question ELOs self-calibrate through the ELO update formula.
+
 ## API Design
 
 - **Style:** RESTful
@@ -172,16 +199,24 @@ Base ELO for new players: **1200**
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/questions` | List questions (filter by category, tag, ELO range) |
+| GET | `/questions` | List questions (filter by category, tag, ELO; `balanced_categories`, `order_by_elo`) |
 | POST | `/questions` | Submit a new question with answers |
-| GET | `/questions/{id}` | Get question with randomized answer subset |
+| GET | `/questions/{id}` | Get question with randomized answer subset (`num_answers`) |
+| PATCH | `/questions/{id}` | Partial update of question fields |
+| DELETE | `/questions/{id}` | Soft-delete a question |
 | POST | `/questions/{id}/attempt` | Submit an answer, returns result + ELO update |
-| GET | `/categories` | List categories |
-| GET | `/tags` | List tags |
-| POST | `/sessions` | Start a quiz session (mode: millionaire / duel) |
-| GET | `/sessions/{id}` | Get session state |
-| GET | `/leaderboard` | Player leaderboard by ELO |
+| POST | `/questions/{id}/fifty-fifty` | 50:50 joker — remove 2 wrong answers |
+| POST | `/questions/{id}/audience-poll` | Audience poll joker — vote percentages |
+| POST | `/questions/{id}/phone-joker` | Phone joker — Drachenlord hint |
+| GET | `/categories` | List categories with question counts |
+| POST | `/categories` | Create a new category |
+| GET | `/tags` | List tags with question counts |
+| POST | `/players` | Create a player (guest) |
 | GET | `/players/{id}` | Player profile + stats |
+| POST | `/sessions` | Start a quiz session (mode: millionaire / duel / speed) |
+| GET | `/sessions/{id}` | Get session state |
+| POST | `/sessions/{id}/finish` | Finish session, persist score |
+| GET | `/leaderboard` | Player leaderboard by ELO |
 
 #### Chess — `/api/v1/chess/` _(low priority)_
 

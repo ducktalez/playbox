@@ -218,6 +218,130 @@ def test_list_questions_order_by_elo_asc(quiz_client) -> None:
     assert elo_scores == sorted(elo_scores), "Questions should be sorted by ascending ELO"
 
 
+def test_list_questions_elo_asc_with_balanced_categories(quiz_client) -> None:
+    """Combined order_by_elo=asc + balanced_categories should interleave categories within ELO bands."""
+    # Create 2 categories
+    cat_a = quiz_client.post("/api/v1/quiz/categories", json={"name": "Alpha"}).json()["id"]
+    cat_b = quiz_client.post("/api/v1/quiz/categories", json={"name": "Beta"}).json()["id"]
+
+    # Create 6 questions: 3 per category, all same ELO
+    for i in range(3):
+        payload = _create_question_payload(category_id=cat_a)
+        payload["text"] = f"Alpha Q{i}"
+        payload["tags"] = [f"alpha-{i}"]
+        quiz_client.post("/api/v1/quiz/questions", json=payload)
+
+    for i in range(3):
+        payload = _create_question_payload(category_id=cat_b)
+        payload["text"] = f"Beta Q{i}"
+        payload["tags"] = [f"beta-{i}"]
+        quiz_client.post("/api/v1/quiz/questions", json=payload)
+
+    resp = quiz_client.get("/api/v1/quiz/questions?order_by_elo=asc&balanced_categories=true&limit=6")
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    categories = [item["category"] for item in items]
+
+    # With balancing, the first two items should not be from the same category
+    # (categories should alternate: Alpha, Beta, Alpha, Beta, ...)
+    assert len(items) == 6
+    assert categories[0] != categories[1], "First two questions should be from different categories"
+
+
+def test_list_questions_elo_balanced_preserves_difficulty_progression(quiz_client) -> None:
+    """ELO bands should preserve overall ascending difficulty even with category interleaving.
+
+    Creates 9 questions across 3 categories (all default ELO 1200).
+    The balanced result must interleave categories within each 5-question band,
+    and no 3 consecutive questions should be from the same category.
+    """
+    cats = {}
+    for name in ["Lore", "Meme", "Alltag"]:
+        resp = quiz_client.post("/api/v1/quiz/categories", json={"name": name})
+        cats[name] = resp.json()["id"]
+
+    for cat_name in ["Lore", "Meme", "Alltag"]:
+        for i in range(3):
+            payload = _create_question_payload(category_id=cats[cat_name])
+            payload["text"] = f"{cat_name} Tier Question {i}"
+            payload["tags"] = [f"{cat_name.lower()}-tier-{i}"]
+            quiz_client.post("/api/v1/quiz/questions", json=payload)
+
+    resp = quiz_client.get(
+        "/api/v1/quiz/questions?order_by_elo=asc&balanced_categories=true&limit=9"
+    )
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    assert len(items) == 9
+
+    # Band 1 (positions 0-4): no 3 consecutive same-category questions
+    categories_band1 = [item["category"] for item in items[:5]]
+    for i in range(len(categories_band1) - 2):
+        triplet = categories_band1[i : i + 3]
+        assert len(set(triplet)) > 1, f"Three consecutive same-category in band 1: {triplet}"
+
+    # Overall: all 3 categories should appear
+    all_cats = {item["category"] for item in items}
+    assert all_cats == {"Lore", "Meme", "Alltag"}
+
+    # ELO should never decrease within the overall sequence (since all start at 1200)
+    elo_scores = [item["elo_score"] for item in items]
+    assert elo_scores == sorted(elo_scores), "Overall ELO order should be non-decreasing"
+
+
+def test_list_questions_elo_balanced_single_category(quiz_client) -> None:
+    """Balanced ELO ordering with a single category should still return all questions in ELO order."""
+    cat_id = quiz_client.post("/api/v1/quiz/categories", json={"name": "Solo"}).json()["id"]
+
+    for i in range(5):
+        payload = _create_question_payload(category_id=cat_id)
+        payload["text"] = f"Solo Question {i}"
+        payload["tags"] = [f"solo-{i}"]
+        quiz_client.post("/api/v1/quiz/questions", json=payload)
+
+    resp = quiz_client.get("/api/v1/quiz/questions?order_by_elo=asc&balanced_categories=true&limit=5")
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    assert len(items) == 5
+    # All same category — should still return them (not break)
+    assert all(item["category"] == "Solo" for item in items)
+    # ELO order preserved (all same ELO, so order by id is fine)
+    elo_scores = [item["elo_score"] for item in items]
+    assert elo_scores == sorted(elo_scores)
+
+
+def test_list_questions_elo_balanced_fewer_than_band_size(quiz_client) -> None:
+    """Balanced ELO ordering with fewer questions than band_size should not crash."""
+    cat_a = quiz_client.post("/api/v1/quiz/categories", json={"name": "FewA"}).json()["id"]
+    cat_b = quiz_client.post("/api/v1/quiz/categories", json={"name": "FewB"}).json()["id"]
+
+    payload_a = _create_question_payload(category_id=cat_a)
+    payload_a["text"] = "Few A Q1"
+    payload_a["tags"] = ["few-a"]
+    quiz_client.post("/api/v1/quiz/questions", json=payload_a)
+
+    payload_b = _create_question_payload(category_id=cat_b)
+    payload_b["text"] = "Few B Q1"
+    payload_b["tags"] = ["few-b"]
+    quiz_client.post("/api/v1/quiz/questions", json=payload_b)
+
+    resp = quiz_client.get("/api/v1/quiz/questions?order_by_elo=asc&balanced_categories=true&limit=2")
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    assert len(items) == 2
+    # Two different categories should be interleaved
+    assert items[0]["category"] != items[1]["category"]
+
+
+def test_list_questions_elo_balanced_empty_result(quiz_client) -> None:
+    """Balanced ELO ordering on empty DB should return empty list, not crash."""
+    resp = quiz_client.get("/api/v1/quiz/questions?order_by_elo=asc&balanced_categories=true&limit=15")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["items"] == []
+    assert data["total"] == 0
+
+
 def test_list_questions_order_by_elo_desc(quiz_client) -> None:
     """GET /api/v1/quiz/questions?order_by_elo=desc should return questions sorted by descending ELO."""
     for i in range(3):
@@ -877,10 +1001,10 @@ def test_seed_quiz_dataset_maps_tier_to_elo(db_session) -> None:
     ).scalars().all()
 
     assert len(questions) == 3
-    # All tiers now start at 1200 — ELO calibrates naturally through gameplay
-    assert questions[0].elo_score == 1200.0  # tier 1
-    assert questions[1].elo_score == 1200.0  # tier 2
-    assert questions[2].elo_score == 1200.0  # tier 3
+    # Tiers get distinct starting ELOs for difficulty curve on fresh DBs
+    assert questions[0].elo_score == 1000.0  # tier 1 (easy)
+    assert questions[1].elo_score == 1200.0  # tier 2 (medium)
+    assert questions[2].elo_score == 1400.0  # tier 3 (hard)
 
 
 # --- Health check ---

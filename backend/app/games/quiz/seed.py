@@ -18,13 +18,14 @@ DEFAULT_SEED_PATH = Path(__file__).with_name("seed_questions.yaml")
 DEFAULT_CREATED_BY = "PlayBox quiz seed"
 
 # Map tier → starting ELO score for seeded questions.
-# All tiers start at the same BASE_ELO (1200) so the ELO system self-calibrates
-# naturally through gameplay rather than relying on pre-seeded difficulty offsets.
+# Modest offsets give Millionär mode a natural difficulty curve on fresh databases.
+# The ELO system still self-calibrates through gameplay, but the initial spread
+# prevents all 15 questions from having identical difficulty at game start.
 # Tier 1 = easy (WWM levels 1-5), Tier 2 = medium (6-10), Tier 3 = hard (11-15).
 TIER_ELO_MAP: dict[int, float] = {
-    1: 1200.0,
+    1: 1000.0,
     2: 1200.0,
-    3: 1200.0,
+    3: 1400.0,
 }
 
 

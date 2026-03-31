@@ -226,7 +226,7 @@
 - [ ] Evaluate whether `tier` field on Question model needs expansion for WWM difficulty curve
 - [x] Map tiers to prize ladder levels (tier 1 = €50–€500, tier 2 = €1k–€16k, tier 3 = €32k+)
 - [x] ELO-based question ordering: serve easier questions first, harder later
-- [ ] Category-balanced difficulty progression within a single game
+- [x] Category-balanced difficulty progression within a single game
 
 ### Visual Enhancements
 
@@ -313,15 +313,15 @@
 - Quiz file-based starter seed importer (`python -m app.games.quiz.seed`)
 - Shared test fixtures in `conftest.py`
 - Shared PyCharm run configurations (`.run/`) and local IDE copies via `setup.py`
-- Drachenlord seed question set (50+ questions across 8 categories, tier-based ELO)
+- Drachenlord seed question set (75+ questions across 8 categories, tier-based ELO)
 - ELO-based question ordering for Millionär mode (ascending difficulty)
-- Backend tests: `test_imposter.py` (9), `test_piccolo.py` (18), `test_quiz.py` (51), `test_elo.py` (8), `test_smoke.py` (6), `test_health` (1) — total 97
+- Backend tests: `test_imposter.py` (9), `test_piccolo.py` (18), `test_quiz.py` (56), `test_elo.py` (8), `test_smoke.py` (6), `test_health` (1) — total 102
 - WWM sound system: 25 MP3 files, tier-appropriate bg music, lock-in sting, 1.8s reveal delay, joker/safety/win sounds
 - WWM visual: orange-gold lock-in color, pulsing reveal animation, diamond answer buttons
 - WWM visual: safety-mark confetti celebration overlay (Level 5/10), win confetti rain, spotlight flash between questions
 - WWM: "Nochmal spielen" replay button on game-over/won screen (re-triggers full init)
 - WWM: Phone joker second-chance bug fixed (wrong answer removed, user picks again)
-- ELO base unified at 1200 for all tiers — system self-calibrates through gameplay (TIER_ELO_MAP all 1200.0)
+- ELO tier offsets: tier 1 = 1000, tier 2 = 1200, tier 3 = 1400 — system self-calibrates through gameplay
 - Imposter: category filter, configurable timer, sound/vibration on timer end, round history counter
 - Piccolo: slide-in animation transitions between challenges
 - Standardized API error payloads: `{ "detail": "...", "code": "MACHINE_READABLE_CODE" }` via `AppError` + global exception handlers
@@ -332,6 +332,12 @@
 - conftest.py `sys.path` fix ensures in-memory SQLite override works correctly for quiz tests
 - Question CRUD: `PATCH /questions/{id}` (partial update) and `DELETE /questions/{id}` (soft-delete) with tests
 - Audience poll percentage distribution bug fixed (guaranteed sum = 100, deterministic remainder)
+- Tier-based initial ELO offsets restored: tier 1 = 1000, tier 2 = 1200, tier 3 = 1400 — gives Millionär a natural difficulty curve on fresh databases
+- Category-balanced difficulty within Millionär: ELO-sorted questions are interleaved by category within 5-question bands so one category doesn't dominate a difficulty tier
+- Seed data expanded to 75+ questions (added tier 1/2/3 questions across all categories for better replayability)
+- ELO-band balanced ordering: edge-case tests added (multi-category bands, single-category, fewer-than-band-size, empty DB)
+- Smoke test aligned with frontend: `test_full_millionaire_game_from_scratch` now uses `balanced_categories=true` matching MillionaireGame.tsx
+- Architecture.md updated with Question Ordering Strategy section and full Quiz API endpoint table
 
 ## Dependencies
 

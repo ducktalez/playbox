@@ -504,3 +504,186 @@ questions:
     note: "Archive platforms became the primary repositories for Drachenlord content, raising questions about right to be forgotten vs. documentation."
     created_by: PlayBox quiz seed
     answers: ["Sie wurden zu Hauptspeicherorten und warfen Fragen zum Recht auf Vergessenwerden auf", ["Alle Inhalte gingen vollständig verloren", "YouTube stellte alles wieder her", "Archive waren bereits vor der Löschung das Hauptmedium"]]
+
+  # ===== Additional Tier 1 (easy) — variety for Millionär levels 1-5 =====
+
+  - text: Which frontend framework does PlayBox use?
+    category: Web Basics
+    tier: 1
+    tags: [starter, frontend, react]
+    note: "PlayBox uses React with TypeScript, bundled via Vite."
+    created_by: PlayBox quiz seed
+    answers: ["React", ["Angular", "Vue.js", "Svelte"]]
+
+  - text: Which Python web framework powers the PlayBox backend?
+    category: PlayBox Basics
+    tier: 1
+    tags: [starter, backend, python]
+    note: "FastAPI is the async Python web framework used for the PlayBox backend."
+    created_by: PlayBox quiz seed
+    answers: ["FastAPI", ["Django", "Flask", "Express"]]
+
+  - text: What does API stand for?
+    category: Web Basics
+    tier: 1
+    tags: [starter, web, api]
+    note: "API = Application Programming Interface — a standard way for software components to communicate."
+    created_by: PlayBox quiz seed
+    answers: ["Application Programming Interface", ["Advanced Protocol Integration", "Automated Page Indexer", "Active Process Indicator"]]
+
+  - text: How many game modes does the PlayBox quiz currently have?
+    category: PlayBox Basics
+    tier: 1
+    tags: [starter, quiz, modes]
+    note: "The quiz has three modes: Millionär, Quizduell 1v1, and Speed."
+    created_by: PlayBox quiz seed
+    answers: ["3", ["1", "2", "5"]]
+
+  - text: What does Drachenlord typically eat on stream?
+    category: Identity & Basics
+    tier: 1
+    tags: [identity, food, content, safe-core]
+    note: "Drachenlord was known for cooking and eating large portions of fast food and simple dishes on stream."
+    created_by: PlayBox quiz seed
+    answers: ["Fast Food und einfache Gerichte", ["Vegane Bowls", "Sterneküche", "Rohkost"]]
+
+  - text: What type of pet did Drachenlord famously keep?
+    category: Identity & Basics
+    tier: 1
+    tags: [identity, pets, basics, safe-core]
+    note: "Drachenlord was known for keeping cats at his property."
+    created_by: PlayBox quiz seed
+    answers: ["Katzen", ["Hunde", "Papageien", "Schlangen"]]
+
+  - text: What does JSON stand for?
+    category: Web Basics
+    tier: 1
+    tags: [starter, web, json]
+    note: "JSON = JavaScript Object Notation, a common data interchange format."
+    created_by: PlayBox quiz seed
+    answers: ["JavaScript Object Notation", ["Java Serialized Object Network", "Joint Standard Open Notation", "JavaScript Online Node"]]
+
+  - text: What color theme is used for the WWM-style quiz interface?
+    category: PlayBox Basics
+    tier: 1
+    tags: [starter, frontend, wwm]
+    note: "The Millionär mode uses the classic WWM dark blue gradient with orange-gold highlights."
+    created_by: PlayBox quiz seed
+    answers: ["Dark blue with orange-gold highlights", ["Red and white", "Green and black", "Purple and silver"]]
+
+  # ===== Additional Tier 2 (medium) — variety for Millionär levels 6-10 =====
+
+  - text: What was the approximate number of YouTube subscribers at the peak of the Drachenlord channel?
+    category: Media & Documentation
+    tier: 2
+    tags: [media, youtube, statistics, safe-core]
+    note: "The Drachenlord channel had approximately 100,000+ subscribers at various points."
+    created_by: PlayBox quiz seed
+    answers: ["Über 100.000", ["Über 1 Million", "Unter 10.000", "Genau 50.000"]]
+
+  - text: Which municipality does Altschauerberg officially belong to?
+    category: Place & Infrastructure
+    tier: 2
+    tags: [place, municipality, geography, safe-core]
+    note: "Altschauerberg is part of the municipality of Emskirchen in the district of Neustadt an der Aisch-Bad Windsheim."
+    created_by: PlayBox quiz seed
+    answers: ["Emskirchen", ["Herzogenaurach", "Erlangen", "Fürth"]]
+
+  - text: What kind of music did Drachenlord try to produce?
+    category: Identity & Basics
+    tier: 2
+    tags: [identity, music, content, safe-core]
+    note: "Drachenlord attempted to create rap and metal music, which became a frequent topic of discussion."
+    created_by: PlayBox quiz seed
+    answers: ["Rap und Metal", ["Klassik und Jazz", "Electronic und Techno", "Country und Folk"]]
+
+  - text: What is the K-factor used in the PlayBox ELO calculation?
+    category: PlayBox Basics
+    tier: 2
+    tags: [elo, backend, technical]
+    note: "K=32 is the standard K-factor used in the ELO calculation, borrowed from chess rating systems."
+    created_by: PlayBox quiz seed
+    answers: ["32", ["16", "64", "10"]]
+
+  - text: What happened to the road sign of Altschauerberg multiple times?
+    category: Place & Infrastructure
+    tier: 2
+    tags: [place, vandalism, altschauerberg, safe-core]
+    note: "The Altschauerberg road sign was repeatedly stolen or vandalized by visitors."
+    created_by: PlayBox quiz seed
+    answers: ["Es wurde wiederholt gestohlen oder beschädigt", ["Es wurde unter Denkmalschutz gestellt", "Es wurde nie verändert", "Es wurde an ein Museum gespendet"]]
+
+  - text: What term describes the act of physically traveling to a content creator's location to harass them?
+    category: Scene Terms & Dynamics
+    tier: 2
+    tags: [terms, pilgrimage, harassment, safe-core]
+    note: "Real-world visits to content creators' homes for the purpose of confrontation are sometimes called 'pilgrimages' in the community."
+    created_by: PlayBox quiz seed
+    answers: ["Pilgerfahrt / Pilgrimage", ["Flashmob", "Convention", "Meetup"]]
+
+  - text: What game type is Imposter in the PlayBox collection?
+    category: PlayBox Basics
+    tier: 2
+    tags: [starter, imposter, game-type]
+    note: "Imposter is a social deduction party game where one player has a different word and must blend in."
+    created_by: PlayBox quiz seed
+    answers: ["Social Deduction Party Game", ["Quizspiel", "Kartenspiel", "Brettspiel"]]
+
+  # ===== Additional Tier 3 (hard) — variety for Millionär levels 11-15 =====
+
+  - text: What legal concept was tested when the BLM classified a personal livestream as broadcasting?
+    category: Legal & Regulation
+    tier: 3
+    tags: [legal, broadcasting, regulation, hard, safe-core]
+    note: "The Rundfunkstaatsvertrag (Interstate Broadcasting Treaty) was applied to classify the stream as requiring a license."
+    created_by: PlayBox quiz seed
+    answers: ["Rundfunkstaatsvertrag", ["Telemediengesetz", "Urheberrechtsgesetz", "Bundesdatenschutzgesetz"]]
+
+  - text: Which psychological concept describes the audience dynamics in the Drachenlord phenomenon?
+    category: Scene Terms & Dynamics
+    tier: 3
+    tags: [dynamics, psychology, deindividuation, hard, safe-core]
+    note: "Deindividuation describes how people in groups lose self-awareness and engage in behavior they wouldn't individually."
+    created_by: PlayBox quiz seed
+    answers: ["Deindividuation", ["Kognitive Dissonanz", "Stockholm-Syndrom", "Dunning-Kruger-Effekt"]]
+
+  - text: What ethical dilemma do journalists face when covering the Drachenlord case?
+    category: Media & Documentation
+    tier: 3
+    tags: [media, ethics, journalism, hard, safe-core]
+    note: "Covering the case risks amplifying the harassment while ignoring it means missing an important societal phenomenon."
+    created_by: PlayBox quiz seed
+    answers: ["Berichterstattung kann das Mobbing verstärken, Schweigen ignoriert das Phänomen", ["Es gibt kein ethisches Dilemma", "Nur die Polizei darf berichten", "Journalisten sind gesetzlich zur Berichterstattung verpflichtet"]]
+
+  - text: What term from media studies describes the cycle where negative attention generates more content and more negative attention?
+    category: Media & Documentation
+    tier: 3
+    tags: [media, attention-economy, cycle, hard, safe-core]
+    note: "The attention economy concept explains how engagement (positive or negative) feeds algorithmic amplification."
+    created_by: PlayBox quiz seed
+    answers: ["Aufmerksamkeitsökonomie", ["Filterblaseneffekt", "Echokammertheorie", "Mediensättigung"]]
+
+  - text: What is the estimated total cost of police operations in Altschauerberg over the years?
+    category: Legal & Regulation
+    tier: 3
+    tags: [legal, police, costs, hard, safe-core]
+    note: "The cumulative police costs were estimated in the hundreds of thousands of euros due to repeated deployments."
+    created_by: PlayBox quiz seed
+    answers: ["Hunderttausende Euro", ["Unter 10.000 Euro", "Genau 1 Million Euro", "Die Kosten wurden nie erfasst"]]
+
+  - text: What makes the Drachenlord case unique in German legal history regarding online-to-offline harassment?
+    category: Legal & Regulation
+    tier: 3
+    tags: [legal, precedent, unique, hard, safe-core]
+    note: "It was one of the first cases where sustained online harassment systematically transitioned into years of physical intimidation, exposing gaps in German harassment law."
+    created_by: PlayBox quiz seed
+    answers: ["Erstmaliger Fall von jahrelanger systematischer Online-zu-Offline-Belästigung", ["Es war ein normaler Nachbarschaftsstreit", "Es betraf nur einen einzelnen Vorfall", "Es gab bereits viele vergleichbare Fälle"]]
+
+  - text: In which format did the Drachenlord respond to the Cui Bono podcast about him?
+    category: Media & Documentation
+    tier: 3
+    tags: [media, cui-bono, response, hard, safe-core]
+    note: "Drachenlord did not produce a formal response; his reactions came through subsequent streams and social media posts."
+    created_by: PlayBox quiz seed
+    answers: ["Durch nachfolgende Streams und Social-Media-Posts", ["Mit einem offiziellen Pressestatement", "Mit einem eigenen Podcast", "Er hat nicht reagiert"]]
+

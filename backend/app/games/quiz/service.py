@@ -93,7 +93,13 @@ class QuizService:
 
         if balanced_categories and category_id is None:
             filtered_questions = self.db.execute(query).scalars().all()
-            questions = self._balance_questions_by_category(filtered_questions)[offset : offset + limit]
+            if order_by_elo:
+                # Combine ELO ordering with category interleaving:
+                # split into ELO bands, interleave categories within each band, then recombine.
+                questions = self._balance_within_elo_bands(filtered_questions, band_size=5)
+            else:
+                questions = self._balance_questions_by_category(filtered_questions)
+            questions = questions[offset : offset + limit]
         else:
             questions = self.db.execute(query.offset(offset).limit(limit)).scalars().all()
 
@@ -121,6 +127,24 @@ class QuizService:
                     balanced.append(bucket.pop(0))
 
         return balanced
+
+    def _balance_within_elo_bands(self, questions: list[Question], band_size: int = 5) -> list[Question]:
+        """Balance categories within ELO bands.
+
+        Splits the ELO-ordered question list into bands of ``band_size`` and
+        interleaves categories within each band. This preserves the overall
+        difficulty progression while avoiding long runs of the same category.
+
+        Example with band_size=5 and 15 questions:
+          Band 1 (levels 1-5):  easy questions, categories interleaved
+          Band 2 (levels 6-10): medium questions, categories interleaved
+          Band 3 (levels 11-15): hard questions, categories interleaved
+        """
+        result: list[Question] = []
+        for start in range(0, len(questions), band_size):
+            band = questions[start : start + band_size]
+            result.extend(self._balance_questions_by_category(band))
+        return result
 
     def create_question(self, data: QuestionCreateIn) -> QuestionOut:
         """Create a new question with answers and tags."""
