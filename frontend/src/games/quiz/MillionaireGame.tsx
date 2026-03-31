@@ -194,6 +194,7 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
   const [gameWon, setGameWon] = useState(false);
   const [loading, setLoading] = useState(true);
   const [slideKey, setSlideKey] = useState(0);
+  const [initTrigger, setInitTrigger] = useState(0);
 
   // Joker state
   const [jokerFiftyUsed, setJokerFiftyUsed] = useState(false);
@@ -273,7 +274,7 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
     };
     init();
     return () => stopSound();
-  }, []);
+  }, [initTrigger]);
 
   // --- Load Question ---
   const loadQuestion = async (id: string, level: number) => {
@@ -335,11 +336,11 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
             setCelebratingSafety(currentLevel as 5 | 10);
           }
         } else {
-          // Phone joker second chance
+          // Phone joker second chance: allow one retry on wrong answer
           if (phoneSecondChance) {
-            setPhoneSecondChance(false);
-          }
-          if (!phoneSecondChance) {
+            // Keep phoneSecondChance true so the feedback UI shows
+            // the retry button; retryWithSecondChance() resets everything.
+          } else {
             playSfx(getWrongSfx(currentLevel));
             setGameOver(true);
           }
@@ -373,10 +374,15 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
 
   // --- Use wrong answer with phone second chance ---
   const retryWithSecondChance = () => {
-    // Reset attempt so user can pick again
+    // Remove the wrong answer from the visible options, then let user pick again
+    if (selectedAnswer) {
+      setFiftyFiftyRemoved((prev) => new Set([...prev, selectedAnswer]));
+    }
     setSelectedAnswer(null);
     setAttempt(null);
     setPhoneSecondChance(false);
+    // Restart background music for the current level
+    playBg(currentLevel);
   };
 
   // --- Joker: 50:50 ---
@@ -439,6 +445,34 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
     const finalPrize = gameWon
       ? PRIZE_LADDER[14].prize
       : getSafetyPrize();
+
+    const replay = () => {
+      // Stop all sounds and reset state for a fresh game
+      stopSound();
+      Object.values(sfx).forEach((a) => { a.pause(); a.currentTime = 0; });
+      setPlayer(null);
+      setSession(null);
+      setQuestionIds([]);
+      setCurrentIdx(0);
+      setCurrentQuestion(null);
+      setAttempt(null);
+      setSelectedAnswer(null);
+      setGameOver(false);
+      setGameWon(false);
+      setJokerFiftyUsed(false);
+      setJokerAudienceUsed(false);
+      setJokerPhoneUsed(false);
+      setFiftyFiftyRemoved(new Set());
+      setAudiencePoll(null);
+      setPhoneHint(null);
+      setPhoneSecondChance(false);
+      setRevealing(false);
+      setCelebratingSafety(null);
+      setLoading(true);
+      // Re-trigger init by bumping initTrigger — useEffect on initTrigger handles re-init
+      setInitTrigger((t) => t + 1);
+    };
+
     return (
       <div className="wwm-container">
         {gameWon && <ConfettiParticles count={60} />}
@@ -458,7 +492,10 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
             ELO: {Math.round(player?.elo_score || 1200)}
           </p>
           <div className="wwm-result__actions">
-            <button className="wwm-btn wwm-btn--primary" onClick={onBack}>
+            <button className="wwm-btn wwm-btn--primary" onClick={replay}>
+              🔄 Nochmal spielen
+            </button>
+            <button className="wwm-btn" onClick={onBack}>
               Zurück zum Menü
             </button>
           </div>

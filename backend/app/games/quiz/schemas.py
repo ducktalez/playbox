@@ -52,6 +52,16 @@ class QuestionOut(BaseModel):
     answers: list[AnswerOut] = []
 
 
+class QuestionUpdateIn(BaseModel):
+    """Request to update a question (partial update)."""
+
+    text: str | None = Field(default=None, max_length=1000)
+    note: str | None = Field(default=None, max_length=2000)
+    category_id: uuid.UUID | None = None
+    media_url: str | None = None
+    media_type: str | None = None
+
+
 class QuestionListOut(BaseModel):
     """Paginated list of questions."""
 

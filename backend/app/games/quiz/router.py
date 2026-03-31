@@ -107,6 +107,7 @@ from app.games.quiz.schemas import (
     QuestionCreateIn,
     QuestionListOut,
     QuestionOut,
+    QuestionUpdateIn,
     SessionCreateIn,
     SessionOut,
     TagOut,
@@ -163,6 +164,22 @@ async def get_question(
 ) -> QuestionOut:
     """Get a question with a randomized subset of answers."""
     return service.get_question(question_id=question_id, num_answers=num_answers)
+
+
+@router.patch("/questions/{question_id}", response_model=QuestionOut)
+async def update_question(
+    question_id: uuid.UUID, body: QuestionUpdateIn, service: QuizService = Depends(get_service)
+) -> QuestionOut:
+    """Update mutable fields of an existing question."""
+    return service.update_question(question_id=question_id, data=body)
+
+
+@router.delete("/questions/{question_id}", response_model=QuestionOut)
+async def delete_question(
+    question_id: uuid.UUID, service: QuizService = Depends(get_service)
+) -> QuestionOut:
+    """Soft-delete a question (sets deleted_at)."""
+    return service.delete_question(question_id=question_id)
 
 
 @router.post("/questions/{question_id}/attempt", response_model=AttemptOut)

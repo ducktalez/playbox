@@ -233,6 +233,82 @@ def test_list_questions_order_by_elo_desc(quiz_client) -> None:
     assert elo_scores == sorted(elo_scores, reverse=True), "Questions should be sorted by descending ELO"
 
 
+# --- Update question ---
+
+
+def test_update_question_text(quiz_client) -> None:
+    """PATCH /api/v1/quiz/questions/{id} should update the text."""
+    create_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = create_resp.json()["id"]
+    resp = quiz_client.patch(
+        f"/api/v1/quiz/questions/{qid}",
+        json={"text": "Updated question text?"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["text"] == "Updated question text?"
+
+
+def test_update_question_note(quiz_client) -> None:
+    """PATCH /api/v1/quiz/questions/{id} should update the note."""
+    create_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = create_resp.json()["id"]
+    resp = quiz_client.patch(
+        f"/api/v1/quiz/questions/{qid}",
+        json={"note": "New background info."},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["note"] == "New background info."
+
+
+def test_update_question_not_found(quiz_client) -> None:
+    """PATCH /api/v1/quiz/questions/{id} on unknown ID should return 404."""
+    resp = quiz_client.patch(
+        f"/api/v1/quiz/questions/{uuid.uuid4()}",
+        json={"text": "Nope"},
+    )
+    assert resp.status_code == 404
+    assert resp.json()["code"] == "QUESTION_NOT_FOUND"
+
+
+# --- Delete question ---
+
+
+def test_delete_question(quiz_client) -> None:
+    """DELETE /api/v1/quiz/questions/{id} should soft-delete the question."""
+    create_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = create_resp.json()["id"]
+
+    del_resp = quiz_client.delete(f"/api/v1/quiz/questions/{qid}")
+    assert del_resp.status_code == 200
+
+    # Should no longer appear in list
+    list_resp = quiz_client.get("/api/v1/quiz/questions")
+    assert all(item["id"] != qid for item in list_resp.json()["items"])
+
+    # Should return 404 on direct GET
+    get_resp = quiz_client.get(f"/api/v1/quiz/questions/{qid}")
+    assert get_resp.status_code == 404
+
+
+def test_delete_question_not_found(quiz_client) -> None:
+    """DELETE /api/v1/quiz/questions/{id} on unknown ID should return 404."""
+    resp = quiz_client.delete(f"/api/v1/quiz/questions/{uuid.uuid4()}")
+    assert resp.status_code == 404
+    assert resp.json()["code"] == "QUESTION_NOT_FOUND"
+
+
+def test_delete_question_idempotent(quiz_client) -> None:
+    """DELETE twice on the same question should return 404 on the second call."""
+    create_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = create_resp.json()["id"]
+
+    first = quiz_client.delete(f"/api/v1/quiz/questions/{qid}")
+    assert first.status_code == 200
+
+    second = quiz_client.delete(f"/api/v1/quiz/questions/{qid}")
+    assert second.status_code == 404
+
+
 # --- Tags ---
 
 
@@ -434,17 +510,20 @@ def test_fifty_fifty_not_found(quiz_client) -> None:
 
 
 def test_audience_poll_returns_percentages(quiz_client) -> None:
-    """POST audience-poll should return percentages summing to ~100."""
+    """POST audience-poll should return percentages summing to exactly 100, every time."""
     qid, answer_ids = _create_question_and_get_displayed(quiz_client)
-    resp = quiz_client.post(
-        f"/api/v1/quiz/questions/{qid}/audience-poll",
-        json={"displayed_answer_ids": answer_ids},
-    )
-    assert resp.status_code == 200
-    data = resp.json()
-    assert len(data["results"]) == len(answer_ids)
-    total = sum(r["percentage"] for r in data["results"])
-    assert total == 100
+    # Run multiple times to catch non-deterministic distribution bugs
+    for _ in range(10):
+        resp = quiz_client.post(
+            f"/api/v1/quiz/questions/{qid}/audience-poll",
+            json={"displayed_answer_ids": answer_ids},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["results"]) == len(answer_ids)
+        total = sum(r["percentage"] for r in data["results"])
+        assert total == 100, f"Audience poll percentages sum to {total}, expected 100"
+        assert all(r["percentage"] >= 0 for r in data["results"])
 
 
 def test_audience_poll_not_found(quiz_client) -> None:

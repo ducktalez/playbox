@@ -3,7 +3,7 @@
 ## Current Status
 
 **Phase:** Execution in Progress
-**Last Updated:** 2026-03-26
+**Last Updated:** 2026-03-31
 
 ## Roadmap
 
@@ -166,7 +166,7 @@
 | Leaderboard | Yes (ELO) | Yes (wins) | Yes (ELO) |
 | Leaderboard | Yes | Yes (wins/loss) |
 
-- Done: PostgreSQL models, Alembic scaffolding, the session finish flow, all three game modes (Millionär, 1v1 local duel, Speed), question form, jokers, standardized error payloads, and most core backend endpoints are present.
+- Done: PostgreSQL models, Alembic scaffolding, the session finish flow, all three game modes (Millionär, 1v1 local duel, Speed), question form, jokers, standardized error payloads, question update/delete endpoints, and most core backend endpoints are present. Audience poll percentage bug and phone joker second-chance bug are fixed. Millionär has a working "Nochmal spielen" replay button.
 - Open: player profiles, tag-based quiz creation, and real-time 1v1 via WebSocket.
 
 ### High Priority
@@ -315,18 +315,23 @@
 - Shared PyCharm run configurations (`.run/`) and local IDE copies via `setup.py`
 - Drachenlord seed question set (50+ questions across 8 categories, tier-based ELO)
 - ELO-based question ordering for Millionär mode (ascending difficulty)
-- Backend tests: `test_imposter.py` (9), `test_piccolo.py` (18), `test_quiz.py` (45), `test_elo.py` (8), `test_smoke.py` (6), `test_health` (1) — total 91
+- Backend tests: `test_imposter.py` (9), `test_piccolo.py` (18), `test_quiz.py` (51), `test_elo.py` (8), `test_smoke.py` (6), `test_health` (1) — total 97
 - WWM sound system: 25 MP3 files, tier-appropriate bg music, lock-in sting, 1.8s reveal delay, joker/safety/win sounds
 - WWM visual: orange-gold lock-in color, pulsing reveal animation, diamond answer buttons
 - WWM visual: safety-mark confetti celebration overlay (Level 5/10), win confetti rain, spotlight flash between questions
+- WWM: "Nochmal spielen" replay button on game-over/won screen (re-triggers full init)
+- WWM: Phone joker second-chance bug fixed (wrong answer removed, user picks again)
 - ELO base unified at 1200 for all tiers — system self-calibrates through gameplay (TIER_ELO_MAP all 1200.0)
 - Imposter: category filter, configurable timer, sound/vibration on timer end, round history counter
 - Piccolo: slide-in animation transitions between challenges
 - Standardized API error payloads: `{ "detail": "...", "code": "MACHINE_READABLE_CODE" }` via `AppError` + global exception handlers
+- SQLAlchemy error handler: catches unhandled DB errors and returns `{ detail, code: "DATABASE_ERROR" }` instead of crashing
 - Quizduell 1v1: local pass-and-play duel mode (DuelGame component, two players, alternating turns, scores, winner)
 - Seed YAML tag coercion fix (integer year tags like `2011` auto-converted to strings)
 - Smoke tests: `test_smoke.py` covers full Millionär game flow, jokers, leaderboard, and DB table creation from scratch
 - conftest.py `sys.path` fix ensures in-memory SQLite override works correctly for quiz tests
+- Question CRUD: `PATCH /questions/{id}` (partial update) and `DELETE /questions/{id}` (soft-delete) with tests
+- Audience poll percentage distribution bug fixed (guaranteed sum = 100, deterministic remainder)
 
 ## Dependencies
 

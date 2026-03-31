@@ -38,6 +38,7 @@ from app.games.quiz.schemas import (
     QuestionCreateIn,
     QuestionListOut,
     QuestionOut,
+    QuestionUpdateIn,
     SessionCreateIn,
     SessionOut,
     TagOut,
@@ -180,6 +181,39 @@ class QuizService:
         out.note = None  # Hide note during gameplay
         out.answers = [AnswerOut(id=a.id, text=a.text) for a in selected]  # Hide is_correct
         return out
+
+    def update_question(self, question_id: uuid.UUID, data: QuestionUpdateIn) -> QuestionOut:
+        """Update a question's mutable fields (partial update)."""
+        question = self.db.get(Question, question_id)
+        if not question or question.deleted_at is not None:
+            raise AppError(404, "Question not found", "QUESTION_NOT_FOUND")
+
+        if data.text is not None:
+            question.text = data.text
+        if data.note is not None:
+            question.note = data.note
+        if data.category_id is not None:
+            question.category_id = data.category_id
+        if data.media_url is not None:
+            question.media_url = data.media_url
+        if data.media_type is not None:
+            question.media_type = data.media_type
+
+        question.updated_at = datetime.now(timezone.utc)
+        self.db.commit()
+        self.db.refresh(question)
+        return self._question_to_out(question)
+
+    def delete_question(self, question_id: uuid.UUID) -> QuestionOut:
+        """Soft-delete a question (sets deleted_at timestamp)."""
+        question = self.db.get(Question, question_id)
+        if not question or question.deleted_at is not None:
+            raise AppError(404, "Question not found", "QUESTION_NOT_FOUND")
+
+        question.deleted_at = datetime.now(timezone.utc)
+        self.db.commit()
+        self.db.refresh(question)
+        return self._question_to_out(question)
 
     def submit_attempt(self, question_id: uuid.UUID, data: AttemptIn) -> AttemptOut:
         """Submit an answer and update ELO scores."""
@@ -362,7 +396,12 @@ class QuizService:
         return FiftyFiftyOut(remove=[a.id for a in to_remove])
 
     def audience_poll(self, question_id: uuid.UUID, data: AudiencePollIn) -> AudiencePollOut:
-        """Generate fake audience poll results biased toward the correct answer."""
+        """Generate fake audience poll results biased toward the correct answer.
+
+        The correct answer always gets 45-72%. The remaining percentage is
+        distributed deterministically among the wrong answers so the total
+        is guaranteed to sum to exactly 100.
+        """
         question = self.db.get(Question, question_id)
         if not question:
             raise AppError(404, "Question not found", "QUESTION_NOT_FOUND")
@@ -372,19 +411,28 @@ class QuizService:
 
         correct_ids = {a.id for a in displayed if a.is_correct}
         correct_pct = random.randint(45, 72)  # noqa: S311
-        remaining = 100 - correct_pct
         wrong_displayed = [a for a in displayed if not a.is_correct]
 
+        # Distribute remaining percentage among wrong answers
+        remaining = 100 - correct_pct
+        wrong_pcts: list[int] = []
+        for i, _ in enumerate(wrong_displayed):
+            if i == len(wrong_displayed) - 1:
+                # Last wrong answer gets everything that's left
+                wrong_pcts.append(remaining)
+            else:
+                pct = random.randint(0, max(0, remaining))  # noqa: S311
+                wrong_pcts.append(pct)
+                remaining -= pct
+
         results: list[AudiencePollEntry] = []
+        wrong_idx = 0
         for a in displayed:
             if a.id in correct_ids:
                 results.append(AudiencePollEntry(answer_id=a.id, percentage=correct_pct))
-            elif a is wrong_displayed[-1]:
-                results.append(AudiencePollEntry(answer_id=a.id, percentage=remaining))
             else:
-                pct = random.randint(0, max(0, remaining))  # noqa: S311
-                remaining -= pct
-                results.append(AudiencePollEntry(answer_id=a.id, percentage=pct))
+                results.append(AudiencePollEntry(answer_id=a.id, percentage=wrong_pcts[wrong_idx]))
+                wrong_idx += 1
 
         return AudiencePollOut(results=results)
 
