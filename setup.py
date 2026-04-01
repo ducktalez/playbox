@@ -213,20 +213,40 @@ def _ensure_frontend_deps(frontend_dir: Path, npm_cmd: str) -> None:
         _print("    ✓ Frontend dependencies installed.\n")
 
 
+def _find_or_create_venv(project_root: Path, backend_dir: Path) -> Path:
+    """Locate an existing venv or create one at backend/.venv."""
+    candidates = [
+        # canonical location
+        backend_dir / ".venv",
+        # PyCharm default (project root)
+        project_root / ".venv",
+    ]
+
+    if sys.platform == "win32":
+        rel = Path("Scripts") / "python.exe"
+    else:
+        rel = Path("bin") / "python"
+
+    for venv_root in candidates:
+        candidate = venv_root / rel
+        if candidate.exists():
+            logger.info("Using venv: %s", venv_root)
+            return candidate
+
+    # None found — create one at backend/.venv
+    venv_root = backend_dir / ".venv"
+    _print(f"🔧  No venv found — creating one at {venv_root.relative_to(project_root)} ...")
+    subprocess.run([sys.executable, "-m", "venv", str(venv_root)], check=True)
+    _print("    ✓ venv created.\n")
+    return venv_root / rel
+
+
 def serve_all(project_root: Path) -> None:
     """Start backend (uvicorn) and frontend (vite) as subprocesses."""
     backend_dir = project_root / "backend"
     frontend_dir = project_root / "frontend"
 
-    if sys.platform == "win32":
-        venv_python = backend_dir / ".venv" / "Scripts" / "python.exe"
-    else:
-        venv_python = backend_dir / ".venv" / "bin" / "python"
-
-    if not venv_python.exists():
-        _print("❌  Backend venv not found.")
-        _print("    Run:  cd backend && python -m venv .venv && pip install -r requirements.txt")
-        sys.exit(1)
+    venv_python = _find_or_create_venv(project_root, backend_dir)
 
     npm_cmd = shutil.which("npm")
     if npm_cmd is None:

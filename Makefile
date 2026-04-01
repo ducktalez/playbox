@@ -33,8 +33,8 @@ install: install-backend install-frontend
 
 install-backend:
 	@echo "Installing backend dependencies..."
-	cd backend && python -m venv .venv && \
-	.venv\Scripts\pip install -r requirements.txt
+	cd backend && python3 -m venv .venv && \
+	.venv/bin/pip install -r requirements.txt
 
 install-frontend:
 	@echo "Installing frontend dependencies..."
@@ -53,7 +53,7 @@ setup:
 
 dev-backend:
 	@echo "Starting backend (uvicorn on http://localhost:8015 and your LAN IP on port 8015)..."
-	cd backend && .venv\Scripts\uvicorn app.main:app --reload --host 0.0.0.0 --port 8015
+	cd backend && .venv/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8015
 
 dev-frontend:
 	@echo "Starting frontend (vite on http://localhost:5173 and your LAN IP on port 5173)..."
@@ -65,11 +65,11 @@ dev-frontend:
 
 test:
 	@echo "Running backend tests..."
-	cd backend && .venv\Scripts\python -m pytest tests/ -v
+	cd backend && .venv/bin/python -m pytest tests/ -v
 
 test-watch:
 	@echo "Running tests in watch mode..."
-	cd backend && .venv\Scripts\python -m pytest tests/ -v --tb=short -x
+	cd backend && .venv/bin/python -m pytest tests/ -v --tb=short -x
 
 # ---------------------------------------------------------------------------
 # Docker
