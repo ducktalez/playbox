@@ -87,7 +87,7 @@ FUTURE ENHANCEMENTS:
 
 import uuid
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, UploadFile, File
 from sqlalchemy.orm import Session
 
 from app.core.database import get_pg_session
@@ -101,6 +101,7 @@ from app.games.quiz.schemas import (
     FiftyFiftyIn,
     FiftyFiftyOut,
     LeaderboardEntry,
+    MediaUploadOut,
     PhoneJokerOut,
     PlayerCreateIn,
     PlayerOut,
@@ -216,6 +217,27 @@ async def phone_joker(
 ) -> PhoneJokerOut:
     """Use the phone joker to get Drachenlord's hint."""
     return service.phone_joker(question_id=question_id, data=body)
+
+
+# --- Media ---
+
+
+@router.post("/questions/{question_id}/media", response_model=MediaUploadOut)
+async def upload_media(
+    question_id: uuid.UUID,
+    file: UploadFile = File(...),
+    service: QuizService = Depends(get_service),
+) -> MediaUploadOut:
+    """Upload a media file (image, video, document) for a question."""
+    return await service.upload_media(question_id=question_id, file=file)
+
+
+@router.delete("/questions/{question_id}/media", response_model=QuestionOut)
+async def delete_media(
+    question_id: uuid.UUID, service: QuizService = Depends(get_service)
+) -> QuestionOut:
+    """Remove media from a question."""
+    return service.delete_media(question_id=question_id)
 
 
 # --- Categories ---

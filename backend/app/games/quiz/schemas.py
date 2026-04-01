@@ -222,3 +222,13 @@ class PhoneJokerOut(BaseModel):
     hint_answer_id: uuid.UUID
     confidence: int
     message: str
+
+
+# --- Media ---
+
+class MediaUploadOut(BaseModel):
+    """Response after uploading media to a question."""
+
+    media_url: str
+    media_type: str
+

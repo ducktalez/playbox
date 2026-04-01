@@ -1,7 +1,9 @@
 """Tests for the Quiz game API (uses in-memory SQLite via quiz_client fixture)."""
 
+import io
 import uuid
 from pathlib import Path
+from unittest.mock import patch
 
 from sqlalchemy import select
 
@@ -1149,6 +1151,148 @@ def test_seed_quiz_dataset_maps_tier_to_elo(db_session) -> None:
     assert questions[0].elo_score == 1000.0  # tier 1 (easy)
     assert questions[1].elo_score == 1200.0  # tier 2 (medium)
     assert questions[2].elo_score == 1400.0  # tier 3 (hard)
+
+
+# --- Media upload/delete ---
+
+
+def test_upload_media_image(quiz_client, tmp_path: Path) -> None:
+    """POST /api/v1/quiz/questions/{id}/media should upload an image and set media_url/type."""
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = q_resp.json()["id"]
+
+    # Create a fake PNG (1x1 pixel)
+    png_bytes = (
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
+        b"\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00"
+        b"\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00"
+        b"\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+
+    with patch("app.games.quiz.service.settings") as mock_settings:
+        mock_settings.media_dir = str(tmp_path / "media")
+        mock_settings.max_media_size_mb = 50
+        resp = quiz_client.post(
+            f"/api/v1/quiz/questions/{qid}/media",
+            files={"file": ("test.png", io.BytesIO(png_bytes), "image/png")},
+        )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["media_type"] == "image"
+    assert data["media_url"].startswith("/media/quiz/")
+    assert data["media_url"].endswith(".png")
+
+
+def test_upload_media_unsupported_type(quiz_client, tmp_path: Path) -> None:
+    """POST /api/v1/quiz/questions/{id}/media with unsupported type should return 422."""
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = q_resp.json()["id"]
+
+    with patch("app.games.quiz.service.settings") as mock_settings:
+        mock_settings.media_dir = str(tmp_path / "media")
+        mock_settings.max_media_size_mb = 50
+        resp = quiz_client.post(
+            f"/api/v1/quiz/questions/{qid}/media",
+            files={"file": ("test.exe", io.BytesIO(b"malware"), "application/x-msdownload")},
+        )
+
+    assert resp.status_code == 422
+    assert resp.json()["code"] == "UNSUPPORTED_MEDIA_TYPE"
+
+
+def test_upload_media_file_too_large(quiz_client, tmp_path: Path) -> None:
+    """POST /api/v1/quiz/questions/{id}/media with oversized file should return 413."""
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = q_resp.json()["id"]
+
+    # Set max to 0 MB to trigger size limit
+    with patch("app.games.quiz.service.settings") as mock_settings:
+        mock_settings.media_dir = str(tmp_path / "media")
+        mock_settings.max_media_size_mb = 0
+        resp = quiz_client.post(
+            f"/api/v1/quiz/questions/{qid}/media",
+            files={"file": ("big.png", io.BytesIO(b"\x89PNG" + b"\x00" * 100), "image/png")},
+        )
+
+    assert resp.status_code == 413
+    assert resp.json()["code"] == "FILE_TOO_LARGE"
+
+
+def test_upload_media_question_not_found(quiz_client, tmp_path: Path) -> None:
+    """POST /api/v1/quiz/questions/{id}/media for unknown question should return 404."""
+    with patch("app.games.quiz.service.settings") as mock_settings:
+        mock_settings.media_dir = str(tmp_path / "media")
+        mock_settings.max_media_size_mb = 50
+        resp = quiz_client.post(
+            f"/api/v1/quiz/questions/{uuid.uuid4()}/media",
+            files={"file": ("test.png", io.BytesIO(b"\x89PNG"), "image/png")},
+        )
+
+    assert resp.status_code == 404
+    assert resp.json()["code"] == "QUESTION_NOT_FOUND"
+
+
+def test_upload_media_updates_question(quiz_client, tmp_path: Path) -> None:
+    """After uploading media, GET /questions should include media_url and media_type."""
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = q_resp.json()["id"]
+    assert q_resp.json()["media_url"] is None
+
+    with patch("app.games.quiz.service.settings") as mock_settings:
+        mock_settings.media_dir = str(tmp_path / "media")
+        mock_settings.max_media_size_mb = 50
+        quiz_client.post(
+            f"/api/v1/quiz/questions/{qid}/media",
+            files={"file": ("pic.jpg", io.BytesIO(b"\xff\xd8\xff\xe0"), "image/jpeg")},
+        )
+
+    # Verify via list endpoint
+    list_resp = quiz_client.get("/api/v1/quiz/questions")
+    question = next(q for q in list_resp.json()["items"] if q["id"] == qid)
+    assert question["media_url"] is not None
+    assert question["media_type"] == "image"
+
+
+def test_delete_media(quiz_client, tmp_path: Path) -> None:
+    """DELETE /api/v1/quiz/questions/{id}/media should clear media fields."""
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = q_resp.json()["id"]
+
+    with patch("app.games.quiz.service.settings") as mock_settings:
+        mock_settings.media_dir = str(tmp_path / "media")
+        mock_settings.max_media_size_mb = 50
+
+        # Upload first
+        quiz_client.post(
+            f"/api/v1/quiz/questions/{qid}/media",
+            files={"file": ("pic.png", io.BytesIO(b"\x89PNG\r\n"), "image/png")},
+        )
+
+        # Delete
+        resp = quiz_client.delete(f"/api/v1/quiz/questions/{qid}/media")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["media_url"] is None
+    assert data["media_type"] is None
+
+
+def test_delete_media_no_media_attached(quiz_client) -> None:
+    """DELETE /api/v1/quiz/questions/{id}/media when no media exists should return 404."""
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = q_resp.json()["id"]
+
+    resp = quiz_client.delete(f"/api/v1/quiz/questions/{qid}/media")
+    assert resp.status_code == 404
+    assert resp.json()["code"] == "NO_MEDIA"
+
+
+def test_delete_media_question_not_found(quiz_client) -> None:
+    """DELETE /api/v1/quiz/questions/{id}/media for unknown question should return 404."""
+    resp = quiz_client.delete(f"/api/v1/quiz/questions/{uuid.uuid4()}/media")
+    assert resp.status_code == 404
+    assert resp.json()["code"] == "QUESTION_NOT_FOUND"
 
 
 # --- Health check ---

@@ -3,7 +3,7 @@
 ## Current Status
 
 **Phase:** Execution in Progress
-**Last Updated:** 2026-04-01
+**Last Updated:** 2026-04-02
 
 ## Roadmap
 
@@ -237,17 +237,21 @@
 
 ## Phase 4 — Quiz ELO + Media
 
-- Done: ELO engine and per-attempt ELO update for player and question are implemented.
-- Open: media upload/display endpoints and stricter media type handling.
+- Done: ELO engine and per-attempt ELO update for player and question are implemented. Media upload/delete endpoints, static file serving, and frontend media display are implemented.
+- Open: ELO history chart, difficulty badges, moderation queue, bulk import.
 
 ### High Priority
 
 - [x] ELO calculation engine (K=32, base 1200)
 - [x] ELO update on each question attempt (player + question)
 - [x] Question ordering by ELO in Millionär mode
-- [ ] Media upload endpoint (clips, images, documents)
-- [ ] Media display in question UI (video player, image viewer)
-- [ ] Media type support: `image`, `video`, `document`
+- [x] Media upload endpoint (`POST /questions/{id}/media` — image, video, document)
+- [x] Media delete endpoint (`DELETE /questions/{id}/media`)
+- [x] Static file serving (`/media/` mount via FastAPI)
+- [x] Media display in question UI (image viewer, video player, document link)
+- [x] Media upload in question submission form (QuestionForm.tsx)
+- [x] Media type validation (JPEG, PNG, GIF, WebP, MP4, WebM, PDF)
+- [x] File size limit enforcement (configurable via `PLAYBOX_MAX_MEDIA_SIZE_MB`)
 
 ### Medium Priority
 
@@ -272,8 +276,8 @@
 
 - [x] Evaluate whether `tier` field on Question model needs expansion for WWM difficulty curve
   - **Result:** 3 tiers (1→1000, 2→1200, 3→1400) are sufficient. ELO self-calibrates through gameplay. Re-evaluate if question pool exceeds 500+.
-- [ ] Media upload endpoint (clips, images, documents) — Phase 4
-- [ ] Media display in question UI (video player, image viewer) — Phase 4
+- [x] Media upload endpoint (clips, images, documents) — Phase 4
+- [x] Media display in question UI (video player, image viewer) — Phase 4
 
 ### Medium Priority
 
@@ -296,7 +300,7 @@
 | Blocker | Impact | Owner | Status |
 |---------|--------|-------|--------|
 | CSS/UI framework decision | Affects all frontend work | — | open |
-| Quiz media storage decision | Affects Phase 4 | — | open |
+| ~~Quiz media storage decision~~ | ~~Affects Phase 4~~ | — | **resolved** (local filesystem, `/media/` mount) |
 
 ## Completed
 
@@ -343,11 +347,13 @@
 - Imposter offline support: client-side fallback with cached word list (localStorage), automatic offline session creation and reveal when backend unreachable, "Offline-Modus" indicator
 - Piccolo offline support: client-side fallback with cached challenge templates (localStorage), offline session with category-balanced challenge ordering, "Offline-Modus" indicator
 - Tier field evaluation: 3 tiers (1→1000, 2→1200, 3→1400) confirmed sufficient for current question pool size (~75). ELO self-calibrates; no model expansion needed.
+- Quiz media system: upload (`POST /questions/{id}/media`), delete (`DELETE /questions/{id}/media`), static serving (`/media/` mount), frontend display (image, video, document) in all quiz modes, media upload in QuestionForm, MIME type validation (JPEG/PNG/GIF/WebP/MP4/WebM/PDF), configurable size limit, Vite dev proxy for `/media`, 8 new tests (all green)
+- Backend tests: `test_imposter.py` (9), `test_piccolo.py` (18), `test_quiz.py` (72), `test_elo.py` (8), `test_smoke.py` (6), `test_health` (1) — total 118 (all green)
 
 ## Dependencies
 
 - Meta-repo standards and templates (followed)
-- PostgreSQL instance for Quiz game
+- SQLite for development (all games); PostgreSQL available for production quiz deployment
 - No external API dependencies
 
 ## Notes

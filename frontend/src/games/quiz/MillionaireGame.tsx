@@ -171,6 +171,7 @@ type PlayerOut = { id: string; name: string; elo_score: number };
 type SessionOut = { id: string; mode: string; player_id: string; score: number };
 type QuestionOut = {
   id: string; text: string; category: string; elo_score: number;
+  media_url: string | null; media_type: string | null;
   answers: { id: string; text: string }[];
 };
 type AttemptOut = {
@@ -612,6 +613,21 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
 
               {/* Question Card */}
               <div className="wwm-question-card">
+                {currentQuestion.media_url && (
+                  <div className="wwm-media">
+                    {currentQuestion.media_type === "image" && (
+                      <img src={currentQuestion.media_url} alt="Frage-Bild" className="wwm-media__img" />
+                    )}
+                    {currentQuestion.media_type === "video" && (
+                      <video src={currentQuestion.media_url} controls className="wwm-media__video" />
+                    )}
+                    {currentQuestion.media_type === "document" && (
+                      <a href={currentQuestion.media_url} target="_blank" rel="noopener noreferrer" className="wwm-media__link">
+                        📄 Dokument anzeigen
+                      </a>
+                    )}
+                  </div>
+                )}
                 <div className="wwm-question-card__text">{currentQuestion.text}</div>
               </div>
 

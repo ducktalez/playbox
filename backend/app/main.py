@@ -2,10 +2,12 @@
 
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import settings
@@ -21,6 +23,7 @@ from app.games.quiz.seed import seed_questions
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan: startup and shutdown events."""
     # Startup
+    Path(settings.media_dir).mkdir(parents=True, exist_ok=True)
     init_pg_db()
     init_sqlite_db()
     # Seed quiz questions if database is empty
@@ -56,6 +59,11 @@ def create_app() -> FastAPI:
     application.include_router(quiz_router, prefix="/api/v1/quiz", tags=["Quiz"])
     # TODO: mount chess router when implemented
     # application.include_router(chess_router, prefix="/api/v1/chess", tags=["Chess"])
+
+    # Serve uploaded media files at /media/
+    media_path = Path(settings.media_dir)
+    media_path.mkdir(parents=True, exist_ok=True)
+    application.mount("/media", StaticFiles(directory=str(media_path)), name="media")
 
     @application.get("/health", tags=["System"])
     async def health_check() -> dict[str, str]:

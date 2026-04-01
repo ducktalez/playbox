@@ -72,6 +72,10 @@ export default defineConfig({
         target: "http://localhost:8015",
         changeOrigin: true,
       },
+      "/media": {
+        target: "http://localhost:8015",
+        changeOrigin: true,
+      },
     },
   },
 });

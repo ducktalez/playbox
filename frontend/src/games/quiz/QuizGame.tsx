@@ -43,6 +43,8 @@ type QuestionOut = {
   text: string;
   category: string;
   elo_score: number;
+  media_url: string | null;
+  media_type: string | null;
   answers: { id: string; text: string }[];
 };
 
@@ -476,6 +478,21 @@ export default function QuizGame() {
         <div className="quiz-question-wrapper" key={slideKey}>
           {/* Question card */}
           <div className="quiz-question-card">
+            {currentQuestion.media_url && (
+              <div className="quiz-media">
+                {currentQuestion.media_type === "image" && (
+                  <img src={currentQuestion.media_url} alt="Frage-Bild" className="quiz-media__img" />
+                )}
+                {currentQuestion.media_type === "video" && (
+                  <video src={currentQuestion.media_url} controls className="quiz-media__video" />
+                )}
+                {currentQuestion.media_type === "document" && (
+                  <a href={currentQuestion.media_url} target="_blank" rel="noopener noreferrer" className="quiz-media__link">
+                    📄 Dokument anzeigen
+                  </a>
+                )}
+              </div>
+            )}
             <h2>{currentQuestion.text}</h2>
           </div>
 

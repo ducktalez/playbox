@@ -30,6 +30,7 @@ export default function QuestionForm({ onBack }: { onBack: () => void }) {
   const [wrongAnswers, setWrongAnswers] = useState(["", "", ""]);
   const [categoryId, setCategoryId] = useState<string>("");
   const [tagsInput, setTagsInput] = useState("");
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
 
   // UI state
   const [categories, setCategories] = useState<CategoryOut[]>([]);
@@ -107,6 +108,22 @@ export default function QuestionForm({ onBack }: { onBack: () => void }) {
         throw new Error(err.detail || `Fehler: ${res.status}`);
       }
 
+      const created = await res.json();
+
+      // Upload media file if selected
+      if (mediaFile) {
+        const formData = new FormData();
+        formData.append("file", mediaFile);
+        const mediaRes = await fetch(`${API_BASE}/questions/${created.id}/media`, {
+          method: "POST",
+          body: formData,
+        });
+        if (!mediaRes.ok) {
+          const mediaErr = await mediaRes.json().catch(() => ({}));
+          console.warn("Media upload failed:", mediaErr.detail || mediaRes.status);
+        }
+      }
+
       setSuccessMsg("✓ Frage erfolgreich hinzugefügt!");
       // Reset form
       setText("");
@@ -114,6 +131,7 @@ export default function QuestionForm({ onBack }: { onBack: () => void }) {
       setCorrectAnswer("");
       setWrongAnswers(["", "", ""]);
       setTagsInput("");
+      setMediaFile(null);
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Unbekannter Fehler");
     } finally {
@@ -218,6 +236,22 @@ export default function QuestionForm({ onBack }: { onBack: () => void }) {
               onChange={(e) => setTagsInput(e.target.value)}
               placeholder="z.B. drachenlord, basics, identity"
             />
+          </label>
+
+          {/* Media upload (optional) */}
+          <label className="quiz-form__label">
+            Bild / Video / Dokument (optional)
+            <input
+              className="quiz-form__input"
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,application/pdf"
+              onChange={(e) => setMediaFile(e.target.files?.[0] || null)}
+            />
+            {mediaFile && (
+              <span style={{ fontSize: "0.85rem", color: "#aaa" }}>
+                {mediaFile.name} ({(mediaFile.size / 1024).toFixed(0)} KB)
+              </span>
+            )}
           </label>
 
           {/* Messages */}

@@ -208,6 +208,8 @@ As the community plays, question ELOs self-calibrate through the ELO update form
 | POST | `/questions/{id}/fifty-fifty` | 50:50 joker — remove 2 wrong answers |
 | POST | `/questions/{id}/audience-poll` | Audience poll joker — vote percentages |
 | POST | `/questions/{id}/phone-joker` | Phone joker — Drachenlord hint |
+| POST | `/questions/{id}/media` | Upload media file (image, video, document) |
+| DELETE | `/questions/{id}/media` | Remove media from a question |
 | GET | `/categories` | List categories with question counts |
 | POST | `/categories` | Create a new category |
 | GET | `/tags` | List tags with question counts |
@@ -270,13 +272,13 @@ PlayBox is delivered as a Progressive Web App via `vite-plugin-pwa` (Workbox und
 - **Docker Compose** for local development (FastAPI + PostgreSQL + Vite dev server)
 - **Single Docker image** for production (backend serves static frontend)
 - **PWA** — installable from browser, offline caching via Service Worker
-- Media files served from `/public/media/` or a future file storage solution
+- Media files served from `/media/` via FastAPI `StaticFiles` mount (local filesystem)
 
 ## Open Questions
 
 - CSS/UI framework: Tailwind CSS vs. MUI vs. custom?
 - Chess: build from scratch vs. fork/extend existing open-source project?
-- Quiz media storage: local filesystem vs. S3-compatible object storage?
+- ~~Quiz media storage: local filesystem vs. S3-compatible object storage?~~ → **Resolved: local filesystem** (`./media/quiz/{question_id}/`), served via `/media/` static mount. Migrate to S3 post-dev if needed.
 - Piccolo: how large should the initial challenge database be?
 - Should there be a moderation queue for user-submitted quiz questions?
 

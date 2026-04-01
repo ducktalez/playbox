@@ -1,10 +1,15 @@
 """Quiz — Game service / business logic."""
 
 import random
+import shutil
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
+from pathlib import Path
 
+from fastapi import UploadFile
+
+from app.core.config import settings
 from app.core.errors import AppError
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -32,6 +37,7 @@ from app.games.quiz.schemas import (
     FiftyFiftyIn,
     FiftyFiftyOut,
     LeaderboardEntry,
+    MediaUploadOut,
     PhoneJokerOut,
     PlayerCreateIn,
     PlayerOut,
@@ -44,6 +50,17 @@ from app.games.quiz.schemas import (
     SessionOut,
     TagOut,
 )
+
+# Allowed MIME types for media uploads
+ALLOWED_MEDIA_TYPES: dict[str, str] = {
+    "image/jpeg": "image",
+    "image/png": "image",
+    "image/gif": "image",
+    "image/webp": "image",
+    "video/mp4": "video",
+    "video/webm": "video",
+    "application/pdf": "document",
+}
 
 
 class QuizService:
@@ -540,6 +557,85 @@ class QuizService:
             msg = random.choice(messages_wrong).format(answer=hint.text)  # noqa: S311
 
         return PhoneJokerOut(hint_answer_id=hint.id, confidence=confidence, message=msg)
+
+    # --- Media ---
+
+    async def upload_media(self, question_id: uuid.UUID, file: UploadFile) -> MediaUploadOut:
+        """Upload a media file and attach it to a question."""
+        question = self.db.get(Question, question_id)
+        if not question or question.deleted_at is not None:
+            raise AppError(404, "Question not found", "QUESTION_NOT_FOUND")
+
+        # Validate content type
+        content_type = file.content_type or ""
+        media_type = ALLOWED_MEDIA_TYPES.get(content_type)
+        if not media_type:
+            allowed = ", ".join(sorted(ALLOWED_MEDIA_TYPES.keys()))
+            raise AppError(422, f"Unsupported file type: {content_type}. Allowed: {allowed}", "UNSUPPORTED_MEDIA_TYPE")
+
+        # Read file content and check size
+        content = await file.read()
+        max_bytes = settings.max_media_size_mb * 1024 * 1024
+        if len(content) > max_bytes:
+            raise AppError(413, f"File too large. Maximum: {settings.max_media_size_mb} MB", "FILE_TOO_LARGE")
+
+        # Determine file extension from content type
+        ext_map = {
+            "image/jpeg": ".jpg", "image/png": ".png", "image/gif": ".gif",
+            "image/webp": ".webp", "video/mp4": ".mp4", "video/webm": ".webm",
+            "application/pdf": ".pdf",
+        }
+        ext = ext_map.get(content_type, "")
+        safe_filename = f"{question_id}{ext}"
+
+        # Save file
+        media_dir = Path(settings.media_dir) / "quiz" / str(question_id)
+        media_dir.mkdir(parents=True, exist_ok=True)
+
+        # Remove any previously uploaded file for this question
+        if question.media_url:
+            old_path = Path(settings.media_dir) / question.media_url.lstrip("/media/")
+            if old_path.exists():
+                old_path.unlink(missing_ok=True)
+
+        file_path = media_dir / safe_filename
+        file_path.write_bytes(content)
+
+        # Update question
+        media_url = f"/media/quiz/{question_id}/{safe_filename}"
+        question.media_url = media_url
+        question.media_type = media_type
+        question.updated_at = datetime.now(timezone.utc)
+        self.db.commit()
+
+        return MediaUploadOut(media_url=media_url, media_type=media_type)
+
+    def delete_media(self, question_id: uuid.UUID) -> QuestionOut:
+        """Remove media from a question and delete the file."""
+        question = self.db.get(Question, question_id)
+        if not question or question.deleted_at is not None:
+            raise AppError(404, "Question not found", "QUESTION_NOT_FOUND")
+
+        if not question.media_url:
+            raise AppError(404, "No media attached to this question", "NO_MEDIA")
+
+        # Delete file from filesystem
+        relative_path = question.media_url.lstrip("/")
+        file_path = Path(settings.media_dir).parent / relative_path
+        if file_path.exists():
+            file_path.unlink(missing_ok=True)
+
+        # Clean up empty directory
+        question_dir = Path(settings.media_dir) / "quiz" / str(question_id)
+        if question_dir.exists() and not any(question_dir.iterdir()):
+            question_dir.rmdir()
+
+        question.media_url = None
+        question.media_type = None
+        question.updated_at = datetime.now(timezone.utc)
+        self.db.commit()
+        self.db.refresh(question)
+        return self._question_to_out(question)
 
     # --- Helpers ---
 
