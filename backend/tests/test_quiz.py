@@ -1731,7 +1731,7 @@ def test_submit_feedback_thumbs_up(quiz_client) -> None:
 
 
 def test_submit_feedback_thumbs_up_with_category(quiz_client) -> None:
-    """POST feedback THUMBS_UP with optional category should succeed."""
+    """POST feedback THUMBS_UP with category should be rejected (no categories allowed)."""
     q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
     qid = q_resp.json()["id"]
 
@@ -1739,8 +1739,8 @@ def test_submit_feedback_thumbs_up_with_category(quiz_client) -> None:
         f"/api/v1/quiz/questions/{qid}/feedback",
         json={"feedback_type": "THUMBS_UP", "category": "GREAT_QUESTION"},
     )
-    assert resp.status_code == 200
-    assert resp.json()["category"] == "GREAT_QUESTION"
+    assert resp.status_code == 422
+    assert resp.json()["code"] == "CATEGORY_NOT_ALLOWED"
 
 
 def test_submit_feedback_thumbs_down_with_category(quiz_client) -> None:
@@ -1758,8 +1758,8 @@ def test_submit_feedback_thumbs_down_with_category(quiz_client) -> None:
     assert data["category"] == "TOO_HARD"
 
 
-def test_submit_feedback_thumbs_down_without_category_fails(quiz_client) -> None:
-    """POST feedback THUMBS_DOWN without category should return 422."""
+def test_submit_feedback_thumbs_down_without_category(quiz_client) -> None:
+    """POST feedback THUMBS_DOWN without category should succeed (category is optional)."""
     q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
     qid = q_resp.json()["id"]
 
@@ -1767,8 +1767,10 @@ def test_submit_feedback_thumbs_down_without_category_fails(quiz_client) -> None
         f"/api/v1/quiz/questions/{qid}/feedback",
         json={"feedback_type": "THUMBS_DOWN"},
     )
-    assert resp.status_code == 422
-    assert resp.json()["code"] == "CATEGORY_REQUIRED"
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["feedback_type"] == "THUMBS_DOWN"
+    assert data["category"] is None
 
 
 def test_submit_feedback_report_with_category(quiz_client) -> None:
@@ -1933,4 +1935,51 @@ def test_submit_feedback_all_report_categories(quiz_client) -> None:
         )
         assert resp.status_code == 200, f"Category {category} should be accepted"
         assert resp.json()["category"] == category
+
+
+def test_submit_feedback_thumbs_down_multi_category(quiz_client) -> None:
+    """POST THUMBS_DOWN with comma-separated category set should succeed."""
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = q_resp.json()["id"]
+
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={"feedback_type": "THUMBS_DOWN", "category": "PROBLEM_WITH_ANSWERS,TOO_HARD"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["category"] == "PROBLEM_WITH_ANSWERS,TOO_HARD"
+
+
+def test_submit_feedback_multi_category_invalid_element(quiz_client) -> None:
+    """POST with comma-separated category containing an invalid element should return 422."""
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = q_resp.json()["id"]
+
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={"feedback_type": "THUMBS_DOWN", "category": "TOO_HARD,NONEXISTENT"},
+    )
+    assert resp.status_code == 422
+    assert resp.json()["code"] == "INVALID_FEEDBACK_CATEGORY"
+
+
+def test_submit_feedback_with_comment(quiz_client) -> None:
+    """POST feedback with a comment should store and return it."""
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = q_resp.json()["id"]
+
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={
+            "feedback_type": "THUMBS_DOWN",
+            "category": "PROBLEM_WITH_QUESTION",
+            "comment": "Die Frage ist missverständlich formuliert",
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["comment"] == "Die Frage ist missverständlich formuliert"
+    assert data["category"] == "PROBLEM_WITH_QUESTION"
+
 

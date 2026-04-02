@@ -18,7 +18,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import QuestionFeedback from "./QuestionFeedback";
+import QuestionFeedback, { type PendingFeedback } from "./QuestionFeedback";
 
 const API_BASE =
   typeof window !== "undefined"
@@ -323,6 +323,11 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
   // Tracks the wrong answer ID after using extra life — shown as red+disabled but still visible
   const [extraLifeWrongId, setExtraLifeWrongId] = useState<string | null>(null);
 
+  // Deferred question feedback
+  const [pendingFeedback, setPendingFeedback] = useState<PendingFeedback | null>(null);
+  // Game-over is deferred: player sees feedback flow first, then advances to game-over screen
+  const [gameOverPending, setGameOverPending] = useState(false);
+
   // Sync React volume state → module-level variables → all audio elements
   useEffect(() => {
     _audioVolume = volume;
@@ -575,7 +580,7 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
             // Extra life from ordering question — feedback UI shows retry button
           } else {
             playSfx(getWrongSfx(currentLevel));
-            setGameOver(true);
+            setGameOverPending(true);
           }
         }
       } catch (e) { console.error(e); setRevealing(false); }
@@ -583,8 +588,37 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
     [selectedAnswer, revealing, currentQuestion, player, session, phoneSecondChance, currentLevel, hasExtraLife, extraLifeUsed],
   );
 
+  /** Fire-and-forget: POST pending feedback for the current question, then clear it. */
+  const flushFeedback = useCallback(() => {
+    if (!pendingFeedback || !currentQuestion) return;
+    const body: Record<string, unknown> = { feedback_type: pendingFeedback.feedback_type };
+    if (pendingFeedback.category) body.category = pendingFeedback.category;
+    if (pendingFeedback.comment) body.comment = pendingFeedback.comment;
+    if (player) body.player_id = player.id;
+    if (session) body.session_id = session.id;
+    fetch(`${API_BASE}/questions/${currentQuestion.id}/feedback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).catch(() => {});
+    setPendingFeedback(null);
+  }, [pendingFeedback, currentQuestion, player, session]);
+
   // --- Next Question ---
   const nextQuestion = async () => {
+    flushFeedback();
+
+    // If game-over was deferred, now transition to the game-over screen
+    if (gameOverPending) {
+      setGameOverPending(false);
+      setGameOver(true);
+      if (session) {
+        await fetch(`${API_BASE}/sessions/${session.id}/finish`, { method: "POST" });
+      }
+      playSfx(sfx.outro);
+      return;
+    }
+
     if (gameOver || gameWon) {
       if (session) {
         await fetch(`${API_BASE}/sessions/${session.id}/finish`, { method: "POST" });
@@ -872,6 +906,8 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
       setHasExtraLife(false);
       setExtraLifeUsed(false);
       setExtraLifeWrongId(null);
+      setPendingFeedback(null);
+      setGameOverPending(false);
       setLoading(true);
       setInitTrigger((t) => t + 1);
     };
@@ -1097,71 +1133,61 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
               {/* Feedback */}
               {attempt && (
                 <div className="wwm-feedback">
+                  {/* Result text — always shown */}
                   {attempt.correct ? (
-                    <>
-                      <p className="wwm-feedback__text wwm-feedback__text--correct">
-                        ✓ Richtig! {PRIZE_LADDER[currentIdx]?.prize} gesichert!
-                      </p>
-                      {attempt.note && (
-                        <div className="wwm-explanation">
-                          <div className="wwm-explanation__title">💡 Hinweis</div>
-                          {attempt.note}
-                        </div>
-                      )}
-                      {currentQuestion && (
-                        <QuestionFeedback
-                          questionId={currentQuestion.id}
-                          playerId={player?.id}
-                          sessionId={session?.id}
-                        />
-                      )}
-                      <button className="wwm-btn wwm-btn--primary" onClick={nextQuestion}>
-                        {currentLevel >= 15 ? "🏆 Gewinn einlösen" : "Nächste Frage →"}
-                      </button>
-                    </>
-                  ) : phoneSecondChance ? (
-                    <>
-                      <p className="wwm-feedback__text wwm-feedback__text--wrong">
-                        ✗ Falsch — aber dein Telefonjoker gibt dir eine 2. Chance!
-                      </p>
-                      <button className="wwm-btn wwm-btn--primary" onClick={retryWithSecondChance}>
-                        Nochmal versuchen
-                      </button>
-                    </>
-                  ) : hasExtraLife && !extraLifeUsed && currentLevel <= EXTRA_LIFE_MAX_LEVEL ? (
-                    <>
-                      <p className="wwm-feedback__text wwm-feedback__text--wrong">
-                        ✗ Falsch — aber dein Extra-Leben rettet dich!
-                      </p>
-                      <button className="wwm-btn wwm-btn--primary" onClick={retryWithExtraLife}>
-                        🛡️ Extra-Leben einsetzen
-                      </button>
-                    </>
+                    <p className="wwm-feedback__text wwm-feedback__text--correct">
+                      ✓ Richtig! {PRIZE_LADDER[currentIdx]?.prize} gesichert!
+                    </p>
                   ) : (
-                    <>
-                      <p className="wwm-feedback__text wwm-feedback__text--wrong">
-                        ✗ Leider falsch!
-                      </p>
-                      {attempt.note && (
-                        <div className="wwm-explanation">
-                          <div className="wwm-explanation__title">💡 Hinweis</div>
-                          {attempt.note}
-                        </div>
-                      )}
-                      {currentQuestion && (
-                        <QuestionFeedback
-                          questionId={currentQuestion.id}
-                          playerId={player?.id}
-                          sessionId={session?.id}
-                        />
-                      )}
-                      <p className="wwm-feedback__safety">
-                        Du gehst mit {getSafetyPrize()} nach Hause.
-                      </p>
-                      <button className="wwm-btn wwm-btn--primary" onClick={onBack}>
-                        Zurück zum Menü
-                      </button>
-                    </>
+                    <p className="wwm-feedback__text wwm-feedback__text--wrong">
+                      {phoneSecondChance
+                        ? "✗ Falsch — aber dein Telefonjoker gibt dir eine 2. Chance!"
+                        : hasExtraLife && !extraLifeUsed && currentLevel <= EXTRA_LIFE_MAX_LEVEL
+                          ? "✗ Falsch — aber dein Extra-Leben rettet dich!"
+                          : "✗ Leider falsch!"}
+                    </p>
+                  )}
+
+                  {/* Explanation note + feedback icons — always shown */}
+                  {attempt.note ? (
+                    <div className="wwm-explanation">
+                      <div className="wwm-explanation__title">💡 Hinweis</div>
+                      {attempt.note}
+                      <QuestionFeedback
+                        onPendingChange={setPendingFeedback}
+                        inline
+                      />
+                    </div>
+                  ) : (
+                    <QuestionFeedback
+                      onPendingChange={setPendingFeedback}
+                    />
+                  )}
+
+                  {/* Game-over pending: show safety prize info */}
+                  {gameOverPending && (
+                    <p className="wwm-feedback__safety">
+                      Du gehst mit {getSafetyPrize()} nach Hause.
+                    </p>
+                  )}
+
+                  {/* Action buttons — depends on scenario */}
+                  {attempt.correct ? (
+                    <button className="wwm-btn wwm-btn--primary" onClick={nextQuestion}>
+                      {currentLevel >= 15 ? "🏆 Gewinn einlösen" : "Nächste Frage →"}
+                    </button>
+                  ) : phoneSecondChance ? (
+                    <button className="wwm-btn wwm-btn--primary" onClick={retryWithSecondChance}>
+                      Nochmal versuchen
+                    </button>
+                  ) : hasExtraLife && !extraLifeUsed && currentLevel <= EXTRA_LIFE_MAX_LEVEL ? (
+                    <button className="wwm-btn wwm-btn--primary" onClick={retryWithExtraLife}>
+                      🛡️ Extra-Leben einsetzen
+                    </button>
+                  ) : (
+                    <button className="wwm-btn wwm-btn--primary" onClick={nextQuestion}>
+                      Weiter
+                    </button>
                   )}
                 </div>
               )}

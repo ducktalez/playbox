@@ -1,183 +1,315 @@
 /**
- * QuestionFeedback — Reusable feedback UI for quiz questions.
+ * QuestionFeedback — Deferred feedback UI for quiz questions.
  *
- * Shown on the answer explanation screen in all game modes.
- * Flow: idle → selected (thumbs up/down/report) → category (follow-up chips) → submitted
+ * Collects feedback locally; the parent component is responsible for
+ * POSTing the payload when the player advances (e.g. "Nächste Frage").
+ *
+ * Flow:
+ *   idle  → thumbs up (instant pending, toggle off with another tap)
+ *   idle  → thumbs down → details (clustered categories + comment) → pending
+ *   idle  → report     → details (report categories + comment)    → pending
+ *   any   → "← Zurück" resets to idle (discards pending)
  */
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 
-const API_BASE =
-  typeof window !== "undefined"
-    ? `${window.location.origin}/api/v1/quiz`
-    : "/api/v1/quiz";
+// --- Types exposed to parent components ---
 
-type FeedbackType = "THUMBS_UP" | "THUMBS_DOWN" | "REPORT";
-type FeedbackState = "idle" | "category" | "submitted";
+export type PendingFeedback = {
+  feedback_type: "THUMBS_UP" | "THUMBS_DOWN" | "REPORT";
+  category: string | null;
+  comment: string | null;
+};
 
-const THUMBS_DOWN_CATEGORIES: { value: string; label: string }[] = [
-  { value: "PROBLEM_WITH_QUESTION", label: "Problem mit Frage" },
-  { value: "PROBLEM_WITH_ANSWERS", label: "Problem mit Antworten" },
+type FeedbackView = "idle" | "thumbs-down-details" | "report-details";
+
+// --- Category definitions (must match backend THUMBS_DOWN_CATEGORIES / REPORT_CATEGORIES) ---
+
+const PROBLEM_GROUP = [
+  { value: "PROBLEM_WITH_QUESTION", label: "Frage" },
+  { value: "PROBLEM_WITH_ANSWERS", label: "Antworten" },
+];
+
+const DIFFICULTY_GROUP = [
   { value: "TOO_HARD", label: "Zu schwer" },
   { value: "TOO_EASY", label: "Zu leicht" },
+];
+
+const EXTRA_GROUP = [
   { value: "NOT_A_GOOD_QUESTION", label: "Keine gute Frage" },
   { value: "DUPLICATE", label: "Duplikat" },
 ];
 
-const REPORT_CATEGORIES: { value: string; label: string }[] = [
-  { value: "QUESTION_INACCURATE", label: "Frage ungenau" },
-  { value: "ANSWER_INCORRECT", label: "Antwort falsch" },
-  { value: "OFFENSIVE_CONTENT", label: "Unangemessener Inhalt" },
+const REPORT_GROUP = [
+  { value: "QUESTION_INACCURATE", label: "Ungenau" },
+  { value: "ANSWER_INCORRECT", label: "Falsch" },
+  { value: "OFFENSIVE_CONTENT", label: "Unangemessen" },
   { value: "OTHER", label: "Sonstiges" },
 ];
 
-const THUMBS_UP_CATEGORIES: { value: string; label: string }[] = [
-  { value: "GREAT_QUESTION", label: "Tolle Frage!" },
-  { value: "LEARNED_SOMETHING", label: "Was gelernt!" },
-];
+// --- Props ---
 
 type Props = {
-  questionId: string;
-  playerId?: string | null;
-  sessionId?: string | null;
+  /** Called whenever the pending feedback changes (null = cleared). */
+  onPendingChange: (payload: PendingFeedback | null) => void;
+  /** If true, render icons as a compact vertical strip (for inside explanation box). */
+  inline?: boolean;
 };
 
-export default function QuestionFeedback({ questionId, playerId, sessionId }: Props) {
-  const [state, setState] = useState<FeedbackState>("idle");
-  const [selectedType, setSelectedType] = useState<FeedbackType | null>(null);
-  const [submittedMessage, setSubmittedMessage] = useState("");
+export default function QuestionFeedback({ onPendingChange, inline }: Props) {
+  const [view, setView] = useState<FeedbackView>("idle");
+  const [pendingType, setPendingType] = useState<PendingFeedback["feedback_type"] | null>(null);
 
-  const submitFeedback = async (type: FeedbackType, category?: string) => {
-    try {
-      const body: Record<string, unknown> = { feedback_type: type };
-      if (category) body.category = category;
-      if (playerId) body.player_id = playerId;
-      if (sessionId) body.session_id = sessionId;
+  // Thumbs-down detail selections
+  const [problemWith, setProblemWith] = useState<string | null>(null);
+  const [difficulty, setDifficulty] = useState<string | null>(null);
+  const [extras, setExtras] = useState<Set<string>>(new Set());
+  const [comment, setComment] = useState("");
 
-      await fetch(`${API_BASE}/questions/${questionId}/feedback`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+  // Report detail selections
+  const [reportCategory, setReportCategory] = useState<string | null>(null);
+  const [reportComment, setReportComment] = useState("");
 
-      setState("submitted");
-      setSubmittedMessage(
-        type === "THUMBS_UP" ? "👍 Danke!" :
-        type === "THUMBS_DOWN" ? "👎 Feedback gesendet" :
-        "🚩 Gemeldet"
-      );
-    } catch {
-      setState("submitted");
-      setSubmittedMessage("Fehler beim Senden");
-    }
-  };
+  // Build comma-separated category set from thumbs-down selections
+  const buildThumbsDownCategory = useCallback((): string | null => {
+    const parts: string[] = [];
+    if (problemWith) parts.push(problemWith);
+    if (difficulty) parts.push(difficulty);
+    extras.forEach((e) => parts.push(e));
+    return parts.length > 0 ? parts.join(",") : null;
+  }, [problemWith, difficulty, extras]);
+
+  // Notify parent when pending state changes
+  const emitPending = useCallback(
+    (payload: PendingFeedback | null) => {
+      onPendingChange(payload);
+    },
+    [onPendingChange],
+  );
+
+  // Reset everything to idle
+  const resetAll = useCallback(() => {
+    setView("idle");
+    setPendingType(null);
+    setProblemWith(null);
+    setDifficulty(null);
+    setExtras(new Set());
+    setComment("");
+    setReportCategory(null);
+    setReportComment("");
+    emitPending(null);
+  }, [emitPending]);
+
+  // --- Handlers ---
 
   const handleThumbsUp = () => {
-    setSelectedType("THUMBS_UP");
-    setState("category");
+    if (pendingType === "THUMBS_UP") {
+      // Toggle off
+      resetAll();
+      return;
+    }
+    resetAll();
+    setPendingType("THUMBS_UP");
+    emitPending({ feedback_type: "THUMBS_UP", category: null, comment: null });
   };
 
   const handleThumbsDown = () => {
-    setSelectedType("THUMBS_DOWN");
-    setState("category");
+    if (view === "thumbs-down-details") {
+      resetAll();
+      return;
+    }
+    // Reset any existing pending and open details
+    setPendingType(null);
+    setReportCategory(null);
+    setReportComment("");
+    emitPending(null);
+    setView("thumbs-down-details");
   };
 
   const handleReport = () => {
-    setSelectedType("REPORT");
-    setState("category");
-  };
-
-  const handleCategorySelect = (category: string) => {
-    if (selectedType) {
-      submitFeedback(selectedType, category);
+    if (view === "report-details") {
+      resetAll();
+      return;
     }
+    setPendingType(null);
+    setProblemWith(null);
+    setDifficulty(null);
+    setExtras(new Set());
+    setComment("");
+    emitPending(null);
+    setView("report-details");
   };
 
-  const handleSkipCategory = () => {
-    if (selectedType === "THUMBS_UP") {
-      submitFeedback("THUMBS_UP");
+  // Thumbs-down: update pending whenever detail selections change
+  useEffect(() => {
+    if (view !== "thumbs-down-details") return;
+    const cat = buildThumbsDownCategory();
+    const trimmedComment = comment.trim() || null;
+    setPendingType("THUMBS_DOWN");
+    emitPending({
+      feedback_type: "THUMBS_DOWN",
+      category: cat,
+      comment: trimmedComment,
+    });
+  }, [view, problemWith, difficulty, extras, comment, buildThumbsDownCategory, emitPending]);
+
+  // Report: update pending whenever detail selections change
+  useEffect(() => {
+    if (view !== "report-details") return;
+    if (!reportCategory) {
+      setPendingType("REPORT");
+      emitPending(null); // can't submit report without category
+      return;
     }
+    setPendingType("REPORT");
+    emitPending({
+      feedback_type: "REPORT",
+      category: reportCategory,
+      comment: reportComment.trim() || null,
+    });
+  }, [view, reportCategory, reportComment, emitPending]);
+
+  const toggleExtra = (value: string) => {
+    setExtras((prev) => {
+      const next = new Set(prev);
+      if (next.has(value)) next.delete(value);
+      else next.add(value);
+      return next;
+    });
   };
 
-  const getCategories = (): { value: string; label: string }[] => {
-    if (selectedType === "THUMBS_DOWN") return THUMBS_DOWN_CATEGORIES;
-    if (selectedType === "REPORT") return REPORT_CATEGORIES;
-    if (selectedType === "THUMBS_UP") return THUMBS_UP_CATEGORIES;
-    return [];
-  };
+  // --- Render: Icon bar (always visible) ---
+  const iconBar = (
+    <div className={`q-feedback__icons${inline ? " q-feedback__icons--inline" : ""}`}>
+      <button
+        className={`q-feedback__btn q-feedback__btn--up${pendingType === "THUMBS_UP" ? " q-feedback__btn--active-up" : ""}`}
+        onClick={handleThumbsUp}
+        title="Gute Frage"
+      >
+        👍
+      </button>
+      <button
+        className={`q-feedback__btn q-feedback__btn--down${pendingType === "THUMBS_DOWN" ? " q-feedback__btn--active-down" : ""}${view === "thumbs-down-details" ? " q-feedback__btn--open" : ""}`}
+        onClick={handleThumbsDown}
+        title="Schlechte Frage"
+      >
+        👎
+      </button>
+      <button
+        className={`q-feedback__btn q-feedback__btn--report${pendingType === "REPORT" ? " q-feedback__btn--active-report" : ""}${view === "report-details" ? " q-feedback__btn--open" : ""}`}
+        onClick={handleReport}
+        title="Frage melden"
+      >
+        🚩
+      </button>
+    </div>
+  );
 
-  if (state === "submitted") {
-    return (
-      <div className="q-feedback q-feedback--submitted">
-        <span className="q-feedback__done">{submittedMessage}</span>
-      </div>
-    );
-  }
+  // --- Render: Segmented pill helper ---
+  const segmentedPill = (
+    options: { value: string; label: string }[],
+    selected: string | null,
+    onSelect: (value: string | null) => void,
+  ) => (
+    <div className="q-pill">
+      {options.map((opt, i) => (
+        <button
+          key={opt.value}
+          className={`q-pill__seg${selected === opt.value ? " q-pill__seg--on" : ""}${i === 0 ? " q-pill__seg--first" : ""}${i === options.length - 1 ? " q-pill__seg--last" : ""}`}
+          onClick={() => onSelect(selected === opt.value ? null : opt.value)}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
 
-  if (state === "category") {
-    const categories = getCategories();
+  const toggleChips = (
+    options: { value: string; label: string }[],
+    selected: Set<string>,
+    onToggle: (value: string) => void,
+  ) => (
+    <div className="q-feedback__chips-row">
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          className={`q-feedback__mini-chip${selected.has(opt.value) ? " q-feedback__mini-chip--on" : ""}`}
+          onClick={() => onToggle(opt.value)}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  // --- Render: Thumbs-down details ---
+  if (view === "thumbs-down-details") {
     return (
-      <div className="q-feedback q-feedback--category">
-        <p className="q-feedback__prompt">
-          {selectedType === "THUMBS_UP" && "Was hat dir gefallen?"}
-          {selectedType === "THUMBS_DOWN" && "Was war das Problem?"}
-          {selectedType === "REPORT" && "Was möchtest du melden?"}
-        </p>
-        <div className="q-feedback__chips">
-          {categories.map((c) => (
-            <button
-              key={c.value}
-              className="q-feedback__chip"
-              onClick={() => handleCategorySelect(c.value)}
-            >
-              {c.label}
-            </button>
-          ))}
-          {selectedType === "THUMBS_UP" && (
-            <button
-              className="q-feedback__chip q-feedback__chip--skip"
-              onClick={handleSkipCategory}
-            >
-              Überspringen
-            </button>
-          )}
-          <button
-            className="q-feedback__chip q-feedback__chip--back"
-            onClick={() => { setState("idle"); setSelectedType(null); }}
-          >
-            ← Zurück
-          </button>
+      <div className="q-feedback q-feedback--details">
+        {iconBar}
+        <div className="q-feedback__detail-panel">
+          <div className="q-feedback__groups">
+            <div className="q-feedback__group">
+              <span className="q-feedback__group-label">Problem</span>
+              {segmentedPill(PROBLEM_GROUP, problemWith, setProblemWith)}
+            </div>
+            <div className="q-feedback__group">
+              <span className="q-feedback__group-label">Schwierigkeit</span>
+              {segmentedPill(DIFFICULTY_GROUP, difficulty, setDifficulty)}
+            </div>
+            <div className="q-feedback__group">
+              <span className="q-feedback__group-label">Weitere</span>
+              {toggleChips(EXTRA_GROUP, extras, toggleExtra)}
+            </div>
+          </div>
+          <div className="q-feedback__footer">
+            <input
+              className="q-feedback__comment"
+              type="text"
+              placeholder="Kommentar (optional)"
+              maxLength={500}
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+            />
+            <button className="q-feedback__back" onClick={resetAll}>← Zurück</button>
+          </div>
         </div>
       </div>
     );
   }
 
-  // idle state
+  // --- Render: Report details ---
+  if (view === "report-details") {
+    return (
+      <div className="q-feedback q-feedback--details">
+        {iconBar}
+        <div className="q-feedback__detail-panel">
+          <div className="q-feedback__groups">
+            <div className="q-feedback__group">
+              <span className="q-feedback__group-label">Grund</span>
+              {segmentedPill(REPORT_GROUP, reportCategory, setReportCategory)}
+            </div>
+          </div>
+          <div className="q-feedback__footer">
+            <input
+              className="q-feedback__comment"
+              type="text"
+              placeholder="Kommentar (optional)"
+              maxLength={500}
+              value={reportComment}
+              onChange={(e) => setReportComment(e.target.value)}
+            />
+            <button className="q-feedback__back" onClick={resetAll}>← Zurück</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Render: Idle (just icons) ---
   return (
     <div className="q-feedback q-feedback--idle">
-      <div className="q-feedback__actions">
-        <button
-          className="q-feedback__btn q-feedback__btn--up"
-          onClick={handleThumbsUp}
-          title="Gute Frage"
-        >
-          👍
-        </button>
-        <button
-          className="q-feedback__btn q-feedback__btn--down"
-          onClick={handleThumbsDown}
-          title="Schlechte Frage"
-        >
-          👎
-        </button>
-        <button
-          className="q-feedback__btn q-feedback__btn--report"
-          onClick={handleReport}
-          title="Frage melden"
-        >
-          🚩
-        </button>
-      </div>
+      {iconBar}
     </div>
   );
 }

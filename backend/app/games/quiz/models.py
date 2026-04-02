@@ -138,7 +138,8 @@ class QuestionFeedback(SQLModel, table=True):
     # THUMBS_UP, THUMBS_DOWN, REPORT
     feedback_type: str = Field(max_length=20)
     # Optional follow-up category, e.g. TOO_HARD, PROBLEM_WITH_ANSWERS, ...
-    category: str | None = Field(default=None, max_length=50)
+    # Stored as comma-separated set for multi-select (e.g. "PROBLEM_WITH_ANSWERS,TOO_HARD")
+    category: str | None = Field(default=None, max_length=200)
     # Free-text comment (future use)
     comment: str | None = Field(default=None, max_length=500)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

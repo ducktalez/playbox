@@ -30,6 +30,7 @@ These instructions apply to both backend and frontend files for the Quiz game.
 - Session completion, frontend mode flows, and question submission remain higher value than advanced polish.
 - Media support should stay URL/file-based only.
 - Quizduell questions may later be linked to Piccolo quiz-style prompts, but that relationship should be introduced only when there is a concrete gameplay need.
+- **Question feedback** uses deferred submission: the frontend collects feedback locally and POSTs it only when the player advances to the next question. `THUMBS_UP` has no sub-categories. `THUMBS_DOWN` categories are stored as a comma-separated set (e.g. `"PROBLEM_WITH_ANSWERS,TOO_HARD"`).
 
 ## Research Documentation
 - Store non-runtime quiz research under `docs/games/quiz/`.

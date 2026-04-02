@@ -18,6 +18,7 @@ These instructions supplement the global `.github/copilot-instructions.md` for f
 - Treat active game screens as app-like surfaces: large tap targets, minimal chrome, and fullscreen-feeling layouts are preferred when they improve the current round flow.
 - Optimize for shared-device usage first, especially for pass-and-play or party-card interactions.
 - Shared player-registration helpers may live in `src/core/` when multiple social/party games follow the same local setup pattern.
+- Reusable reporting/feedback UI components may live in `src/core/` when multiple games share the same report-and-rate flow; game-specific wrappers stay in the game module.
 
 ## Deferred until go-live
 - **Styling polish**: no design system, no CSS framework. Basic inline styles or minimal CSS are fine for now.

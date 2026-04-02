@@ -873,10 +873,11 @@ a:hover {
 }
 
 .quiz-explanation {
+  position: relative;
   background: rgba(108, 99, 255, 0.1);
   border: 1px solid rgba(108, 99, 255, 0.25);
   border-radius: 12px;
-  padding: 1rem 1.25rem;
+  padding: 1rem 3.2rem 1rem 1.25rem;
   margin-top: 1rem;
   text-align: left;
   color: var(--text-primary);
@@ -917,103 +918,281 @@ a:hover {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* --- Question Feedback (👍/👎/🚩) --- */
+/* --- Question Feedback (👍/👎/🚩) — Deferred submission --- */
 
 .q-feedback {
-  margin-top: 1rem;
   animation: quiz-fade-in 0.25s ease;
 }
 
 .q-feedback--idle {
+  /* Standalone (no explanation note): centered icons */
   text-align: center;
+  margin-top: 0.7rem;
 }
 
-.q-feedback__actions {
+.q-feedback--details {
+  margin-top: 0.7rem;
+}
+
+/* Icon bar — horizontal strip */
+.q-feedback__icons {
   display: flex;
+  gap: 0.4rem;
   justify-content: center;
-  gap: 0.75rem;
   flex-wrap: wrap;
+}
+
+/* Inline mode: icons float vertically at top-right of explanation box */
+.q-feedback__icons--inline {
+  position: absolute;
+  right: 0.5rem;
+  top: 0.4rem;
+  flex-direction: column;
+  gap: 0.2rem;
+  justify-content: flex-start;
+}
+
+.q-feedback__icons--inline .q-feedback__btn {
+  width: 26px;
+  height: 26px;
+  font-size: 0.8rem;
+  border-width: 1.5px;
+}
+
+.q-feedback__icons--inline .q-feedback__btn--report {
+  font-size: 0.7rem;
 }
 
 .q-feedback__btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  font-size: 1.3rem;
+  width: 32px;
+  height: 32px;
+  font-size: 1rem;
   border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 2px solid transparent;
   background: var(--bg-elevated);
   cursor: pointer;
-  transition: background var(--transition), transform 0.15s ease;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+  flex-shrink: 0;
 }
 
 .q-feedback__btn:hover {
-  background: rgba(108, 99, 255, 0.2);
+  background: rgba(108, 99, 255, 0.15);
   transform: scale(1.1);
 }
 
 .q-feedback__btn--report {
-  font-size: 1.1rem;
+  font-size: 0.9rem;
 }
 
-.q-feedback--category {
-  text-align: center;
+/* Active / pending states */
+.q-feedback__btn--active-up {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.15);
 }
 
-.q-feedback__prompt {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-bottom: 0.6rem;
+.q-feedback__btn--active-down {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.15);
 }
 
-.q-feedback__chips {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.4rem;
+.q-feedback__btn--active-report {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
 }
 
-.q-feedback__chip {
-  font-size: 0.8rem;
-  padding: 0.35rem 0.75rem;
-  border-radius: 20px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-  cursor: pointer;
-  transition: background var(--transition), border-color var(--transition);
-}
-
-.q-feedback__chip:hover {
-  background: rgba(108, 99, 255, 0.2);
+.q-feedback__btn--open {
   border-color: var(--accent);
 }
 
-.q-feedback__chip--skip {
-  color: var(--text-muted);
-  border-style: dashed;
+/* Detail panel (thumbs-down or report follow-up) */
+.q-feedback__detail-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  animation: quiz-fade-in 0.2s ease;
 }
 
-.q-feedback__chip--back {
+/* Horizontal flow of groups — wraps on narrow screens */
+.q-feedback__groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  align-items: flex-end;
+}
+
+/* Single group: label stacked above pill */
+.q-feedback__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.q-feedback__group-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  white-space: nowrap;
+  padding-left: 0.2rem;
+}
+
+/* Row: label + segmented pill inline (used for report single-row) */
+.q-feedback__row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.q-feedback__row-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Segmented pill — auto-width (not full stretch) */
+.q-pill {
+  display: inline-flex;
+}
+
+.q-pill__seg {
+  font-size: 0.66rem;
+  padding: 0.18rem 0.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  user-select: none;
+  white-space: nowrap;
+  text-align: center;
+  border-radius: 0;
+  margin-left: -1px; /* collapse double borders */
+}
+
+.q-pill__seg--first {
+  border-radius: 16px 0 0 16px;
+  margin-left: 0;
+}
+
+.q-pill__seg--last {
+  border-radius: 0 16px 16px 0;
+}
+
+/* Single-item pills (first + last) */
+.q-pill__seg--first.q-pill__seg--last {
+  border-radius: 16px;
+}
+
+.q-pill__seg:hover {
+  background: rgba(108, 99, 255, 0.12);
+  border-color: rgba(108, 99, 255, 0.3);
+  z-index: 1;
+}
+
+.q-pill__seg--on {
+  background: rgba(108, 99, 255, 0.3);
+  border-color: var(--accent);
+  color: #fff;
+  z-index: 2;
+}
+
+.q-pill__seg--on:hover {
+  background: rgba(108, 99, 255, 0.4);
+}
+
+/* Individual toggle chips — for multi-select rows (not segmented) */
+.q-feedback__chips-row {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.q-feedback__mini-chip {
+  font-size: 0.66rem;
+  padding: 0.18rem 0.4rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.q-feedback__mini-chip:hover {
+  background: rgba(108, 99, 255, 0.12);
+  border-color: rgba(108, 99, 255, 0.3);
+}
+
+.q-feedback__mini-chip--on {
+  background: rgba(108, 99, 255, 0.3);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.q-feedback__mini-chip--on:hover {
+  background: rgba(108, 99, 255, 0.4);
+}
+
+/* Comment + back button on one line */
+.q-feedback__footer {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.q-feedback__comment {
+  flex: 1;
+  min-width: 0;
+  padding: 0.25rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+  font-size: 0.72rem;
+  font-family: inherit;
+}
+
+.q-feedback__comment::placeholder {
+  color: var(--text-muted);
+}
+
+.q-feedback__comment:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Back button */
+.q-feedback__back {
+  font-size: 0.72rem;
   color: var(--text-muted);
   background: transparent;
-  border-color: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.2rem 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color 0.2s;
 }
 
-.q-feedback__chip--back:hover {
+.q-feedback__back:hover {
   color: var(--text-primary);
-  background: rgba(255,255,255,0.05);
-}
-
-.q-feedback--submitted {
-  text-align: center;
-}
-
-.q-feedback__done {
-  font-size: 0.85rem;
-  color: var(--text-muted);
 }
 
 /* --- Setup screen --- */
@@ -2191,10 +2370,11 @@ a:hover {
 }
 
 .wwm-explanation {
+  position: relative;
   background: rgba(108, 99, 255, 0.1);
   border: 1px solid rgba(108, 99, 255, 0.25);
   border-radius: 12px;
-  padding: 0.8rem 1rem;
+  padding: 0.8rem 2.4rem 0.8rem 1rem;
   margin: 0.75rem 0;
   text-align: left;
   font-size: 0.9rem;

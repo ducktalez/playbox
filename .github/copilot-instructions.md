@@ -30,6 +30,12 @@ The project is in early development. Only implement what is **technically necess
 - Error format: `{ "detail": "...", "code": "MACHINE_READABLE_CODE" }`.
 - Enum values are **uppercase strings** in JSON.
 
+## Cross-Game Content Reporting
+- **Content reporting/feedback** (rating, flagging, reporting) should follow consistent patterns across all games: feedback type enum + optional category set + optional free-text comment.
+- Reusable UI patterns for reporting belong in `frontend/src/core/` when multiple games share the same flow; game-specific wrappers stay in the game module.
+- Backend schema convention: `feedback_type` (uppercase string), `category` (comma-separated set of uppercase strings or `null`), `comment` (free text or `null`).
+- Games that already have reporting: **Imposter** (word reports), **Quiz** (question feedback). Piccolo should adopt the same pattern when adding challenge reporting.
+
 ## Known Pitfalls
 - **Tests must run from `backend/`**: `cd backend && python -m pytest tests/ -v`.
 - **Quiz uses PostgreSQL**, Imposter/Piccolo use **in-memory or SQLite**. Prefer **in-memory SQLite during development** when persistence is not technically required. Don't mix the engines per game.

@@ -59,7 +59,6 @@ from app.games.quiz.schemas import (
     SessionOut,
     TagOut,
     THUMBS_DOWN_CATEGORIES,
-    THUMBS_UP_CATEGORIES,
 )
 
 # Allowed MIME types for media uploads
@@ -737,31 +736,23 @@ class QuizService:
             raise AppError(404, "Question not found", "QUESTION_NOT_FOUND")
 
         # Validate category based on feedback_type
-        if data.feedback_type == "THUMBS_DOWN":
-            if not data.category:
-                raise AppError(422, "Category is required for THUMBS_DOWN feedback", "CATEGORY_REQUIRED")
-            if data.category not in THUMBS_DOWN_CATEGORIES:
+        if data.feedback_type == "THUMBS_UP":
+            # THUMBS_UP does not accept categories
+            if data.category:
                 raise AppError(
                     422,
-                    f"Invalid category '{data.category}' for THUMBS_DOWN. Allowed: {', '.join(sorted(THUMBS_DOWN_CATEGORIES))}",
-                    "INVALID_FEEDBACK_CATEGORY",
+                    "THUMBS_UP feedback does not accept categories",
+                    "CATEGORY_NOT_ALLOWED",
                 )
+        elif data.feedback_type == "THUMBS_DOWN":
+            # THUMBS_DOWN: category is optional; if provided, validate each element in the comma-separated set
+            if data.category:
+                self._validate_category_set(data.category, THUMBS_DOWN_CATEGORIES, "THUMBS_DOWN")
         elif data.feedback_type == "REPORT":
+            # REPORT: category is required; validate each element
             if not data.category:
                 raise AppError(422, "Category is required for REPORT feedback", "CATEGORY_REQUIRED")
-            if data.category not in REPORT_CATEGORIES:
-                raise AppError(
-                    422,
-                    f"Invalid category '{data.category}' for REPORT. Allowed: {', '.join(sorted(REPORT_CATEGORIES))}",
-                    "INVALID_FEEDBACK_CATEGORY",
-                )
-        elif data.feedback_type == "THUMBS_UP":
-            if data.category and data.category not in THUMBS_UP_CATEGORIES:
-                raise AppError(
-                    422,
-                    f"Invalid category '{data.category}' for THUMBS_UP. Allowed: {', '.join(sorted(THUMBS_UP_CATEGORIES))}",
-                    "INVALID_FEEDBACK_CATEGORY",
-                )
+            self._validate_category_set(data.category, REPORT_CATEGORIES, "REPORT")
 
         feedback = QuestionFeedback(
             question_id=question_id,
@@ -780,6 +771,7 @@ class QuizService:
             question_id=feedback.question_id,
             feedback_type=feedback.feedback_type,
             category=feedback.category,
+            comment=feedback.comment,
             created_at=feedback.created_at,
         )
 
@@ -805,10 +797,25 @@ class QuizService:
                 question_id=e.question_id,
                 feedback_type=e.feedback_type,
                 category=e.category,
+                comment=e.comment,
                 created_at=e.created_at,
             )
             for e in entries
         ]
+
+    @staticmethod
+    def _validate_category_set(category_csv: str, allowed: set[str], type_label: str) -> None:
+        """Validate each element in a comma-separated category string against the allowed set."""
+        elements = [e.strip() for e in category_csv.split(",") if e.strip()]
+        if not elements:
+            raise AppError(422, "Category string is empty after parsing", "INVALID_FEEDBACK_CATEGORY")
+        for element in elements:
+            if element not in allowed:
+                raise AppError(
+                    422,
+                    f"Invalid category '{element}' for {type_label}. Allowed: {', '.join(sorted(allowed))}",
+                    "INVALID_FEEDBACK_CATEGORY",
+                )
 
     # --- Ordering Questions (WWM Kandidatenfrage) ---
 

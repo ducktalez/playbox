@@ -7,7 +7,7 @@
  */
 
 import { useState, useCallback } from "react";
-import QuestionFeedback from "./QuestionFeedback";
+import QuestionFeedback, { type PendingFeedback } from "./QuestionFeedback";
 
 const API_BASE =
   typeof window !== "undefined"
@@ -47,6 +47,9 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [scores, setScores] = useState<[number, number]>([0, 0]);
   const [slideKey, setSlideKey] = useState(0);
+
+  // Deferred question feedback
+  const [pendingFeedback, setPendingFeedback] = useState<PendingFeedback | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Current player: odd question index (0,2,4,...) = Player 1, even (1,3,5,...) = Player 2
@@ -156,8 +159,25 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
     [selectedAnswer, currentQuestion, activePlayer, activeSession, activePlayerIdx],
   );
 
+  /** Fire-and-forget: POST pending feedback for the current question, then clear it. */
+  const flushFeedback = useCallback(() => {
+    if (!pendingFeedback || !currentQuestion) return;
+    const body: Record<string, unknown> = { feedback_type: pendingFeedback.feedback_type };
+    if (pendingFeedback.category) body.category = pendingFeedback.category;
+    if (pendingFeedback.comment) body.comment = pendingFeedback.comment;
+    if (activePlayer) body.player_id = activePlayer.id;
+    if (activeSession) body.session_id = activeSession.id;
+    fetch(`${API_BASE}/questions/${currentQuestion.id}/feedback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).catch(() => {});
+    setPendingFeedback(null);
+  }, [pendingFeedback, currentQuestion, activePlayer, activeSession]);
+
   // --- Next question ---
   const nextQuestion = async () => {
+    flushFeedback();
     const nextIdx = currentIdx + 1;
     if (nextIdx >= questionIds.length) {
       // Finish both sessions
@@ -362,14 +382,16 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
                 <div className="quiz-explanation">
                   <div className="quiz-explanation__title">💡 Hinweis</div>
                   {attempt.note}
+                  <QuestionFeedback
+                    onPendingChange={setPendingFeedback}
+                    inline
+                  />
                 </div>
               )}
 
-              {currentQuestion && (
+              {!attempt.note && (
                 <QuestionFeedback
-                  questionId={currentQuestion.id}
-                  playerId={activePlayer?.id}
-                  sessionId={activeSession?.id}
+                  onPendingChange={setPendingFeedback}
                 />
               )}
 

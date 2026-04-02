@@ -23,3 +23,7 @@ applyTo: "backend/**"
 - **Logging pipeline**: no structured logging beyond basic stdout.
 - **Rate limiting**: not implemented.
 
+## Content Reporting
+- New games should follow the same feedback/report schema convention used by Quiz and Imposter: `feedback_type` enum + optional `category` set (comma-separated) + optional free-text `comment`.
+- Keep validation consistent: validate each element in a comma-separated category string against the allowed set for that feedback type.
+

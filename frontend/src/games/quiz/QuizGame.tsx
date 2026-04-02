@@ -15,7 +15,7 @@ import DuelGame from "./DuelGame";
 import LeaderboardView from "./LeaderboardView";
 import PlayerProfile from "./PlayerProfile";
 import QuestionForm from "./QuestionForm";
-import QuestionFeedback from "./QuestionFeedback";
+import QuestionFeedback, { type PendingFeedback } from "./QuestionFeedback";
 
 const API_BASE =
   typeof window !== "undefined"
@@ -96,7 +96,26 @@ export default function QuizGame() {
   const [timerActive, setTimerActive] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
 
+  // Deferred question feedback
+  const [pendingFeedback, setPendingFeedback] = useState<PendingFeedback | null>(null);
+
   const isSpeedMode = duelMode === "duel-speed";
+
+  /** Fire-and-forget: POST pending feedback for the current question, then clear it. */
+  const flushFeedback = useCallback(() => {
+    if (!pendingFeedback || !currentQuestion) return;
+    const body: Record<string, unknown> = { feedback_type: pendingFeedback.feedback_type };
+    if (pendingFeedback.category) body.category = pendingFeedback.category;
+    if (pendingFeedback.comment) body.comment = pendingFeedback.comment;
+    if (player) body.player_id = player.id;
+    if (session) body.session_id = session.id;
+    fetch(`${API_BASE}/questions/${currentQuestion.id}/feedback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).catch(() => {});
+    setPendingFeedback(null);
+  }, [pendingFeedback, currentQuestion, player, session]);
 
   // --- Load available tags ---
   useEffect(() => {
@@ -261,6 +280,7 @@ export default function QuizGame() {
 
   // --- Next question ---
   const nextQuestion = async () => {
+    flushFeedback();
     const nextIdx = currentIdx + 1;
     if (nextIdx >= questionIds.length) {
       if (session) {
@@ -545,14 +565,16 @@ export default function QuizGame() {
                 <div className="quiz-explanation">
                   <div className="quiz-explanation__title">💡 Hinweis</div>
                   {attempt.note}
+                  <QuestionFeedback
+                    onPendingChange={setPendingFeedback}
+                    inline
+                  />
                 </div>
               )}
 
-              {currentQuestion && (
+              {!attempt.note && (
                 <QuestionFeedback
-                  questionId={currentQuestion.id}
-                  playerId={player?.id}
-                  sessionId={session?.id}
+                  onPendingChange={setPendingFeedback}
                 />
               )}
 
