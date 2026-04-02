@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 import yaml
 
 from app.core.database import PgSessionLocal, init_pg_db
-from app.games.quiz.models import Answer, Category, Question, QuestionTag, Tag
+from app.games.quiz.models import Answer, Category, OrderingQuestion, Question, QuestionTag, Tag
 
 DEFAULT_SEED_PATH = Path(__file__).with_name("seed_questions.yaml")
 DEFAULT_CREATED_BY = "PlayBox quiz seed"
@@ -50,6 +50,9 @@ class SeedQuestionIn(BaseModel):
     note: str | None = Field(default=None, max_length=2000)
     category: str | None = None
     tier: int | None = Field(default=None, ge=1)
+    wwm_difficulty: int | None = Field(default=None, ge=0, le=15)
+    language: str = "de"
+    is_pun: bool = False
     tags: list[str] = Field(default_factory=list)
     answers: list[SeedAnswerIn] = Field(..., min_length=2)
     media_url: str | None = None
@@ -116,6 +119,15 @@ class QuizSeedFile(BaseModel):
 
     categories: list[SeedCategoryIn] = Field(default_factory=list)
     questions: list[SeedQuestionIn] = Field(default_factory=list)
+    ordering_questions: list["SeedOrderingQuestionIn"] = Field(default_factory=list)
+
+
+class SeedOrderingQuestionIn(BaseModel):
+    """An ordering question in the quiz seed file."""
+
+    text: str = Field(..., max_length=1000)
+    ordered_answers: list[str] = Field(..., min_length=2)
+    language: str = "de"
 
 
 @dataclass(slots=True)
@@ -185,6 +197,9 @@ def seed_quiz_dataset(db: Session, dataset: QuizSeedFile) -> QuizSeedResult:
             note=question_data.note,
             category_id=category_id,
             elo_score=elo_score,
+            wwm_difficulty=question_data.wwm_difficulty,
+            language=question_data.language,
+            is_pun=question_data.is_pun,
             media_url=question_data.media_url,
             media_type=question_data.media_type,
             created_by=question_data.created_by,
@@ -212,6 +227,22 @@ def seed_quiz_dataset(db: Session, dataset: QuizSeedFile) -> QuizSeedResult:
             db.add(QuestionTag(question_id=question.id, tag_id=tag.id))
 
         result.created_questions += 1
+
+    # --- Ordering Questions ---
+    for oq_data in dataset.ordering_questions:
+        existing = db.execute(
+            select(OrderingQuestion).where(OrderingQuestion.text == oq_data.text)
+        ).scalar_one_or_none()
+        if existing:
+            continue
+
+        import json
+        oq = OrderingQuestion(
+            text=oq_data.text,
+            ordered_answers_json=json.dumps(oq_data.ordered_answers, ensure_ascii=False),
+            language=oq_data.language,
+        )
+        db.add(oq)
 
     db.commit()
     return result

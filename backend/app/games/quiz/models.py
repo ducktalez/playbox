@@ -1,8 +1,10 @@
 """Quiz — SQLAlchemy / SQLModel models."""
 
+import json
 import uuid
 from datetime import datetime, timezone
 
+from sqlalchemy import Column, Text
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -51,6 +53,12 @@ class Question(SQLModel, table=True):
     note: str | None = Field(default=None, max_length=2000)  # optional hint shown after answering
     category_id: uuid.UUID | None = Field(default=None, foreign_key="categories.id")
     elo_score: float = Field(default=1200.0)
+    # WWM difficulty level 1–15 (0 = unrated / special); null = not assigned yet
+    wwm_difficulty: int | None = Field(default=None, ge=0, le=15)
+    # ISO 639-1 language code; "de" = German (default), "en" = English
+    language: str = Field(default="de", max_length=5)
+    # True if the question is designed as a Wortspiel/pun (used to select Q1 in Millionär)
+    is_pun: bool = Field(default=False)
     media_url: str | None = Field(default=None, max_length=500)
     media_type: str | None = Field(default=None, max_length=50)  # image, video, document
     created_by: str | None = Field(default=None, max_length=200)
@@ -116,4 +124,29 @@ class QuestionAttempt(SQLModel, table=True):
     answered_correctly: bool = Field(default=False)
     time_taken_ms: int | None = Field(default=None)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class OrderingQuestion(SQLModel, table=True):
+    """A question where answers must be placed in the correct order (WWM Kandidatenfrage)."""
+
+    __tablename__ = "ordering_questions"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    text: str = Field(max_length=1000)
+    # JSON-serialized list of answer strings in the correct order.
+    # Example: '["First", "Second", "Third", "Fourth"]'
+    ordered_answers_json: str = Field(sa_column=Column("ordered_answers_json", Text, nullable=False))
+    language: str = Field(default="de", max_length=5)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @property
+    def ordered_answers(self) -> list[str]:
+        """Deserialize the ordered answers from JSON."""
+        return json.loads(self.ordered_answers_json)
+
+    @ordered_answers.setter
+    def ordered_answers(self, value: list[str]) -> None:
+        """Serialize the ordered answers to JSON."""
+        self.ordered_answers_json = json.dumps(value, ensure_ascii=False)
+
 

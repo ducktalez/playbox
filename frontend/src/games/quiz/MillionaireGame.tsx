@@ -7,6 +7,14 @@
  * - Three jokers: 50:50, Audience Poll, Phone (Drachenlord)
  * - Game Over on wrong answer (falls back to last safety)
  * - Sound effects served from /media/sounds/wwm/
+ * - Kandidaten-Auswahlfrage (ordering question) before main game
+ *   → correct answer earns an extra life (usable up to €32,000)
+ *
+ * SOUND NOTE: intro.mp3 is currently NOT used because we jump straight
+ * to the Kandidaten-Auswahlfrage (ordering question). The question-low
+ * background music starts immediately instead. Whether a dedicated intro
+ * screen or intro music should be added needs to be decided later.
+ * See also: README.md "Ablage/TODOs".
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -36,7 +44,13 @@ const PRIZE_LADDER = [
 ];
 const SAFETY_LEVELS = new Set([5, 10]);
 
-// --- Sound System (real WWM MP3 files) ---
+// --- Sound System ---
+// Two independent audio layers:
+//   1. Background music (BG) – one looping track at a time; new BG stops old BG.
+//   2. Sound effects (SFX) – play on top of BG without interrupting it.
+// Within each layer, only one track plays at a time by default. SFX can
+// overlap with BG, but a new SFX of the same "role" stops the previous one
+// explicitly (e.g. after-correct interrupts lock-in).
 const SOUND_BASE = "/media/sounds/wwm";
 
 function createAudio(file: string, loop = false): HTMLAudioElement {
@@ -54,9 +68,9 @@ const bgTracks = {
   million: createAudio("question-million.mp3", true),
 };
 
-// One-shot sound effects
+// One-shot / short-loop sound effects
 const sfx = {
-  intro: createAudio("intro.mp3"),
+  intro: createAudio("intro.mp3"), // NOTE: currently unused, see file header
   lockIn: createAudio("lock-in.mp3"),
   correctLow: createAudio("correct-low.mp3"),
   correctMid: createAudio("correct-mid.mp3"),
@@ -72,7 +86,7 @@ const sfx = {
   safety1: createAudio("safety-1.mp3"),
   safety2: createAudio("safety-2.mp3"),
   afterCorrect: createAudio("after-correct.mp3"),
-  afterSelection: createAudio("after-selection.mp3"),
+  afterSelection: createAudio("after-selection.mp3"), // plays after correct candidate is selected (ordering phase)
   afterSafety: createAudio("after-safety.mp3"),
   win: createAudio("win.mp3"),
   win2: createAudio("win-2.mp3"),
@@ -81,8 +95,28 @@ const sfx = {
 
 let currentBg: HTMLAudioElement | null = null;
 
-/** Stop the currently playing background music. */
-function stopSound() {
+// Module-level volume state (synced from React state via useEffect)
+let _audioVolume = 0.8;
+let _audioMuted = false;
+
+/** Apply current volume/mute to every audio element. */
+function applyVolumeToAll() {
+  const effectiveVol = _audioMuted ? 0 : _audioVolume;
+  [...Object.values(bgTracks), ...Object.values(sfx)].forEach((a) => {
+    a.volume = effectiveVol;
+  });
+}
+
+/** Return the background track appropriate for the given level. */
+function getBgTrack(level: number): HTMLAudioElement {
+  if (level <= 5) return bgTracks.low;
+  if (level <= 10) return bgTracks.mid;
+  if (level <= 14) return bgTracks.high;
+  return bgTracks.million;
+}
+
+/** Stop only the background music. SFX keep playing. */
+function stopBg() {
   if (currentBg) {
     currentBg.pause();
     currentBg.currentTime = 0;
@@ -90,23 +124,40 @@ function stopSound() {
   }
 }
 
-/** Start tier-appropriate background music. */
+/**
+ * Start tier-appropriate background music.
+ * If the correct track for `level` is already playing, this is a no-op
+ * (keeps the music uninterrupted, important for levels 1-5).
+ */
 function playBg(level: number) {
-  stopSound();
-  let track: HTMLAudioElement;
-  if (level <= 5) track = bgTracks.low;
-  else if (level <= 10) track = bgTracks.mid;
-  else if (level <= 14) track = bgTracks.high;
-  else track = bgTracks.million;
+  const track = getBgTrack(level);
+  if (currentBg === track && !track.paused) return; // already playing the right track
+  stopBg();
   track.currentTime = 0;
+  track.volume = _audioMuted ? 0 : _audioVolume;
   track.play().catch(() => {});
   currentBg = track;
 }
 
-/** Play a one-shot sound effect. */
+/** Play a sound effect on top of whatever is currently playing. */
 function playSfx(audio: HTMLAudioElement) {
+  audio.volume = _audioMuted ? 0 : _audioVolume;
   audio.currentTime = 0;
   audio.play().catch(() => {});
+}
+
+/** Stop a specific SFX track (e.g. stop lock-in when after-correct starts). */
+function stopSfxTrack(audio: HTMLAudioElement) {
+  audio.pause();
+  audio.currentTime = 0;
+}
+
+/** Stop ALL sfx tracks (cleanup). */
+function stopAllSfx() {
+  Object.values(sfx).forEach((a) => {
+    a.pause();
+    a.currentTime = 0;
+  });
 }
 
 function getCorrectSfx(level: number): HTMLAudioElement {
@@ -181,6 +232,20 @@ type AttemptOut = {
 };
 type AudiencePollEntry = { answer_id: string; percentage: number };
 type PhoneHint = { hint_answer_id: string; confidence: number; message: string };
+type OrderingQuestionOut = { id: string; text: string; shuffled_answers: string[] };
+
+/** Max level (inclusive) at which the extra life from the ordering question works. */
+const EXTRA_LIFE_MAX_LEVEL = 11; // €32,000
+
+/** Live-updating timer for the ordering question. */
+function OrderingTimer({ startTime }: { startTime: number }) {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setElapsed(Date.now() - startTime), 100);
+    return () => clearInterval(interval);
+  }, [startTime]);
+  return <div className="wwm-ordering__timer">{(elapsed / 1000).toFixed(1)}s</div>;
+}
 
 export default function MillionaireGame({ onBack }: { onBack: () => void }) {
   // Game state
@@ -212,6 +277,32 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
   // Safety / Win celebration overlay
   const [celebratingSafety, setCelebratingSafety] = useState<5 | 10 | null>(null);
 
+  // Volume control
+  const [volume, setVolume] = useState(0.8);
+  const [muted, setMuted] = useState(false);
+
+  // --- Ordering question (Kandidaten-Auswahlfrage) ---
+  const [orderingPhase, setOrderingPhase] = useState(true);
+  const [orderingQ, setOrderingQ] = useState<OrderingQuestionOut | null>(null);
+  const [orderingSelected, setOrderingSelected] = useState<string[]>([]);
+  const [orderingTimerStart, setOrderingTimerStart] = useState<number | null>(null);
+  const [orderingTimerMs, setOrderingTimerMs] = useState<number | null>(null);
+  const [orderingResult, setOrderingResult] = useState<{ correct: boolean; correct_order: string[] } | null>(null);
+  const [orderingChecking, setOrderingChecking] = useState(false);
+
+  // Extra life: earned by solving ordering question correctly
+  const [hasExtraLife, setHasExtraLife] = useState(false);
+  const [extraLifeUsed, setExtraLifeUsed] = useState(false);
+  // Tracks the wrong answer ID after using extra life — shown as red+disabled but still visible
+  const [extraLifeWrongId, setExtraLifeWrongId] = useState<string | null>(null);
+
+  // Sync React volume state → module-level variables → all audio elements
+  useEffect(() => {
+    _audioVolume = volume;
+    _audioMuted = muted;
+    applyVolumeToAll();
+  }, [volume, muted]);
+
   // Auto-dismiss safety celebration after 2.5 s
   useEffect(() => {
     if (!celebratingSafety) return;
@@ -225,11 +316,8 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
   // Stop all sounds on unmount
   useEffect(() => {
     return () => {
-      stopSound();
-      Object.values(sfx).forEach((a) => {
-        a.pause();
-        a.currentTime = 0;
-      });
+      stopBg();
+      stopAllSfx();
     };
   }, []);
 
@@ -243,39 +331,63 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     const init = async () => {
       try {
-        const pRes = await fetch(`${API_BASE}/players`, {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: "Gast" }),
-        });
-        if (!pRes.ok) throw new Error(`Player: ${pRes.status}`);
-        const pData = await pRes.json();
-        setPlayer(pData);
-
-        const sRes = await fetch(`${API_BASE}/sessions`, {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: "millionaire", player_id: pData.id }),
-        });
-        if (!sRes.ok) throw new Error(`Session: ${sRes.status}`);
-        setSession(await sRes.json());
-
-        const qRes = await fetch(`${API_BASE}/questions?order_by_elo=asc&balanced_categories=true&limit=15`);
-        if (!qRes.ok) throw new Error(`Questions: ${qRes.status}`);
-        const qData = await qRes.json();
-        const ids = qData.items.map((q: { id: string }) => q.id);
-        if (ids.length === 0) { alert("Keine Fragen vorhanden!"); onBack(); return; }
-
-        setQuestionIds(ids);
-        setLoading(false);
-        playSfx(sfx.intro);
-        loadQuestion(ids[0], 1);
+        // Fetch ordering question for Kandidaten-Auswahlfrage
+        const oqRes = await fetch(`${API_BASE}/ordering-question?language=de`);
+        if (oqRes.ok) {
+          const oqData: OrderingQuestionOut = await oqRes.json();
+          setOrderingQ(oqData);
+          setOrderingPhase(true);
+          setOrderingTimerStart(Date.now()); // Timer starts immediately
+          setLoading(false);
+          // Play BG music directly — intro.mp3 is NOT used (see file header)
+          playBg(1);
+          return; // Wait for ordering phase to complete before loading main game
+        }
+        // If no ordering questions exist, skip to main game
+        setOrderingPhase(false);
+        await initMainGame();
       } catch (e) {
         alert(`Fehler: ${e instanceof Error ? e.message : e}`);
         onBack();
       }
     };
     init();
-    return () => stopSound();
+    return () => stopBg();
   }, [initTrigger]);
+
+  /** Initialize player, session, and questions for the main game. */
+  const initMainGame = async () => {
+    try {
+      const pRes = await fetch(`${API_BASE}/players`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Gast" }),
+      });
+      if (!pRes.ok) throw new Error(`Player: ${pRes.status}`);
+      const pData = await pRes.json();
+      setPlayer(pData);
+
+      const sRes = await fetch(`${API_BASE}/sessions`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "millionaire", player_id: pData.id }),
+      });
+      if (!sRes.ok) throw new Error(`Session: ${sRes.status}`);
+      setSession(await sRes.json());
+
+      const qRes = await fetch(`${API_BASE}/questions?order_by_elo=asc&balanced_categories=true&limit=15&language=de&pun_first=true&randomize=true`);
+      if (!qRes.ok) throw new Error(`Questions: ${qRes.status}`);
+      const qData = await qRes.json();
+      const ids = qData.items.map((q: { id: string }) => q.id);
+      if (ids.length === 0) { alert("Keine Fragen vorhanden!"); onBack(); return; }
+
+      setQuestionIds(ids);
+      setLoading(false);
+      // BG music will be started by loadQuestion — no intro sound
+      loadQuestion(ids[0], 1);
+    } catch (e) {
+      alert(`Fehler: ${e instanceof Error ? e.message : e}`);
+      onBack();
+    }
+  };
 
   // --- Load Question ---
   const loadQuestion = async (id: string, level: number) => {
@@ -285,13 +397,70 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
     setAudiencePoll(null);
     setPhoneHint(null);
     setPhoneSecondChance(false);
+    setExtraLifeWrongId(null);
     setSlideKey((k) => k + 1);
 
     const res = await fetch(`${API_BASE}/questions/${id}?num_answers=4`);
     if (res.ok) {
       setCurrentQuestion(await res.json());
+      // playBg is a no-op if the correct track is already playing (levels 1-5)
       playBg(level);
     }
+  };
+
+  // --- Ordering question interaction ---
+  const orderingSelectAnswer = (answer: string) => {
+    if (orderingResult || orderingChecking) return;
+    if (orderingSelected.includes(answer)) return;
+
+    const newSelected = [...orderingSelected, answer];
+    setOrderingSelected(newSelected);
+
+    // Auto-check when all answers have been selected
+    if (orderingQ && newSelected.length === orderingQ.shuffled_answers.length) {
+      const elapsed = orderingTimerStart ? Date.now() - orderingTimerStart : 0;
+      setOrderingTimerMs(elapsed);
+      checkOrdering(newSelected, elapsed);
+    }
+  };
+
+  const orderingReset = () => {
+    if (orderingResult || orderingChecking) return;
+    setOrderingSelected([]);
+    // Timer keeps running — no restart on reset (measures total time from question appearance)
+  };
+
+  const checkOrdering = async (submitted: string[], elapsed: number) => {
+    if (!orderingQ) return;
+    setOrderingChecking(true);
+    try {
+      const res = await fetch(`${API_BASE}/ordering-question/${orderingQ.id}/check`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ submitted_order: submitted, time_taken_ms: elapsed }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setOrderingResult(data);
+        if (data.correct) {
+          setHasExtraLife(true);
+          playSfx(getCorrectSfx(1));
+          // after-selection jingle: plays after the correct candidate is selected
+          setTimeout(() => playSfx(sfx.afterSelection), 1200);
+        } else {
+          playSfx(getWrongSfx(1));
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setOrderingChecking(false);
+    }
+  };
+
+  const finishOrderingPhase = async () => {
+    setOrderingPhase(false);
+    setLoading(true);
+    await initMainGame();
   };
 
   // --- Submit Answer ---
@@ -300,12 +469,13 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
       if (selectedAnswer || revealing || !currentQuestion || !player || !session) return;
       setSelectedAnswer(answerId);
       setRevealing(true);
-      stopSound();
 
-      // Play lock-in sting immediately
+      // Levels 1-5: BG music keeps playing; Levels 6+: stop BG for suspense
+      if (currentLevel > 5) {
+        stopBg();
+      }
+
       playSfx(sfx.lockIn);
-      // Play the after-selection tension loop while waiting
-      playSfx(sfx.afterSelection);
 
       try {
         const res = await fetch(`${API_BASE}/questions/${currentQuestion.id}/attempt`, {
@@ -317,30 +487,38 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
         if (!res.ok) { setRevealing(false); return; }
         const att: AttemptOut = await res.json();
 
-        // 1.8-second suspense pause before revealing the result
+        // 1.8-second suspense pause
         await new Promise((resolve) => setTimeout(resolve, 1800));
-        sfx.afterSelection.pause();
-        sfx.afterSelection.currentTime = 0;
+        stopSfxTrack(sfx.lockIn);
 
         setAttempt(att);
         setRevealing(false);
         setPlayer((p) => p ? { ...p, elo_score: att.player_elo_after } : p);
 
         if (att.correct) {
-          playSfx(getCorrectSfx(currentLevel));
           if (currentLevel >= 15) {
+            // Million question: single win sound (no correctMillion + win overlap)
+            stopBg();
             setGameWon(true);
-            setTimeout(() => playSfx(sfx.win), 1500);
-          } else if (SAFETY_LEVELS.has(currentLevel)) {
-            const safetySfx = currentLevel === 5 ? sfx.safety1 : sfx.safety2;
-            setTimeout(() => playSfx(safetySfx), 1500);
-            setCelebratingSafety(currentLevel as 5 | 10);
+            playSfx(sfx.win);
+          } else {
+            playSfx(getCorrectSfx(currentLevel));
+            if (SAFETY_LEVELS.has(currentLevel)) {
+              const safetySfx = currentLevel === 5 ? sfx.safety1 : sfx.safety2;
+              setTimeout(() => {
+                // At €500 mark: stop BG music → silence after safety jingle
+                if (currentLevel === 5) stopBg();
+                playSfx(safetySfx);
+              }, 1500);
+              setCelebratingSafety(currentLevel as 5 | 10);
+            }
           }
         } else {
-          // Phone joker second chance: allow one retry on wrong answer
+          // Phone joker second chance
           if (phoneSecondChance) {
-            // Keep phoneSecondChance true so the feedback UI shows
-            // the retry button; retryWithSecondChance() resets everything.
+            // Feedback UI shows retry button
+          } else if (hasExtraLife && !extraLifeUsed && currentLevel <= EXTRA_LIFE_MAX_LEVEL) {
+            // Extra life from ordering question — feedback UI shows retry button
           } else {
             playSfx(getWrongSfx(currentLevel));
             setGameOver(true);
@@ -348,7 +526,7 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
         }
       } catch (e) { console.error(e); setRevealing(false); }
     },
-    [selectedAnswer, revealing, currentQuestion, player, session, phoneSecondChance, currentLevel],
+    [selectedAnswer, revealing, currentQuestion, player, session, phoneSecondChance, currentLevel, hasExtraLife, extraLifeUsed],
   );
 
   // --- Next Question ---
@@ -367,22 +545,35 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
       playSfx(sfx.win);
       return;
     }
-    playSfx(sfx.afterCorrect);
+    // after-correct transition sound only plays above €500 (level 6+)
+    if (currentLevel >= 6) {
+      stopSfxTrack(sfx.lockIn);
+      playSfx(sfx.afterCorrect);
+    }
     setCurrentIdx(nextIdx);
-    stopSound();
     loadQuestion(questionIds[nextIdx], nextIdx + 1);
   };
 
-  // --- Use wrong answer with phone second chance ---
+  // --- Retry with phone second chance ---
   const retryWithSecondChance = () => {
-    // Remove the wrong answer from the visible options, then let user pick again
     if (selectedAnswer) {
       setFiftyFiftyRemoved((prev) => new Set([...prev, selectedAnswer]));
     }
     setSelectedAnswer(null);
     setAttempt(null);
     setPhoneSecondChance(false);
-    // Restart background music for the current level
+    playBg(currentLevel);
+  };
+
+  // --- Retry with extra life from ordering question ---
+  const retryWithExtraLife = () => {
+    // Track the wrong answer — it stays visible but marked red+disabled (all 4 answers remain)
+    if (selectedAnswer) {
+      setExtraLifeWrongId(selectedAnswer);
+    }
+    setSelectedAnswer(null);
+    setAttempt(null);
+    setExtraLifeUsed(true);
     playBg(currentLevel);
   };
 
@@ -441,16 +632,139 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
     );
   }
 
+  // --- Ordering Phase (Kandidaten-Auswahlfrage) ---
+  if (orderingPhase && orderingQ) {
+    return (
+      <div className="wwm-container">
+        <div className="wwm-header">
+          <button className="wwm-back" onClick={onBack} title="Zurück">←</button>
+          <span className="wwm-ordering-title">Kandidaten-Auswahlfrage</span>
+          <div className="wwm-header-right">
+            <div className="wwm-volume">
+              <button
+                className="wwm-volume__btn"
+                onClick={() => setMuted((m) => !m)}
+                title={muted ? "Ton einschalten" : "Ton ausschalten"}
+              >
+                {muted ? "🔇" : volume < 0.3 ? "🔈" : volume < 0.7 ? "🔉" : "🔊"}
+              </button>
+              <input
+                type="range" className="wwm-volume__slider"
+                min="0" max="1" step="0.05"
+                value={muted ? 0 : volume}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value);
+                  setVolume(v);
+                  if (v > 0 && muted) setMuted(false);
+                  if (v === 0) setMuted(true);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="wwm-ordering">
+          <div className="wwm-ordering__question">{orderingQ.text}</div>
+          <div className="wwm-ordering__body">
+            <div className="wwm-ordering__selected">
+              {orderingSelected.map((a, i) => {
+                const isCorrectPos = orderingResult && orderingResult.correct_order[i] === a;
+                return (
+                  <div
+                    key={`sel-${i}`}
+                    className={`wwm-ordering__slot wwm-ordering__slot--filled${orderingResult ? (isCorrectPos ? " wwm-ordering__slot--correct" : " wwm-ordering__slot--wrong") : ""}`}
+                  >
+                    <span className="wwm-ordering__slot-num">{i + 1}.</span>
+                    <span className="wwm-ordering__slot-text">{a}</span>
+                  </div>
+                );
+              })}
+              {Array.from(
+                { length: orderingQ.shuffled_answers.length - orderingSelected.length },
+                (_, i) => (
+                  <div key={`empty-${i}`} className="wwm-ordering__slot wwm-ordering__slot--empty">
+                    <span className="wwm-ordering__slot-num">{orderingSelected.length + i + 1}.</span>
+                    <span className="wwm-ordering__slot-text">—</span>
+                  </div>
+                ),
+              )}
+            </div>
+            <div className="wwm-ordering__choices">
+              {!orderingResult && (
+                <>
+                  {orderingQ.shuffled_answers.map((a) => {
+                    const isUsed = orderingSelected.includes(a);
+                    return (
+                      <button
+                        key={a}
+                        className={`wwm-ordering__choice${isUsed ? " wwm-ordering__choice--used" : ""}`}
+                        onClick={() => orderingSelectAnswer(a)}
+                        disabled={isUsed || orderingChecking}
+                      >
+                        {a}
+                      </button>
+                    );
+                  })}
+                  <button
+                    className="wwm-ordering__reset"
+                    onClick={orderingReset}
+                    disabled={orderingSelected.length === 0 || orderingChecking}
+                    title="Auswahl zurücksetzen"
+                  >↺ Reset</button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {orderingTimerStart && !orderingResult && <OrderingTimer startTime={orderingTimerStart} />}
+          {orderingTimerMs !== null && orderingResult && (
+            <div className="wwm-ordering__timer">{(orderingTimerMs / 1000).toFixed(1)}s</div>
+          )}
+
+          {orderingResult && (
+            <div className="wwm-ordering__result">
+              {orderingResult.correct ? (
+                <>
+                  <p className="wwm-ordering__result-text wwm-ordering__result-text--correct">
+                    ✓ Richtig! Du erhältst ein Extra-Leben!
+                  </p>
+                  <p className="wwm-ordering__result-hint">
+                    Du darfst bis €32.000 eine Frage falsch beantworten und es nochmal versuchen.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="wwm-ordering__result-text wwm-ordering__result-text--wrong">
+                    ✗ Leider falsch!
+                  </p>
+                  <div className="wwm-ordering__correct-order">
+                    <p>Richtige Reihenfolge:</p>
+                    {orderingResult.correct_order.map((a, i) => (
+                      <div key={i} className="wwm-ordering__slot wwm-ordering__slot--correct">
+                        <span className="wwm-ordering__slot-num">{i + 1}.</span>
+                        <span className="wwm-ordering__slot-text">{a}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+              <button className="wwm-btn wwm-btn--primary" onClick={finishOrderingPhase}>
+                Weiter zum Spiel →
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   // --- Game Over / Won ---
   if (gameOver || gameWon) {
-    const finalPrize = gameWon
-      ? PRIZE_LADDER[14].prize
-      : getSafetyPrize();
+    const finalPrize = gameWon ? PRIZE_LADDER[14].prize : getSafetyPrize();
 
     const replay = () => {
-      // Stop all sounds and reset state for a fresh game
-      stopSound();
-      Object.values(sfx).forEach((a) => { a.pause(); a.currentTime = 0; });
+      stopBg();
+      stopAllSfx();
       setPlayer(null);
       setSession(null);
       setQuestionIds([]);
@@ -469,8 +783,17 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
       setPhoneSecondChance(false);
       setRevealing(false);
       setCelebratingSafety(null);
+      setOrderingPhase(true);
+      setOrderingQ(null);
+      setOrderingSelected([]);
+      setOrderingTimerStart(null);
+      setOrderingTimerMs(null);
+      setOrderingResult(null);
+      setOrderingChecking(false);
+      setHasExtraLife(false);
+      setExtraLifeUsed(false);
+      setExtraLifeWrongId(null);
       setLoading(true);
-      // Re-trigger init by bumping initTrigger — useEffect on initTrigger handles re-init
       setInitTrigger((t) => t + 1);
     };
 
@@ -485,20 +808,14 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
             {finalPrize}
           </div>
           {!gameWon && (
-            <p className="wwm-result__safety">
-              Gesichert bei: {getSafetyPrize()}
-            </p>
+            <p className="wwm-result__safety">Gesichert bei: {getSafetyPrize()}</p>
           )}
-          <p className="wwm-result__elo">
-            ELO: {Math.round(player?.elo_score || 1200)}
-          </p>
+          <p className="wwm-result__elo">ELO: {Math.round(player?.elo_score || 1200)}</p>
           <div className="wwm-result__actions">
             <button className="wwm-btn wwm-btn--primary" onClick={replay}>
               🔄 Nochmal spielen
             </button>
-            <button className="wwm-btn" onClick={onBack}>
-              Zurück zum Menü
-            </button>
+            <button className="wwm-btn" onClick={onBack}>Zurück zum Menü</button>
           </div>
         </div>
       </div>
@@ -526,7 +843,7 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
         </div>
       )}
 
-      {/* Header: Back + Jokers */}
+      {/* Header: Back + Jokers + Prize + Volume */}
       <div className="wwm-header">
         <button className="wwm-back" onClick={onBack} title="Zurück">←</button>
         <div className="wwm-jokers">
@@ -548,8 +865,38 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
             onClick={usePhone}
             title="Telefonjoker"
           >📞</button>
+          {hasExtraLife && (
+            <span
+              className={`wwm-joker wwm-joker--extra-life${extraLifeUsed ? " wwm-joker--used" : ""}`}
+              title={extraLifeUsed ? "Extra-Leben verbraucht" : "Extra-Leben (bis €32.000)"}
+            >🛡️</span>
+          )}
         </div>
-        <span className="wwm-level-badge">{PRIZE_LADDER[currentIdx]?.prize}</span>
+        <div className="wwm-header-right">
+          <span className="wwm-level-badge">{PRIZE_LADDER[currentIdx]?.prize}</span>
+          <div className="wwm-volume">
+            <button
+              className="wwm-volume__btn"
+              onClick={() => setMuted((m) => !m)}
+              title={muted ? "Ton einschalten" : "Ton ausschalten"}
+              aria-label={muted ? "Ton einschalten" : "Ton ausschalten"}
+            >
+              {muted ? "🔇" : volume < 0.3 ? "🔈" : volume < 0.7 ? "🔉" : "🔊"}
+            </button>
+            <input
+              type="range" className="wwm-volume__slider"
+              min="0" max="1" step="0.05"
+              value={muted ? 0 : volume}
+              onChange={(e) => {
+                const v = parseFloat(e.target.value);
+                setVolume(v);
+                if (v > 0 && muted) setMuted(false);
+                if (v === 0) setMuted(true);
+              }}
+              aria-label="Lautstärke"
+            />
+          </div>
+        </div>
       </div>
 
       <div className="wwm-body">
@@ -580,9 +927,7 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
                 <div className="wwm-phone-bubble">
                   <span className="wwm-phone-bubble__icon">📞</span>
                   <p className="wwm-phone-bubble__msg">"{phoneHint.message}"</p>
-                  <span className="wwm-phone-bubble__conf">
-                    Sicherheit: {phoneHint.confidence}%
-                  </span>
+                  <span className="wwm-phone-bubble__conf">Sicherheit: {phoneHint.confidence}%</span>
                 </div>
               )}
 
@@ -598,10 +943,7 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
                         <div key={entry.answer_id} className="wwm-audience__bar-row">
                           <span className="wwm-audience__label">{ANSWER_LABELS[i]}</span>
                           <div className="wwm-audience__bar">
-                            <div
-                              className="wwm-audience__bar-fill"
-                              style={{ width: `${entry.percentage}%` }}
-                            />
+                            <div className="wwm-audience__bar-fill" style={{ width: `${entry.percentage}%` }} />
                           </div>
                           <span className="wwm-audience__pct">{entry.percentage}%</span>
                         </div>
@@ -631,17 +973,28 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
                 <div className="wwm-question-card__text">{currentQuestion.text}</div>
               </div>
 
-              {/* Answer Buttons (2x2) */}
+              {/* Answer Buttons */}
               <div className="wwm-answers">
-                {visibleAnswers.map((a, i) => {
+                {visibleAnswers.map((a) => {
                   const globalIdx = currentQuestion.answers.indexOf(a);
                   const isSelected = selectedAnswer === a.id;
                   const isCorrect = attempt?.correct_answer_id === a.id;
                   const isWrong = isSelected && attempt && !attempt.correct;
+                  const isExtraLifeWrong = extraLifeWrongId === a.id;
+
+                  // When wrong answer triggers a retry scenario (phone/extra life),
+                  // do NOT reveal the correct answer in green
+                  const isRetryScenario = attempt && !attempt.correct && (
+                    phoneSecondChance ||
+                    (hasExtraLife && !extraLifeUsed && currentLevel <= EXTRA_LIFE_MAX_LEVEL)
+                  );
 
                   let stateClass = "";
-                  if (attempt) {
-                    if (isCorrect) stateClass = "wwm-answer--correct";
+                  if (isExtraLifeWrong) {
+                    // Previously wrong answer from extra life — stays red+disabled
+                    stateClass = "wwm-answer--wrong";
+                  } else if (attempt) {
+                    if (isCorrect && !isRetryScenario) stateClass = "wwm-answer--correct";
                     else if (isWrong) stateClass = "wwm-answer--wrong";
                     else if (isSelected) stateClass = "wwm-answer--selected";
                   } else if (isSelected) {
@@ -652,7 +1005,7 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
                     <button
                       key={a.id}
                       className={`wwm-answer ${stateClass}`}
-                      disabled={!!attempt || revealing}
+                      disabled={!!attempt || revealing || isExtraLifeWrong}
                       onClick={() => submitAnswer(a.id)}
                     >
                       <span className="wwm-answer__label">{ANSWER_LABELS[globalIdx]}</span>
@@ -687,6 +1040,15 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
                       </p>
                       <button className="wwm-btn wwm-btn--primary" onClick={retryWithSecondChance}>
                         Nochmal versuchen
+                      </button>
+                    </>
+                  ) : hasExtraLife && !extraLifeUsed && currentLevel <= EXTRA_LIFE_MAX_LEVEL ? (
+                    <>
+                      <p className="wwm-feedback__text wwm-feedback__text--wrong">
+                        ✗ Falsch — aber dein Extra-Leben rettet dich!
+                      </p>
+                      <button className="wwm-btn wwm-btn--primary" onClick={retryWithExtraLife}>
+                        🛡️ Extra-Leben einsetzen
                       </button>
                     </>
                   ) : (

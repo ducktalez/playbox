@@ -33,6 +33,9 @@ class QuestionCreateIn(BaseModel):
     category_id: uuid.UUID | None = None
     tags: list[str] = Field(default_factory=list)
     answers: list[AnswerIn] = Field(..., min_length=2)
+    wwm_difficulty: int | None = Field(default=None, ge=0, le=15)
+    language: str = Field(default="de", max_length=5)
+    is_pun: bool = False
     media_url: str | None = None
     media_type: str | None = None
     created_by: str | None = None
@@ -47,6 +50,9 @@ class QuestionOut(BaseModel):
     category: str | None = None
     tags: list[str] = []
     elo_score: float
+    wwm_difficulty: int | None = None
+    language: str = "de"
+    is_pun: bool = False
     media_url: str | None = None
     media_type: str | None = None
     answers: list[AnswerOut] = []
@@ -58,6 +64,9 @@ class QuestionUpdateIn(BaseModel):
     text: str | None = Field(default=None, max_length=1000)
     note: str | None = Field(default=None, max_length=2000)
     category_id: uuid.UUID | None = None
+    wwm_difficulty: int | None = Field(default=None, ge=0, le=15)
+    language: str | None = Field(default=None, max_length=5)
+    is_pun: bool | None = None
     media_url: str | None = None
     media_type: str | None = None
 
@@ -231,4 +240,31 @@ class MediaUploadOut(BaseModel):
 
     media_url: str
     media_type: str
+
+
+# --- Ordering Questions (WWM Kandidatenfrage) ---
+
+
+class OrderingQuestionOut(BaseModel):
+    """An ordering question with shuffled answers."""
+
+    id: uuid.UUID
+    text: str
+    shuffled_answers: list[str]
+
+
+class OrderingCheckIn(BaseModel):
+    """Request to validate an ordering attempt."""
+
+    submitted_order: list[str] = Field(..., min_length=2, description="Answers in the order the player selected them")
+    time_taken_ms: int | None = Field(default=None, ge=0, description="Time the player took in milliseconds")
+
+
+class OrderingCheckOut(BaseModel):
+    """Result of an ordering question check."""
+
+    correct: bool
+    correct_order: list[str]
+    time_taken_ms: int | None = None
+
 

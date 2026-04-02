@@ -102,6 +102,9 @@ from app.games.quiz.schemas import (
     FiftyFiftyOut,
     LeaderboardEntry,
     MediaUploadOut,
+    OrderingCheckIn,
+    OrderingCheckOut,
+    OrderingQuestionOut,
     PhoneJokerOut,
     PlayerCreateIn,
     PlayerOut,
@@ -131,24 +134,30 @@ def get_service(db: Session = Depends(get_pg_session)) -> QuizService:
 async def list_questions(
     category_id: uuid.UUID | None = None,
     tag: str | None = None,
+    language: str | None = Query(default=None, max_length=5, description="ISO 639-1 language filter, e.g. 'de' or 'en'"),
     elo_min: float | None = None,
     elo_max: float | None = None,
     balanced_categories: bool = Query(default=False),
     order_by_elo: str | None = Query(default=None, pattern="^(asc|desc)$"),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    pun_first: bool = Query(default=False, description="Ensure the first question is a Wortspiel/pun (is_pun=True) when one exists"),
+    randomize: bool = Query(default=False, description="Randomly sample from ELO bands for question variety across games"),
     service: QuizService = Depends(get_service),
 ) -> QuestionListOut:
     """List questions with optional filters."""
     return service.list_questions(
         category_id=category_id,
         tag=tag,
+        language=language,
         elo_min=elo_min,
         elo_max=elo_max,
         balanced_categories=balanced_categories,
         order_by_elo=order_by_elo,
         limit=limit,
         offset=offset,
+        pun_first=pun_first,
+        randomize=randomize,
     )
 
 
@@ -238,6 +247,28 @@ async def delete_media(
 ) -> QuestionOut:
     """Remove media from a question."""
     return service.delete_media(question_id=question_id)
+
+
+# --- Ordering Questions (WWM Kandidatenfrage) ---
+
+
+@router.get("/ordering-question", response_model=OrderingQuestionOut)
+async def get_ordering_question(
+    language: str | None = Query(default=None, max_length=5),
+    service: QuizService = Depends(get_service),
+) -> OrderingQuestionOut:
+    """Get a random ordering question with shuffled answers for the WWM candidate selection."""
+    return service.get_random_ordering_question(language=language)
+
+
+@router.post("/ordering-question/{question_id}/check", response_model=OrderingCheckOut)
+async def check_ordering_question(
+    question_id: uuid.UUID,
+    body: OrderingCheckIn,
+    service: QuizService = Depends(get_service),
+) -> OrderingCheckOut:
+    """Validate the player's submitted answer order."""
+    return service.check_ordering_question(question_id=question_id, data=body)
 
 
 # --- Categories ---

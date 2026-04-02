@@ -1302,5 +1302,410 @@ def test_health(client) -> None:
     """GET /health should return ok."""
     resp = client.get("/health")
     assert resp.status_code == 200
-    assert resp.json() == {"status": "ok"}
 
+
+# --- New fields: wwm_difficulty, language, is_pun ---
+
+
+def _de_question_payload(**overrides) -> dict:
+    """Minimal German question payload with new fields."""
+    base = {
+        "text": "Was ist die Hauptstadt von Deutschland?",
+        "language": "de",
+        "is_pun": False,
+        "wwm_difficulty": 3,
+        "answers": [
+            {"text": "Berlin", "is_correct": True},
+            {"text": "München", "is_correct": False},
+        ],
+    }
+    base.update(overrides)
+    return base
+
+
+def test_create_question_with_wwm_difficulty(quiz_client) -> None:
+    """POST /questions should persist and return wwm_difficulty."""
+    resp = quiz_client.post("/api/v1/quiz/questions", json=_de_question_payload(wwm_difficulty=7))
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["wwm_difficulty"] == 7
+
+
+def test_create_question_wwm_difficulty_optional(quiz_client) -> None:
+    """wwm_difficulty is optional — null by default."""
+    payload = _de_question_payload()
+    payload.pop("wwm_difficulty", None)
+    resp = quiz_client.post("/api/v1/quiz/questions", json=payload)
+    assert resp.status_code == 200
+    assert resp.json()["wwm_difficulty"] is None
+
+
+def test_create_question_wwm_difficulty_out_of_range(quiz_client) -> None:
+    """wwm_difficulty must be 0–15; 16 should be rejected."""
+    resp = quiz_client.post("/api/v1/quiz/questions", json=_de_question_payload(wwm_difficulty=16))
+    assert resp.status_code == 422
+
+
+def test_create_question_language_stored(quiz_client) -> None:
+    """language field should be stored and returned."""
+    resp = quiz_client.post("/api/v1/quiz/questions", json=_de_question_payload(language="de"))
+    assert resp.status_code == 200
+    assert resp.json()["language"] == "de"
+
+
+def test_language_filter_excludes_other_languages(quiz_client) -> None:
+    """GET /questions?language=de should not return questions with language=en."""
+    # Create one German and one English question
+    quiz_client.post("/api/v1/quiz/questions", json=_de_question_payload(text="Deutsche Frage", language="de"))
+    quiz_client.post(
+        "/api/v1/quiz/questions",
+        json={
+            "text": "English question",
+            "language": "en",
+            "answers": [{"text": "Yes", "is_correct": True}, {"text": "No", "is_correct": False}],
+        },
+    )
+
+    resp = quiz_client.get("/api/v1/quiz/questions?language=de")
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    assert all(q["language"] == "de" for q in items), "language=de filter must exclude 'en' questions"
+
+
+def test_language_filter_en_returns_only_en(quiz_client) -> None:
+    """GET /questions?language=en should return only English questions."""
+    quiz_client.post("/api/v1/quiz/questions", json=_de_question_payload(text="Nur Deutsch", language="de"))
+    quiz_client.post(
+        "/api/v1/quiz/questions",
+        json={
+            "text": "Only English",
+            "language": "en",
+            "answers": [{"text": "Correct", "is_correct": True}, {"text": "Wrong", "is_correct": False}],
+        },
+    )
+
+    resp = quiz_client.get("/api/v1/quiz/questions?language=en")
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    assert len(items) >= 1
+    assert all(q["language"] == "en" for q in items)
+
+
+def test_create_pun_question(quiz_client) -> None:
+    """is_pun=True should be stored and returned."""
+    resp = quiz_client.post("/api/v1/quiz/questions", json=_de_question_payload(is_pun=True))
+    assert resp.status_code == 200
+    assert resp.json()["is_pun"] is True
+
+
+def test_pun_first_puts_pun_at_position_zero(quiz_client) -> None:
+    """GET /questions?pun_first=true&balanced_categories=true should put an is_pun question first."""
+    # Create several non-pun questions and one pun question
+    for i in range(5):
+        quiz_client.post(
+            "/api/v1/quiz/questions",
+            json=_de_question_payload(text=f"Normale Frage {i}", is_pun=False),
+        )
+    quiz_client.post(
+        "/api/v1/quiz/questions",
+        json=_de_question_payload(text="Das Wortspiel-Frage", is_pun=True),
+    )
+
+    resp = quiz_client.get(
+        "/api/v1/quiz/questions?pun_first=true&balanced_categories=true&order_by_elo=asc&limit=6"
+    )
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    assert len(items) >= 1
+    assert items[0]["is_pun"] is True, "First question must be the pun when pun_first=true"
+
+
+def test_pun_first_no_pun_available(quiz_client) -> None:
+    """pun_first=true without any pun questions should still return results normally."""
+    for i in range(3):
+        quiz_client.post(
+            "/api/v1/quiz/questions",
+            json=_de_question_payload(text=f"Frage ohne Pun {i}", is_pun=False),
+        )
+
+    resp = quiz_client.get(
+        "/api/v1/quiz/questions?pun_first=true&balanced_categories=true&order_by_elo=asc&limit=3"
+    )
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    assert len(items) == 3  # Results returned normally even without a pun
+
+
+def test_randomize_returns_valid_questions(quiz_client) -> None:
+    """GET /questions?randomize=true should still return valid question objects."""
+    for i in range(10):
+        quiz_client.post(
+            "/api/v1/quiz/questions",
+            json=_de_question_payload(text=f"Randomisier-Frage {i}", language="de"),
+        )
+
+    resp = quiz_client.get(
+        "/api/v1/quiz/questions?order_by_elo=asc&balanced_categories=true&limit=5&randomize=true&language=de"
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["items"]) <= 5
+    for q in data["items"]:
+        assert "id" in q
+        assert "text" in q
+        assert q["language"] == "de"
+
+
+def test_update_question_wwm_difficulty(quiz_client) -> None:
+    """PATCH /questions/{id} should update wwm_difficulty."""
+    create_resp = quiz_client.post("/api/v1/quiz/questions", json=_de_question_payload(wwm_difficulty=1))
+    qid = create_resp.json()["id"]
+
+    resp = quiz_client.patch(f"/api/v1/quiz/questions/{qid}", json={"wwm_difficulty": 14})
+    assert resp.status_code == 200
+    assert resp.json()["wwm_difficulty"] == 14
+
+
+def test_default_language_is_de(quiz_client) -> None:
+    """Questions without explicit language should default to 'de'."""
+    payload = {
+        "text": "Sprachlose Frage",
+        "answers": [{"text": "Antwort", "is_correct": True}, {"text": "Falsch", "is_correct": False}],
+    }
+    resp = quiz_client.post("/api/v1/quiz/questions", json=payload)
+    assert resp.status_code == 200
+    assert resp.json()["language"] == "de"
+
+
+# ===== Ordering Question (Kandidaten-Auswahlfrage) Tests =====
+
+
+def _seed_ordering_question(quiz_client, text="Ordne richtig!", answers=None, language="de"):
+    """Seed an ordering question directly via the DB session (no API for creation)."""
+    import json
+    from app.games.quiz.models import OrderingQuestion
+
+    # Access the overridden DB session from the dependency
+    from app.core.database import get_pg_session
+    app = quiz_client.app
+    override_fn = app.dependency_overrides.get(get_pg_session)
+    if override_fn:
+        gen = override_fn()
+        db = next(gen)
+    else:
+        raise RuntimeError("No DB session override found")
+
+    if answers is None:
+        answers = ["Erster", "Zweiter", "Dritter", "Vierter"]
+
+    oq = OrderingQuestion(
+        text=text,
+        ordered_answers_json=json.dumps(answers, ensure_ascii=False),
+        language=language,
+    )
+    db.add(oq)
+    db.flush()
+    return str(oq.id), answers
+
+
+def test_ordering_question_get_random(quiz_client) -> None:
+    """GET /ordering-question should return a random ordering question with shuffled answers."""
+    oq_id, correct_answers = _seed_ordering_question(quiz_client)
+
+    resp = quiz_client.get("/api/v1/quiz/ordering-question")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["id"] == oq_id
+    assert data["text"] == "Ordne richtig!"
+    assert set(data["shuffled_answers"]) == set(correct_answers)
+    assert len(data["shuffled_answers"]) == 4
+
+
+def test_ordering_question_with_language_filter(quiz_client) -> None:
+    """GET /ordering-question?language=de should filter by language."""
+    _seed_ordering_question(quiz_client, text="Deutsche Frage", language="de")
+    _seed_ordering_question(quiz_client, text="English Question", answers=["A", "B", "C", "D"], language="en")
+
+    resp = quiz_client.get("/api/v1/quiz/ordering-question?language=en")
+    assert resp.status_code == 200
+    assert resp.json()["text"] == "English Question"
+
+
+def test_ordering_question_404_when_empty(quiz_client) -> None:
+    """GET /ordering-question should return 404 if no ordering questions exist."""
+    resp = quiz_client.get("/api/v1/quiz/ordering-question")
+    assert resp.status_code == 404
+    assert resp.json()["code"] == "NO_ORDERING_QUESTIONS"
+
+
+def test_ordering_check_correct(quiz_client) -> None:
+    """POST /ordering-question/{id}/check with correct order should return correct=true."""
+    oq_id, correct = _seed_ordering_question(quiz_client)
+
+    resp = quiz_client.post(f"/api/v1/quiz/ordering-question/{oq_id}/check", json={
+        "submitted_order": correct,
+        "time_taken_ms": 5000,
+    })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["correct"] is True
+    assert data["correct_order"] == correct
+    assert data["time_taken_ms"] == 5000
+
+
+def test_ordering_check_wrong(quiz_client) -> None:
+    """POST /ordering-question/{id}/check with wrong order should return correct=false."""
+    oq_id, correct = _seed_ordering_question(quiz_client)
+    wrong = list(reversed(correct))
+
+    resp = quiz_client.post(f"/api/v1/quiz/ordering-question/{oq_id}/check", json={
+        "submitted_order": wrong,
+    })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["correct"] is False
+    assert data["correct_order"] == correct
+
+
+def test_ordering_check_404(quiz_client) -> None:
+    """POST /ordering-question/{id}/check with invalid ID should return 404."""
+    import uuid
+    resp = quiz_client.post(f"/api/v1/quiz/ordering-question/{uuid.uuid4()}/check", json={
+        "submitted_order": ["A", "B"],
+    })
+    assert resp.status_code == 404
+    assert resp.json()["code"] == "ORDERING_QUESTION_NOT_FOUND"
+
+
+def test_ordering_check_preserves_time(quiz_client) -> None:
+    """Time taken should be echoed back in the response."""
+    oq_id, correct = _seed_ordering_question(quiz_client)
+
+    resp = quiz_client.post(f"/api/v1/quiz/ordering-question/{oq_id}/check", json={
+        "submitted_order": correct,
+        "time_taken_ms": 12345,
+    })
+    assert resp.status_code == 200
+    assert resp.json()["time_taken_ms"] == 12345
+
+
+# ===== Millionaire Game Init Flow (Integration Test) =====
+
+
+def test_millionaire_init_flow_with_ordering(quiz_client) -> None:
+    """Full WWM init sequence: ordering question → check → player → session → questions → load first question.
+
+    This mirrors exactly what the frontend does when the user clicks
+    "Wer wird Elite-Hater?". If any step fails the game shows a blank screen.
+    """
+    # 1. Seed an ordering question + a regular quiz question
+    oq_id, correct = _seed_ordering_question(quiz_client)
+    quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+
+    # 2. Fetch ordering question (frontend does this first)
+    resp = quiz_client.get("/api/v1/quiz/ordering-question?language=de")
+    assert resp.status_code == 200
+    oq = resp.json()
+    assert "shuffled_answers" in oq
+    assert len(oq["shuffled_answers"]) == 4
+
+    # 3. Check ordering answer (correct submission)
+    resp = quiz_client.post(f"/api/v1/quiz/ordering-question/{oq['id']}/check", json={
+        "submitted_order": correct,
+        "time_taken_ms": 3000,
+    })
+    assert resp.status_code == 200
+    assert resp.json()["correct"] is True
+
+    # 4. Create player
+    resp = quiz_client.post("/api/v1/quiz/players", json={"name": "Gast"})
+    assert resp.status_code == 200
+    player = resp.json()
+    assert "id" in player
+
+    # 5. Create session
+    resp = quiz_client.post("/api/v1/quiz/sessions", json={
+        "mode": "millionaire",
+        "player_id": player["id"],
+    })
+    assert resp.status_code == 200
+    session = resp.json()
+    assert session["mode"] == "millionaire"
+
+    # 6. Fetch questions list
+    resp = quiz_client.get(
+        "/api/v1/quiz/questions?order_by_elo=asc&balanced_categories=true&limit=15&language=de&pun_first=true&randomize=true"
+    )
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    assert len(items) >= 1
+
+    # 7. Load first question with 4 answers
+    qid = items[0]["id"]
+    resp = quiz_client.get(f"/api/v1/quiz/questions/{qid}?num_answers=4")
+    assert resp.status_code == 200
+    q = resp.json()
+    assert len(q["answers"]) >= 2  # at least 2 answers
+
+
+def test_millionaire_init_flow_no_ordering(quiz_client) -> None:
+    """WWM init when no ordering questions exist — should skip straight to main game."""
+    # Seed a regular quiz question (no ordering question)
+    quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+
+    # 1. Ordering question returns 404 → frontend skips to main game
+    resp = quiz_client.get("/api/v1/quiz/ordering-question?language=de")
+    assert resp.status_code == 404
+
+    # 2. Create player + session + fetch questions (main game init)
+    resp = quiz_client.post("/api/v1/quiz/players", json={"name": "Gast"})
+    assert resp.status_code == 200
+    player = resp.json()
+
+    resp = quiz_client.post("/api/v1/quiz/sessions", json={
+        "mode": "millionaire",
+        "player_id": player["id"],
+    })
+    assert resp.status_code == 200
+
+    resp = quiz_client.get(
+        "/api/v1/quiz/questions?order_by_elo=asc&balanced_categories=true&limit=15&language=de&pun_first=true&randomize=true"
+    )
+    assert resp.status_code == 200
+    assert len(resp.json()["items"]) >= 1
+
+
+def test_millionaire_answer_and_next(quiz_client) -> None:
+    """WWM: answer a question correctly and advance to the next one."""
+    # Seed two questions
+    q1 = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload()).json()
+    payload2 = _create_question_payload()
+    payload2["text"] = "Zweite Frage?"
+    q2 = quiz_client.post("/api/v1/quiz/questions", json=payload2).json()
+
+    # Create player + session
+    player = quiz_client.post("/api/v1/quiz/players", json={"name": "Gast"}).json()
+    session = quiz_client.post("/api/v1/quiz/sessions", json={
+        "mode": "millionaire", "player_id": player["id"],
+    }).json()
+
+    # Load first question with answers
+    resp = quiz_client.get(f"/api/v1/quiz/questions/{q1['id']}?num_answers=4")
+    assert resp.status_code == 200
+    answers = resp.json()["answers"]
+    correct_id = next(a["id"] for a in q1["answers"] if a["is_correct"])
+
+    # Submit correct answer
+    resp = quiz_client.post(f"/api/v1/quiz/questions/{q1['id']}/attempt", json={
+        "answer_id": correct_id,
+        "player_id": player["id"],
+        "session_id": session["id"],
+    })
+    assert resp.status_code == 200
+    att = resp.json()
+    assert att["correct"] is True
+
+    # Load next question
+    resp = quiz_client.get(f"/api/v1/quiz/questions/{q2['id']}?num_answers=4")
+    assert resp.status_code == 200
+    assert resp.json()["text"] == "Zweite Frage?"

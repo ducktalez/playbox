@@ -10,7 +10,12 @@
 - Plan: Mehrere Sprachen (Deutsch, Englisch). Vorrangig einheitlich, starten mit english. 
 - Piccolo: Schätz-fragen 
 - Keine Ports in python-files -> .env
-
+- WWM: Im Original fahren die Antwortmöglichkeiten tatsächlich nacheinander ein. Hier sollte notiert werden, dass es zwei Versionen dieses Spiels erfordert:
+  - Quiz App Version: Alle Antworten sind sofort verfügbar 
+  - Quiz-show Version: Antworten fahren nacheinander ein, Spieler buzzern dazwischen (für Liveshows oder lokale Partys)
+- WWM: Die allererste Anordnungs-Frage zu Beginn ist momentan nicht implementiert
+- Quizduell-Fragen und WWM-Fragen haben teilweise einen funktionalen Unterschied. Die erste Frage bei WWM ist zB. meist ein Wortwitz oder eine Fangfrage, die nicht unbedingt in die Quizduell-Datenbank passt. Hier sollte geklärt werden, wie das in der Datenbank vermerkt werden kann. 
+- WWM Sound: Die Intro-Musik (intro.mp3) wird aktuell NICHT verwendet, da wir direkt zur Kandidaten-Auswahlfrage springen und dort die question-low BG-Musik startet. Ob ein Intro-Screen oder die Intro-Musik eingebaut werden soll, muss noch geklärt werden.
 ## Games
 
 | Game | Description | Status | Priority |

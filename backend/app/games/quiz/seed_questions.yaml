@@ -1,689 +1,733 @@
 categories:
   - name: PlayBox Basics
-    description: Starter questions about the PlayBox project itself.
+    description: Starterfragen rund um das PlayBox-Projekt selbst.
   - name: Web Basics
-    description: Starter questions about web and app fundamentals.
+    description: Starterfragen zu Web- und App-Grundlagen.
   - name: Identity & Basics
-    description: Name, alias, place, core identifying facts about the Drachenlord case.
+    description: Name, Alias, Ort, grundlegende Fakten zum Drachenlord-Phänomen.
   - name: Timeline & Milestones
-    description: Major years, turning points, chronology of the Drachenlord phenomenon.
+    description: Wichtige Jahre, Wendepunkte, Chronologie des Drachenlord-Phänomens.
   - name: Media & Documentation
-    description: Documentaries, podcasts, public reporting about Drachenlord.
+    description: Dokumentationen, Podcasts, Berichterstattung über Drachenlord.
   - name: Legal & Regulation
-    description: Authorities, court decisions, media regulation in the Drachenlord case.
+    description: Behörden, Gerichtsurteile, Medienrecht im Drachenlord-Fall.
   - name: Scene Terms & Dynamics
-    description: Defined terms, structural dynamics, recurring concepts in the Drachenlord scene.
+    description: Begriffe, Strukturdynamiken, wiederkehrende Konzepte in der Drachenlord-Szene.
   - name: Place & Infrastructure
-    description: Location, house symbolism, archives, platform loss.
+    description: Ort, Haus-Symbolik, Archive, Plattformverlust.
 
 questions:
-  # ===== PlayBox Basics (tier 1 — easy) =====
+  # ===== Wortspiel-Frage (Tier 1, wwm_difficulty 1 — immer erste Frage) =====
 
-  - text: Which endpoint is used as the PlayBox health check?
+  - text: "Wie nennt man einen Drachen, der im Internet Livestreams macht?"
+    category: Identity & Basics
+    tier: 1
+    wwm_difficulty: 1
+    is_pun: true
+    tags: [identity, pun, basics, safe-core]
+    note: "Die Antwort steckt schon im Namen selbst: Drache + Lord = Drachenlord. Das Pseudonym ist gleichzeitig Beschreibung und Markenzeichen."
+    created_by: PlayBox quiz seed
+    answers: ["Drachenlord", ["Drachenadmin", "Drachengott", "Drachenstreamer"]]
+
+  # ===== PlayBox Basics (Tier 1 — leicht) =====
+
+  - text: Welcher Endpunkt dient als Health-Check des PlayBox-Backends?
     category: PlayBox Basics
     tier: 1
     tags: [starter, backend]
-    note: "The /health endpoint returns {\"status\": \"ok\"} and is used by monitoring tools to verify the server is running."
+    note: "Der /health-Endpunkt gibt {\"status\": \"ok\"} zurück und dient Monitoring-Tools zur Überprüfung der Server-Verfügbarkeit."
     created_by: PlayBox quiz seed
     answers: ["/health", ["/status", "/ping", "/api/v1/health"]]
 
-  - text: Which game currently uses PostgreSQL in PlayBox?
+  - text: Welches Spiel nutzt in PlayBox aktuell eine persistente Datenbank?
     category: PlayBox Basics
     tier: 1
     tags: [starter, database]
-    note: "Quiz is the only game that needs persistent storage (ELO scores, questions, players). Imposter and Piccolo use in-memory storage."
+    note: "Quiz ist das einzige Spiel, das persistente Speicherung braucht (ELO-Scores, Fragen, Spieler). Imposter und Piccolo verwenden In-Memory-Storage."
     created_by: PlayBox quiz seed
     answers: ["Quiz", ["Imposter", "Piccolo", "Chess"]]
 
-  - text: What is the default base ELO score for new quiz players?
+  - text: Welchen ELO-Startwert erhalten neue Quiz-Spieler?
     category: PlayBox Basics
     tier: 1
     tags: [starter, elo]
-    note: "1200 is the standard starting ELO, borrowed from chess rating systems. It represents an average beginner."
+    note: "1200 ist der Standard-Startwert im ELO-System, aus dem Schach übernommen. Er markiert einen durchschnittlichen Anfänger."
     created_by: PlayBox quiz seed
     answers: ["1200", ["800", "1500", "2000"]]
 
-  - text: What does PWA stand for?
+  - text: Wofür steht die Abkürzung PWA?
     category: Web Basics
     tier: 1
     tags: [starter, frontend]
+    note: "PWA steht für Progressive Web App — eine Webanwendung, die sich wie eine native App verhält und offline nutzbar ist."
     created_by: PlayBox quiz seed
     answers: ["Progressive Web App", ["Private Web Access", "Portable Web API", "Primary Window Application"]]
 
-  - text: Which HTTP method is typically used to fetch data from a REST API?
+  - text: Welche HTTP-Methode wird üblicherweise zum Abrufen von Daten von einer REST-API verwendet?
     category: Web Basics
     tier: 1
     tags: [starter, http]
+    note: "GET ist die HTTP-Methode zum Lesen von Ressourcen — ohne Seiteneffekte auf den Server."
     created_by: PlayBox quiz seed
     answers: ["GET", ["PATCH", "DELETE", "TRACE"]]
 
-  # ===== Identity & Basics (tier 1 — easy) =====
+  # ===== Identity & Basics (Tier 1 — leicht) =====
 
-  - text: Under which online alias did Rainer Winkler become widely known?
+  - text: Unter welchem Online-Alias wurde Rainer Winkler bekannt?
     category: Identity & Basics
     tier: 1
     tags: [identity, alias, basics, safe-core]
-    note: "Rainer Winkler used the alias 'Drachenlord' on YouTube and other platforms."
+    note: "Rainer Winkler nutzte das Pseudonym 'Drachenlord' auf YouTube und anderen Plattformen."
     created_by: PlayBox quiz seed
     answers: ["Drachenlord", ["Drachenmeister", "Drachenkönig", "Drachenritter"]]
 
-  - text: Which place name is most strongly associated with the physical setting of the Drachenlord case?
+  - text: Welcher Ortsname ist am stärksten mit dem physischen Schauplatz des Drachenlord-Phänomens verbunden?
     category: Identity & Basics
     tier: 1
     tags: [place, altschauerberg, basics, safe-core]
-    note: "Altschauerberg in Mittelfranken became famous as the location of Drachenlord's house."
+    note: "Altschauerberg in Mittelfranken wurde durch Drachenlords Wohnsitz bekannt."
     created_by: PlayBox quiz seed
     answers: ["Altschauerberg", ["Bayreuth", "Passau", "Emsdetten"]]
 
-  - text: What does the term "Drachenschanze" refer to?
+  - text: "Was bezeichnet der Begriff \"Drachenschanze\"?"
     category: Identity & Basics
     tier: 1
     tags: [terms, drachenschanze, place, safe-core]
-    note: "The 'Drachenschanze' was the colloquial name for Drachenlord's house and property in Altschauerberg."
+    note: "Die 'Drachenschanze' war der umgangssprachliche Name für Drachenlords Haus und Grundstück in Altschauerberg."
     created_by: PlayBox quiz seed
-    answers: ["The house/property in Altschauerberg associated with Drachenlord", ["A documentary title", "A forum archive", "A police operation codename"]]
+    answers: ["Das Haus und Grundstück in Altschauerberg, das mit Drachenlord verbunden war", ["Ein Dokumentationstitel", "Ein Forumarchiv", "Ein Polizei-Operationsname"]]
 
-  - text: In which German federal state is Altschauerberg located?
+  - text: In welchem deutschen Bundesland liegt Altschauerberg?
     category: Identity & Basics
     tier: 1
     tags: [identity, place, geography, safe-core]
-    note: "Altschauerberg is a small village in the municipality of Emskirchen in Mittelfranken, Bavaria."
+    note: "Altschauerberg ist ein kleines Dorf der Gemeinde Emskirchen in Mittelfranken, Bayern."
     created_by: PlayBox quiz seed
     answers: ["Bayern", ["Hessen", "Sachsen", "Nordrhein-Westfalen"]]
 
-  - text: On which platform did Drachenlord primarily publish his content?
+  - text: Auf welcher Plattform veröffentlichte Drachenlord hauptsächlich seine Inhalte?
     category: Identity & Basics
     tier: 1
     tags: [identity, youtube, platform, safe-core]
-    note: "YouTube was the primary platform for Drachenlord's videos and livestreams."
+    note: "YouTube war Drachenlords primäre Plattform für Videos und Livestreams."
     created_by: PlayBox quiz seed
     answers: ["YouTube", ["TikTok", "Twitch", "Instagram"]]
 
-  - text: What type of content did Drachenlord primarily create on YouTube?
+  - text: Welche Art von Inhalten erstellte Drachenlord hauptsächlich auf YouTube?
     category: Identity & Basics
     tier: 1
     tags: [identity, content, basics, safe-core]
-    note: "Drachenlord primarily published vlogs, livestreams, and gaming-related content."
+    note: "Drachenlord veröffentlichte vor allem Vlogs, Livestreams und Gaming-Inhalte."
     created_by: PlayBox quiz seed
-    answers: ["Vlogs and Livestreams", ["Cooking tutorials", "Music videos", "Travel documentaries"]]
+    answers: ["Vlogs und Livestreams", ["Kochanleitungen", "Musikvideos", "Reisedokumentationen"]]
 
-  - text: What greeting is most associated with Drachenlord?
+  - text: Welcher Gruß ist am stärksten mit Drachenlord verbunden?
     category: Identity & Basics
     tier: 1
     tags: [identity, catchphrase, basics, safe-core]
-    note: "'Meddl Leude' is one of Drachenlord's most well-known catchphrases."
+    note: "'Meddl Leude' ist einer von Drachenlords bekanntesten Ausrufen."
     created_by: PlayBox quiz seed
     answers: ["Meddl Leude", ["Hallo zusammen", "Servus Freunde", "Guten Tag allerseits"]]
 
-  - text: What word does Drachenlord famously use instead of "jetzt"?
+  - text: "Welches Wort verwendet Drachenlord bekanntermaßen statt \"jetzt\"?"
     category: Identity & Basics
     tier: 1
     tags: [identity, dialect, catchphrase, safe-core]
-    note: "'Etzala' is Drachenlord's dialectal version of 'jetzt' (now)."
+    note: "'Etzala' ist Drachenlords dialektale Variante des Worts 'jetzt'."
     created_by: PlayBox quiz seed
     answers: ["Etzala", ["Etzadla", "Jetztle", "Numal"]]
 
-  - text: In which region of Bavaria is the Drachenlord's location situated?
+  - text: In welcher Region Bayerns liegt Drachenlords Heimatort?
     category: Identity & Basics
     tier: 1
     tags: [identity, geography, place, safe-core]
-    note: "Altschauerberg is in Mittelfranken (Middle Franconia), a region of Bavaria."
+    note: "Altschauerberg liegt in Mittelfranken, einem Regierungsbezirk Bayerns."
     created_by: PlayBox quiz seed
     answers: ["Mittelfranken", ["Oberbayern", "Schwaben", "Niederbayern"]]
 
-  # ===== Timeline & Milestones (tier 1 — easy) =====
+  # ===== Timeline & Milestones (Tier 1 — leicht) =====
 
-  - text: In which approximate year did the Drachenlord YouTube channel start?
+  - text: In welchem Jahr startete der Drachenlord-YouTube-Kanal?
     category: Timeline & Milestones
     tier: 1
     tags: [timeline, youtube, origins, 2011, safe-core]
-    note: "The Drachenlord YouTube channel started around August 2011."
+    note: "Der Drachenlord-YouTube-Kanal startete im August 2011."
     created_by: PlayBox quiz seed
     answers: ["2011", ["2009", "2014", "2016"]]
 
-  - text: In which year did the public address leak escalate the situation into the offline world?
+  - text: In welchem Jahr eskalierte die Veröffentlichung seiner Adresse die Situation in die Offline-Welt?
     category: Timeline & Milestones
     tier: 1
     tags: [timeline, escalation, address, safe-core]
-    note: "In 2014, Drachenlord's home address became widely known, leading to real-world visits and escalation."
+    note: "2014 wurde Drachenlords Heimatadresse öffentlich bekannt, was zu realen Besuchen und einer neuen Eskalationsstufe führte."
     created_by: PlayBox quiz seed
     answers: ["2014", ["2011", "2016", "2019"]]
 
-  # ===== Timeline & Milestones (tier 2 — medium) =====
+  # ===== Timeline & Milestones (Tier 2 — mittel) =====
 
-  - text: In which year did the event known as the "Schanzenfest" take place?
+  - text: "In welchem Jahr fand das sogenannte \"Schanzenfest\" statt?"
     category: Timeline & Milestones
     tier: 2
     tags: [timeline, schanzenfest, escalation, 2018, safe-core]
-    note: "The 'Schanzenfest' in 2018 was one of the largest gatherings at the Drachenschanze."
+    note: "Das 'Schanzenfest' 2018 war eines der größten Massentreffen an der Drachenschanze."
     created_by: PlayBox quiz seed
     answers: ["2018", ["2016", "2019", "2022"]]
 
-  - text: In which year was the house known as the "Drachenschanze" demolished?
+  - text: "In welchem Jahr wurde die als \"Drachenschanze\" bekannte Immobilie abgerissen?"
     category: Timeline & Milestones
     tier: 2
     tags: [timeline, drachenschanze, demolition, 2022, safe-core]
-    note: "The Drachenschanze was demolished in 2022 after years of deterioration and public attention."
+    note: "Die Drachenschanze wurde 2022 abgerissen, nach jahrelangem Verfall und öffentlicher Aufmerksamkeit."
     created_by: PlayBox quiz seed
     answers: ["2022", ["2018", "2021", "2024"]]
 
-  - text: On which platform were the key Drachenlord channels removed on 11 August 2022?
+  - text: Von welcher Plattform wurden Drachenlords Kanäle am 11. August 2022 gelöscht?
     category: Timeline & Milestones
     tier: 2
     tags: [platform, youtube, deletion, 2022, safe-core]
-    note: "YouTube removed the main Drachenlord channels on 11 August 2022."
+    note: "YouTube löschte die Haupt-Kanäle von Drachenlord am 11. August 2022."
     created_by: PlayBox quiz seed
     answers: ["YouTube", ["Twitch", "TikTok", "Facebook"]]
 
-  - text: In which year was Drachenlord first sentenced by a court?
+  - text: In welchem Jahr wurde Drachenlord erstmals gerichtlich verurteilt?
     category: Timeline & Milestones
     tier: 2
     tags: [timeline, legal, court, safe-core]
-    note: "Drachenlord received his first court sentence in 2021."
+    note: "Drachenlord erhielt sein erstes Gerichtsurteil im Jahr 2021."
     created_by: PlayBox quiz seed
     answers: ["2021", ["2019", "2022", "2023"]]
 
-  - text: What year marks the beginning of regular police operations around the Drachenschanze?
+  - text: In welchem Jahr begannen regelmäßige Polizeieinsätze rund um die Drachenschanze?
     category: Timeline & Milestones
     tier: 2
     tags: [timeline, police, escalation, safe-core]
-    note: "Starting around 2016, police regularly responded to incidents in Altschauerberg."
+    note: "Ab etwa 2016 musste die Polizei regelmäßig auf Vorfälle in Altschauerberg reagieren."
     created_by: PlayBox quiz seed
     answers: ["2016", ["2014", "2018", "2020"]]
 
-  - text: In which year did Drachenlord briefly use the streaming platform "Drache_Offiziell"?
+  - text: "In welchem Jahr nutzte Drachenlord kurzzeitig das Streaming-Angebot \"Drache_Offiziell\"?"
     category: Timeline & Milestones
     tier: 2
     tags: [timeline, streaming, platform, safe-core]
-    note: "Drachenlord used his own streaming setup under 'Drache_Offiziell' around 2019 before it was banned by the BLM."
+    note: "Drachenlord streamte 2019 unter dem Namen 'Drache_Offiziell', bevor die BLM dies untersagte."
     created_by: PlayBox quiz seed
     answers: ["2019", ["2017", "2021", "2023"]]
 
-  # ===== Media & Documentation (tier 2 — medium) =====
+  # ===== Media & Documentation (Tier 2 — mittel) =====
 
-  - text: Which documentary format produced an important 2016 report on the Drachenlord phenomenon?
+  - text: Welches Dokumentationsformat produzierte 2016 einen wichtigen Bericht über das Drachenlord-Phänomen?
     category: Media & Documentation
     tier: 2
     tags: [media, documentary, y-kollektiv, 2016, safe-core]
-    note: "The Y-Kollektiv produced a widely-seen documentary segment about Drachenlord in 2016."
+    note: "Das Y-Kollektiv (funk/ARD) produzierte 2016 einen viel gesehenen Dokumentationsbeitrag über Drachenlord."
     created_by: PlayBox quiz seed
     answers: ["Y-Kollektiv", ["Spiegel TV", "STRG_F", "ZDF Magazin Royale"]]
 
-  - text: What is the title of the major 2022 podcast reconstruction about the Drachenlord case?
+  - text: Wie lautet der Titel der großen Podcast-Rekonstruktion des Drachenlord-Falls aus dem Jahr 2022?
     category: Media & Documentation
     tier: 2
     tags: [media, podcast, cui-bono, 2022, safe-core]
-    note: "'Cui Bono: Wer hat Angst vorm Drachenlord?' was a widely discussed podcast that reconstructed the case."
+    note: "'Cui Bono: Wer hat Angst vorm Drachenlord?' war ein viel diskutierter Podcast, der den Fall umfassend aufarbeitete."
     created_by: PlayBox quiz seed
     answers: ["Cui Bono: Wer hat Angst vorm Drachenlord?", ["Baywatch Berlin", "Fest & Flauschig", "Lage der Nation"]]
 
-  - text: Which TV network produced a well-known documentary segment about the Altschauerberg situation?
+  - text: Welches TV-Medium produzierte einen bekannten Dokumentationsbeitrag über die Altschauerberg-Situation?
     category: Media & Documentation
     tier: 2
     tags: [media, documentary, tv, safe-core]
-    note: "Spiegel TV produced notable documentary segments about the Drachenlord case and the situation in Altschauerberg."
+    note: "Spiegel TV produzierte mehrere beachtenswerte Dokumentationsbeiträge über den Drachenlord-Fall."
     created_by: PlayBox quiz seed
     answers: ["Spiegel TV", ["RTL Exclusiv", "Galileo", "Stern TV"]]
 
-  - text: Which public broadcasting research format also covered the Drachenlord phenomenon?
+  - text: Welches öffentlich-rechtliche Recherche-Format berichtete ebenfalls über das Drachenlord-Phänomen?
     category: Media & Documentation
     tier: 2
     tags: [media, documentary, strg-f, safe-core]
-    note: "STRG_F, the investigative YouTube format of funk/NDR, also reported on the case."
+    note: "STRG_F, das investigative YouTube-Format von funk/NDR, berichtete ebenfalls über den Fall."
     created_by: PlayBox quiz seed
     answers: ["STRG_F", ["extra 3", "Monitor", "Panorama"]]
 
-  - text: What kind of media format is "Cui Bono"?
+  - text: "Welches Medienformat ist \"Cui Bono\"?"
     category: Media & Documentation
     tier: 1
     tags: [media, podcast, cui-bono, safe-core]
-    note: "'Cui Bono' is a podcast series, not a TV show or newspaper article."
+    note: "'Cui Bono' ist eine Podcast-Serie — kein TV-Format und kein Zeitungsartikel."
     created_by: PlayBox quiz seed
     answers: ["Podcast", ["TV-Dokumentation", "Zeitungsartikel", "Spielfilm"]]
 
-  # ===== Legal & Regulation (tier 2 — medium) =====
+  # ===== Legal & Regulation (Tier 2 — mittel) =====
 
-  - text: Which authority prohibited the "Drache_Offiziell" livestream in March 2019?
+  - text: "Welche Behörde untersagte den \"Drache_Offiziell\"-Livestream im März 2019?"
     category: Legal & Regulation
     tier: 2
     tags: [legal, blm, regulation, livestream, 2019, safe-core]
-    note: "The Bayerische Landeszentrale für neue Medien (BLM) shut down the stream because it lacked a broadcasting licence."
+    note: "Die Bayerische Landeszentrale für neue Medien (BLM) stellte den Stream ein, weil er ohne Sendelizenz betrieben wurde."
     created_by: PlayBox quiz seed
     answers: ["Bayerische Landeszentrale für neue Medien (BLM)", ["Bayerischer Rundfunk", "Bundesnetzagentur", "Landesmedienanstalt NRW"]]
 
-  - text: Why did the BLM prohibit the "Drache_Offiziell" livestream?
+  - text: "Aus welchem Grund untersagte die BLM den \"Drache_Offiziell\"-Livestream?"
     category: Legal & Regulation
     tier: 2
     tags: [legal, blm, regulation, safe-core]
-    note: "The stream was classified as broadcasting and lacked the required licence."
+    note: "Der Stream wurde als Rundfunk eingestuft und benötigte daher eine Sendelizenz."
     created_by: PlayBox quiz seed
     answers: ["Fehlende Sendelizenz", ["Urheberrechtsverletzung", "Jugendschutzverstoß", "Volksverhetzung"]]
 
-  - text: What kind of legal outcome did Drachenlord face in 2021?
+  - text: Welches rechtliche Ergebnis hatte das Verfahren gegen Drachenlord im Jahr 2021?
     category: Legal & Regulation
     tier: 2
     tags: [legal, court, sentence, "2021", safe-core]
-    note: "In 2021, Drachenlord was sentenced in a first-instance court proceeding."
+    note: "2021 wurde Drachenlord in erster Instanz verurteilt."
     created_by: PlayBox quiz seed
     answers: ["Verurteilung (erstinstanzlich)", ["Freispruch", "Einstellung des Verfahrens", "Geldstrafe ohne Bewährung"]]
 
-  # ===== Scene Terms & Dynamics (tier 2 — medium) =====
+  # ===== Scene Terms & Dynamics (Tier 2 — mittel) =====
 
-  - text: What is the term for abusing emergency calls to trigger a police response at someone's location?
+  - text: Wie nennt man das missbräuchliche Absetzen von Notrufen, um einen Polizeieinsatz an einer bestimmten Adresse auszulösen?
     category: Scene Terms & Dynamics
     tier: 2
     tags: [terms, swatting, escalation, safe-core]
-    note: "Swatting is the practice of making false emergency reports to send armed police to someone's address."
+    note: "Swatting ist die Praxis, falsche Notrufe zu tätigen, um bewaffnete Polizei zu einer bestimmten Adresse zu schicken."
     created_by: PlayBox quiz seed
     answers: ["Swatting", ["Doxing", "Brigading", "Shadow banning"]]
 
-  - text: What does "Doxing" mean in the context of online harassment?
+  - text: "Was bedeutet \"Doxing\" im Kontext von Online-Belästigung?"
     category: Scene Terms & Dynamics
     tier: 2
     tags: [terms, doxing, privacy, safe-core]
-    note: "Doxing is the practice of publishing someone's private personal information online without consent."
+    note: "Doxing ist das Veröffentlichen privater Informationen über eine Person ohne deren Einwilligung."
     created_by: PlayBox quiz seed
     answers: ["Veröffentlichung privater Daten", ["Erstellen gefälschter Profile", "Hacken von Accounts", "Melden von Inhalten"]]
 
-  - text: What term describes the collective phenomenon of organized negative engagement with a public figure?
+  - text: Welcher Begriff beschreibt das Phänomen organisierter negativer Aufmerksamkeit gegenüber einer öffentlichen Person?
     category: Scene Terms & Dynamics
     tier: 2
     tags: [terms, anti-fandom, dynamics, safe-core]
-    note: "Anti-fandom describes the organized opposition community that forms around a public figure."
+    note: "Anti-Fandom bezeichnet eine organisierte Gemeinschaft, die sich gegen eine öffentliche Person formiert."
     created_by: PlayBox quiz seed
     answers: ["Anti-Fandom", ["Trolling", "Cybermobbing", "Shitstorm"]]
 
-  - text: What is the so-called "Drachengame"?
+  - text: "Was bezeichnet man als das sogenannte \"Drachengame\"?"
     category: Scene Terms & Dynamics
     tier: 2
     tags: [terms, drachengame, dynamics, safe-core]
-    note: "The 'Drachengame' refers to the ongoing cycle of provocation and reaction between Drachenlord and his detractors."
+    note: "Das 'Drachengame' beschreibt den Kreislauf aus Provokation und Reaktion zwischen Drachenlord und seinen Kritikern."
     created_by: PlayBox quiz seed
     answers: ["Der Kreislauf aus Provokation und Reaktion zwischen Drachenlord und seinen Kritikern", ["Ein Videospiel von Drachenlord", "Ein Forum-Wettbewerb", "Ein YouTube-Format"]]
 
-  - text: What does "Brigading" mean in social media context?
+  - text: "Was bedeutet \"Brigading\" in sozialen Medien?"
     category: Scene Terms & Dynamics
     tier: 2
     tags: [terms, brigading, social-media, safe-core]
-    note: "Brigading is the coordinated effort of a group to flood a target with negative engagement."
+    note: "Brigading ist das koordinierte Massenfluten einer Zielseite mit negativem Engagement."
     created_by: PlayBox quiz seed
     answers: ["Koordiniertes Massenfluten mit negativem Engagement", ["Einzelne Hasskommentare", "Bot-gesteuerte Likes", "Automatische Follower-Generierung"]]
 
-  - text: What role did pizza delivery play in the harassment of Drachenlord?
+  - text: Welche Rolle spielten Pizzalieferungen bei der Belästigung von Drachenlord?
     category: Scene Terms & Dynamics
     tier: 2
     tags: [terms, harassment, delivery, safe-core]
-    note: "People repeatedly ordered unwanted pizza deliveries to Drachenlord's address as a form of harassment."
+    note: "Nutzer bestellten wiederholt ungewollte Pizzalieferungen an Drachenlords Adresse als Belästigungsform."
     created_by: PlayBox quiz seed
     answers: ["Ungewollte Lieferungen wurden an seine Adresse bestellt", ["Er arbeitete als Pizzalieferant", "Er startete ein Pizza-Unternehmen", "Pizza war sein Lieblingsessen im Stream"]]
 
-  # ===== Place & Infrastructure (tier 2 — medium) =====
+  # ===== Place & Infrastructure (Tier 2 — mittel) =====
 
-  - text: What happened to Drachenlord's Google Maps listing in Altschauerberg?
+  - text: Was passierte mit dem Google-Maps-Eintrag von Drachenlords Adresse in Altschauerberg?
     category: Place & Infrastructure
     tier: 2
     tags: [place, maps, manipulation, safe-core]
-    note: "The Google Maps entry for Altschauerberg was repeatedly manipulated by internet users."
+    note: "Der Google-Maps-Eintrag für Altschauerberg wurde von Nutzern wiederholt manipuliert."
     created_by: PlayBox quiz seed
     answers: ["Wurde wiederholt manipuliert", ["Wurde offiziell von Google entfernt", "Wurde zum Denkmal erklärt", "Blieb unverändert"]]
 
-  - text: What is the main challenge with archiving Drachenlord content after the YouTube deletion?
+  - text: Welches Problem entstand beim Archivieren von Drachenlord-Inhalten nach der YouTube-Löschung?
     category: Place & Infrastructure
     tier: 2
     tags: [archives, deletion, preservation, safe-core]
-    note: "After the YouTube channel deletion, much of the original content was lost or scattered across unofficial mirrors."
+    note: "Nach der Kanallöschung waren viele Originalvideos verloren oder auf inoffizielle Mirror verstreut."
     created_by: PlayBox quiz seed
     answers: ["Verlust und Verstreuung auf inoffizielle Mirror", ["Alle Videos wurden automatisch auf archive.org gespeichert", "Google stellte ein offizielles Backup bereit", "Die Videos waren nie gelöscht"]]
 
-  - text: What is the approximate population of Altschauerberg as a village?
+  - text: Wie viele Einwohner hat Altschauerberg ungefähr?
     category: Place & Infrastructure
     tier: 2
     tags: [place, altschauerberg, population, safe-core]
-    note: "Altschauerberg is a very small village with only about 40 inhabitants."
+    note: "Altschauerberg ist ein sehr kleines Dorf mit nur rund 40 Einwohnern."
     created_by: PlayBox quiz seed
     answers: ["Ungefähr 40", ["Ungefähr 500", "Ungefähr 2.000", "Ungefähr 10.000"]]
 
-  - text: What was a common method used by visitors to find the Drachenschanze?
+  - text: Wie fanden Besucher typischerweise den Weg zur Drachenschanze?
     category: Place & Infrastructure
     tier: 2
     tags: [place, navigation, visitors, safe-core]
-    note: "Visitors used Google Maps and the widely known address to navigate to the location."
+    note: "Besucher nutzten Google Maps und die öffentlich bekannte Adresse zur Navigation nach Altschauerberg."
     created_by: PlayBox quiz seed
     answers: ["Google Maps und die veröffentlichte Adresse", ["Offizielle Tourismus-Webseiten", "QR-Codes in der Stadt", "Lokale Reiseführer"]]
 
-  - text: What type of content did Drachenlord stream besides gaming?
+  - text: Welche Inhalte streamte Drachenlord neben Gaming noch?
     category: Identity & Basics
     tier: 2
     tags: [identity, content, streaming, safe-core]
-    note: "Besides gaming, Drachenlord streamed cooking, Q&A sessions, and reactions to comments."
+    note: "Neben Gaming streamte Drachenlord auch Kochen, Q&A-Sessions und Reaktionen auf Kommentare."
     created_by: PlayBox quiz seed
     answers: ["Kochen, Q&A und Reaktionen auf Kommentare", ["Musikproduktion", "Sportübertragungen", "Programmier-Tutorials"]]
 
-  - text: How did the local community of Altschauerberg react to the mass visits?
+  - text: Wie reagierte die Dorfgemeinschaft Altschauerbergs auf die Massenbesuche?
     category: Place & Infrastructure
     tier: 2
     tags: [place, community, reaction, safe-core]
-    note: "The local community was severely impacted and mostly opposed the disruptions caused by visitors."
+    note: "Die Dorfgemeinschaft war durch die Besuche stark belastet und lehnte die Störungen überwiegend ab."
     created_by: PlayBox quiz seed
     answers: ["Stark belastet und gegen die Störungen", ["Begeistert vom Tourismus", "Gleichgültig", "Sie organisierten Führungen"]]
 
-  # ===== Legal (tier 3 — hard) =====
+  # ===== Legal (Tier 3 — schwer) =====
 
-  - text: What happened on appeal regarding the 2021 Drachenlord verdict?
+  - text: Was geschah im Berufungsverfahren zum erstinstanzlichen Urteil gegen Drachenlord von 2021?
     category: Legal & Regulation
     tier: 3
     tags: [legal, appeal, court, safe-core]
-    note: "The initial sentence was reduced to a probationary sentence on appeal."
+    note: "Im Berufungsverfahren wurde die Strafe auf eine Bewährungsstrafe reduziert."
     created_by: PlayBox quiz seed
     answers: ["Bewährungsstrafe", ["Verschärfung der Strafe", "Bestätigung des Urteils", "Erneute Verhandlung"]]
 
-  - text: Why was the BLM action in 2019 legally unusual in the context of internet content?
+  - text: Warum war das Vorgehen der BLM im Jahr 2019 im Kontext von Internet-Inhalten rechtlich ungewöhnlich?
     category: Legal & Regulation
     tier: 3
     tags: [legal, blm, regulation, internet, hard, safe-core]
-    note: "Classifying a personal internet livestream as requiring a broadcasting licence was an unusual regulatory step."
+    note: "Einen privaten Internet-Livestream als rundfunklizenzpflichtig einzustufen war ein ungewöhnlicher Regulierungsschritt."
     created_by: PlayBox quiz seed
     answers: ["Ein privater Livestream wurde als rundfunklizenzpflichtig eingestuft", ["Es war die erste Strafe für YouTube überhaupt", "Das BLM war nicht zuständig", "Livestreams waren generell verboten"]]
 
-  - text: What term describes the legal concept when authorities restrict content due to missing broadcast licenses?
+  - text: Welches Rechtsgebiet ist relevant, wenn Behörden Inhalte wegen fehlender Sendelizenzen untersagen?
     category: Legal & Regulation
     tier: 3
     tags: [legal, regulation, broadcasting, safe-core]
-    note: "Rundfunkrecht (broadcasting law) regulates who may operate broadcast-like services."
+    note: "Das Rundfunkrecht regelt, wer rundfunkähnliche Dienste betreiben darf."
     created_by: PlayBox quiz seed
     answers: ["Rundfunkrecht", ["Urheberrecht", "Telemediengesetz", "Datenschutzrecht"]]
 
-  - text: How many documented police operations were there in Altschauerberg in peak years?
+  - text: Wie viele dokumentierte Polizeieinsätze gab es in Altschauerberg in Spitzenzeiten?
     category: Legal & Regulation
     tier: 3
     tags: [legal, police, statistics, hard, safe-core]
-    note: "At peak times, police responded to Altschauerberg hundreds of times per year."
+    note: "In Spitzenzeiten musste die Polizei hunderte Male pro Jahr nach Altschauerberg ausrücken."
     created_by: PlayBox quiz seed
     answers: ["Hunderte pro Jahr in Spitzenzeiten", ["Weniger als 10 pro Jahr", "Genau 50 pro Jahr", "Nur einmalige Einsätze"]]
 
-  # ===== Timeline (tier 3 — hard) =====
+  # ===== Timeline (Tier 3 — schwer) =====
 
-  - text: In what order did these events happen? 1) Schanzenfest 2) BLM-Verbot 3) Channel-Löschung
+  - text: "In welcher Reihenfolge fanden diese Ereignisse statt? 1)\u202fSchanzenfest  2)\u202fBLM-Verbot  3)\u202fChannel-Löschung"
     category: Timeline & Milestones
     tier: 3
     tags: [timeline, ordering, hard, safe-core]
-    note: "Schanzenfest (2018), BLM ban (March 2019), Channel deletion (August 2022)."
+    note: "Schanzenfest (2018), BLM-Verbot (März 2019), Channel-Löschung (August 2022)."
     created_by: PlayBox quiz seed
     answers: ["Schanzenfest → BLM-Verbot → Channel-Löschung", ["BLM-Verbot → Schanzenfest → Channel-Löschung", "Channel-Löschung → Schanzenfest → BLM-Verbot", "Schanzenfest → Channel-Löschung → BLM-Verbot"]]
 
-  - text: How many years passed between the start of the YouTube channel and the channel deletion?
+  - text: Wie viele Jahre lagen zwischen dem Start des YouTube-Kanals und seiner Löschung?
     category: Timeline & Milestones
     tier: 3
     tags: [timeline, duration, hard, safe-core]
-    note: "The channel started in 2011 and was deleted in 2022 — approximately 11 years."
+    note: "Der Kanal startete 2011 und wurde 2022 gelöscht — das sind ungefähr 11 Jahre."
     created_by: PlayBox quiz seed
     answers: ["Ungefähr 11 Jahre", ["Ungefähr 5 Jahre", "Ungefähr 8 Jahre", "Ungefähr 15 Jahre"]]
 
-  # ===== Media & Documentation (tier 3 — hard) =====
+  # ===== Media & Documentation (Tier 3 — schwer) =====
 
-  - text: Which term describes the broader societal debate around online mob dynamics, inspired partly by the Drachenlord case?
+  - text: Welcher Begriff beschreibt die breitere gesellschaftliche Debatte um Online-Mob-Dynamiken, die u.\u202fa. durch den Drachenlord-Fall angestoßen wurde?
     category: Media & Documentation
     tier: 3
     tags: [media, maskengame, debate, comparison, safe-core]
-    note: "The 'Maskengame' term emerged as a broader frame for discussing online mob phenomena and systemic failures."
+    note: "Der Begriff 'Maskengame' entstand als übergeordneter Rahmen, um Online-Mob-Phänomene und systemische Versäumnisse zu diskutieren."
     created_by: PlayBox quiz seed
     answers: ["Maskengame", ["Netzhass", "Cybermobbing-Debatte", "Trollkultur"]]
 
-  - text: What is a key difference between the Y-Kollektiv documentary (2016) and the Cui Bono podcast (2022)?
+  - text: Was ist ein wesentlicher Unterschied zwischen der Y-Kollektiv-Dokumentation (2016) und dem Cui-Bono-Podcast (2022)?
     category: Media & Documentation
     tier: 3
     tags: [media, comparison, documentary, podcast, hard, safe-core]
-    note: "Y-Kollektiv was an early journalistic report; Cui Bono was a deep narrative reconstruction with broader societal analysis."
+    note: "Das Y-Kollektiv lieferte frühe journalistische Berichterstattung; Cui Bono bot eine tiefe narrative Rekonstruktion mit breiterer gesellschaftlicher Analyse."
     created_by: PlayBox quiz seed
     answers: ["Cui Bono bot eine tiefere gesellschaftliche Analyse", ["Y-Kollektiv war länger als Cui Bono", "Cui Bono war ein TV-Format", "Y-Kollektiv war ein Podcast"]]
 
-  # ===== Scene Terms (tier 3 — hard) =====
+  # ===== Scene Terms (Tier 3 — schwer) =====
 
-  - text: Which false attribution case involved Drachenlord being wrongly linked to a violent incident in the Netherlands?
+  - text: Mit welchem gewaltsamen Vorfall in den Niederlanden wurde Drachenlord fälschlicherweise in Verbindung gebracht?
     category: Scene Terms & Dynamics
     tier: 3
     tags: [disinformation, utrecht, false-attribution, hard, safe-core]
-    note: "After a violent incident in Utrecht, false claims circulated linking Drachenlord to it."
+    note: "Nach einem Gewaltvorfall in Utrecht kursierten falsche Behauptungen, Drachenlord sei beteiligt gewesen."
     created_by: PlayBox quiz seed
     answers: ["Utrecht", ["Amsterdam", "Rotterdam", "Den Haag"]]
 
-  - text: Which Scandinavian incident also saw Drachenlord falsely attributed?
+  - text: Mit welchem skandinavischen Vorfall wurde Drachenlord ebenfalls fälschlicherweise in Verbindung gebracht?
     category: Scene Terms & Dynamics
     tier: 3
     tags: [disinformation, kongsberg, false-attribution, hard, safe-core]
-    note: "After an incident in Kongsberg, Norway, misinformation falsely connected Drachenlord to the event."
+    note: "Nach einem Vorfall in Kongsberg, Norwegen, wurden fälschlicherweise Verbindungen zu Drachenlord behauptet."
     created_by: PlayBox quiz seed
     answers: ["Kongsberg", ["Oslo", "Bergen", "Malmö"]]
 
-  - text: What is a "Fake-Interview" in the Drachenlord context?
+  - text: "Was versteht man im Drachenlord-Kontext unter einem \"Fake-Interview\"?"
     category: Scene Terms & Dynamics
     tier: 3
     tags: [disinformation, fake-interview, media, safe-core]
-    note: "Fabricated interview quotes were attributed to Drachenlord and spread through media channels."
+    note: "Gefälschte Interview-Zitate wurden Drachenlord zugeschrieben und über Medienkanäle verbreitet."
     created_by: PlayBox quiz seed
     answers: ["Gefälschte Interview-Zitate, die Drachenlord zugeschrieben wurden", ["Ein inszeniertes YouTube-Video", "Ein Satire-Format", "Ein offizielles Presseinterview"]]
 
-  - text: What precedent does the Drachenlord case set regarding the intersection of online harassment and physical world consequences?
+  - text: Welchen Präzedenzfall setzt der Drachenlord-Fall bezüglich der Eskalation von Online-Belästigung in die reale Welt?
     category: Scene Terms & Dynamics
     tier: 3
     tags: [dynamics, precedent, analysis, hard, safe-core]
-    note: "The case demonstrates how online harassment can escalate into sustained real-world targeting, challenging existing legal frameworks."
+    note: "Der Fall zeigt, wie Online-Belästigung in dauerhafte reale Verfolgung eskalieren kann und bestehende Rechtssysteme herausfordert."
     created_by: PlayBox quiz seed
     answers: ["Online-Harassment kann in dauerhafte reale Verfolgung eskalieren", ["Internet-Aktivitäten haben keine realen Konsequenzen", "Behörden können Online-Mobbing vollständig verhindern", "Soziale Medien regulieren sich selbst effektiv"]]
 
-  - text: What was unique about the Drachenlord phenomenon compared to typical cyberbullying cases?
+  - text: Was unterschied das Drachenlord-Phänomen von typischen Cybermobbing-Fällen?
     category: Scene Terms & Dynamics
     tier: 3
     tags: [dynamics, comparison, unique, hard, safe-core]
-    note: "The sustained duration (over a decade), the physical pilgrimages, and the organized community structure made it uniquely persistent."
+    note: "Die jahrelange Dauer, die physischen Pilgerfahrten und die organisierte Community-Struktur machten den Fall einzigartig persistent."
     created_by: PlayBox quiz seed
     answers: ["Die jahrelange Dauer, physische Besuche und organisierte Gemeinschaftsstruktur", ["Es war ein einmaliger Vorfall", "Es betraf nur eine Person", "Es fand nur online statt"]]
 
-  - text: What does "NWO" refer to in the context of German internet phenomena similar to Drachenlord?
+  - text: Wofür steht „NWO" im Kontext deutschsprachiger Internet-Phänomene ähnlich wie dem Drachenlord-Fall?
     category: Scene Terms & Dynamics
     tier: 3
     tags: [terms, nwo, comparison, broader-context, safe-core]
-    note: "NWO (Neue Wilde Ordnung or similar abbreviations) refers to related but distinct internet phenomena in the German-speaking space."
+    note: "NWO bezeichnet verwandte, aber eigenständige Internet-Phänomene im deutschsprachigen Raum."
     created_by: PlayBox quiz seed
     answers: ["Verwandte, aber eigenständige Internet-Phänomene im deutschsprachigen Raum", ["Eine politische Partei", "Ein YouTube-Netzwerk", "Eine Gaming-Organisation"]]
 
-  - text: What societal question does the Drachenlord case fundamentally raise?
+  - text: Welche gesellschaftliche Grundfrage wirft der Drachenlord-Fall auf?
     category: Scene Terms & Dynamics
     tier: 3
     tags: [dynamics, society, fundamental, hard, safe-core]
-    note: "The case raises questions about the responsibility of platforms, law enforcement, and society when online hate transitions to the physical world."
+    note: "Der Fall stellt die Frage nach der Verantwortung von Plattformen, Behörden und der Gesellschaft, wenn Online-Hass in die reale Welt übergeht."
     created_by: PlayBox quiz seed
     answers: ["Verantwortung von Plattformen und Gesellschaft bei der Transition von Online-Hass in die reale Welt", ["Ob YouTube-Stars Steuern zahlen sollten", "Ob Gaming einen positiven Einfluss hat", "Ob Livestreaming verboten werden sollte"]]
 
-  # ===== Place & Infrastructure (tier 3 — hard) =====
+  # ===== Place & Infrastructure (Tier 3 — schwer) =====
 
-  - text: What role did archive platforms play after the YouTube channel deletion?
+  - text: Welche Rolle spielten Archivplattformen nach der Löschung des YouTube-Kanals?
     category: Place & Infrastructure
     tier: 3
     tags: [archives, platform, deletion, preservation, hard, safe-core]
-    note: "Archive platforms became the primary repositories for Drachenlord content, raising questions about right to be forgotten vs. documentation."
+    note: "Archivplattformen wurden zu Hauptspeicherorten und warfen damit Fragen zum Recht auf Vergessenwerden versus Dokumentation auf."
     created_by: PlayBox quiz seed
     answers: ["Sie wurden zu Hauptspeicherorten und warfen Fragen zum Recht auf Vergessenwerden auf", ["Alle Inhalte gingen vollständig verloren", "YouTube stellte alles wieder her", "Archive waren bereits vor der Löschung das Hauptmedium"]]
 
-  # ===== Additional Tier 1 (easy) — variety for Millionär levels 1-5 =====
+  # ===== Zusätzliche Tier-1-Fragen (Abwechslung für Millionär-Level 1–5) =====
 
-  - text: Which frontend framework does PlayBox use?
+  - text: Welches Frontend-Framework verwendet PlayBox?
     category: Web Basics
     tier: 1
     tags: [starter, frontend, react]
-    note: "PlayBox uses React with TypeScript, bundled via Vite."
+    note: "PlayBox verwendet React mit TypeScript, gebündelt über Vite."
     created_by: PlayBox quiz seed
     answers: ["React", ["Angular", "Vue.js", "Svelte"]]
 
-  - text: Which Python web framework powers the PlayBox backend?
+  - text: Welches Python-Webframework betreibt das PlayBox-Backend?
     category: PlayBox Basics
     tier: 1
     tags: [starter, backend, python]
-    note: "FastAPI is the async Python web framework used for the PlayBox backend."
+    note: "FastAPI ist das asynchrone Python-Webframework für das PlayBox-Backend."
     created_by: PlayBox quiz seed
     answers: ["FastAPI", ["Django", "Flask", "Express"]]
 
-  - text: What does API stand for?
+  - text: Wofür steht die Abkürzung API?
     category: Web Basics
     tier: 1
     tags: [starter, web, api]
-    note: "API = Application Programming Interface — a standard way for software components to communicate."
+    note: "API steht für Application Programming Interface — eine standardisierte Schnittstelle für die Kommunikation zwischen Softwarekomponenten."
     created_by: PlayBox quiz seed
     answers: ["Application Programming Interface", ["Advanced Protocol Integration", "Automated Page Indexer", "Active Process Indicator"]]
 
-  - text: How many game modes does the PlayBox quiz currently have?
+  - text: Wie viele Spielmodi hat das PlayBox-Quiz aktuell?
     category: PlayBox Basics
     tier: 1
     tags: [starter, quiz, modes]
-    note: "The quiz has three modes: Millionär, Quizduell 1v1, and Speed."
+    note: "Das Quiz hat drei Modi: Millionär, Quizduell 1v1 und Speed."
     created_by: PlayBox quiz seed
     answers: ["3", ["1", "2", "5"]]
 
-  - text: What does Drachenlord typically eat on stream?
+  - text: Was isst Drachenlord typischerweise beim Streamen?
     category: Identity & Basics
     tier: 1
     tags: [identity, food, content, safe-core]
-    note: "Drachenlord was known for cooking and eating large portions of fast food and simple dishes on stream."
+    note: "Drachenlord war bekannt fürs Kochen und Essen großer Portionen Fast Food und einfacher Gerichte im Stream."
     created_by: PlayBox quiz seed
     answers: ["Fast Food und einfache Gerichte", ["Vegane Bowls", "Sterneküche", "Rohkost"]]
 
-  - text: What type of pet did Drachenlord famously keep?
+  - text: Welche Haustiere hielt Drachenlord bekanntermaßen?
     category: Identity & Basics
     tier: 1
     tags: [identity, pets, basics, safe-core]
-    note: "Drachenlord was known for keeping cats at his property."
+    note: "Drachenlord war bekannt dafür, Katzen auf seinem Grundstück zu halten."
     created_by: PlayBox quiz seed
     answers: ["Katzen", ["Hunde", "Papageien", "Schlangen"]]
 
-  - text: What does JSON stand for?
+  - text: Wofür steht die Abkürzung JSON?
     category: Web Basics
     tier: 1
     tags: [starter, web, json]
-    note: "JSON = JavaScript Object Notation, a common data interchange format."
+    note: "JSON steht für JavaScript Object Notation — ein verbreitetes Format für den Datenaustausch zwischen Systemen."
     created_by: PlayBox quiz seed
     answers: ["JavaScript Object Notation", ["Java Serialized Object Network", "Joint Standard Open Notation", "JavaScript Online Node"]]
 
-  - text: What color theme is used for the WWM-style quiz interface?
+  - text: Welches Farbschema hat das WWM-Spielinterface in PlayBox?
     category: PlayBox Basics
     tier: 1
     tags: [starter, frontend, wwm]
-    note: "The Millionär mode uses the classic WWM dark blue gradient with orange-gold highlights."
+    note: "Der Millionär-Modus verwendet den klassischen WWM-Dunkelblau-Farbverlauf mit orange-goldenen Akzenten."
     created_by: PlayBox quiz seed
-    answers: ["Dark blue with orange-gold highlights", ["Red and white", "Green and black", "Purple and silver"]]
+    answers: ["Dunkelblau mit orange-goldenen Akzenten", ["Rot-Weiß", "Grün-Schwarz", "Lila-Silber"]]
 
-  # ===== Additional Tier 2 (medium) — variety for Millionär levels 6-10 =====
+  # ===== Zusätzliche Tier-2-Fragen (Abwechslung für Millionär-Level 6–10) =====
 
-  - text: What was the approximate number of YouTube subscribers at the peak of the Drachenlord channel?
+  - text: Wie viele YouTube-Abonnenten hatte der Drachenlord-Kanal ungefähr auf seinem Höhepunkt?
     category: Media & Documentation
     tier: 2
     tags: [media, youtube, statistics, safe-core]
-    note: "The Drachenlord channel had approximately 100,000+ subscribers at various points."
+    note: "Der Drachenlord-Kanal hatte zu verschiedenen Zeiten über 100.000 Abonnenten."
     created_by: PlayBox quiz seed
     answers: ["Über 100.000", ["Über 1 Million", "Unter 10.000", "Genau 50.000"]]
 
-  - text: Which municipality does Altschauerberg officially belong to?
+  - text: Zu welcher Gemeinde gehört Altschauerberg offiziell?
     category: Place & Infrastructure
     tier: 2
     tags: [place, municipality, geography, safe-core]
-    note: "Altschauerberg is part of the municipality of Emskirchen in the district of Neustadt an der Aisch-Bad Windsheim."
+    note: "Altschauerberg gehört zur Gemeinde Emskirchen im Landkreis Neustadt an der Aisch-Bad Windsheim."
     created_by: PlayBox quiz seed
     answers: ["Emskirchen", ["Herzogenaurach", "Erlangen", "Fürth"]]
 
-  - text: What kind of music did Drachenlord try to produce?
+  - text: Welche Art von Musik versuchte Drachenlord zu produzieren?
     category: Identity & Basics
     tier: 2
     tags: [identity, music, content, safe-core]
-    note: "Drachenlord attempted to create rap and metal music, which became a frequent topic of discussion."
+    note: "Drachenlord versuchte sich an Rap und Metal-Musik, was regelmäßig Gesprächsthema in der Szene war."
     created_by: PlayBox quiz seed
     answers: ["Rap und Metal", ["Klassik und Jazz", "Electronic und Techno", "Country und Folk"]]
 
-  - text: What is the K-factor used in the PlayBox ELO calculation?
+  - text: Welcher K-Faktor wird in der PlayBox-ELO-Berechnung verwendet?
     category: PlayBox Basics
     tier: 2
     tags: [elo, backend, technical]
-    note: "K=32 is the standard K-factor used in the ELO calculation, borrowed from chess rating systems."
+    note: "K=32 ist der Standard-K-Faktor in der ELO-Berechnung, aus dem Schachsystem übernommen."
     created_by: PlayBox quiz seed
     answers: ["32", ["16", "64", "10"]]
 
-  - text: What happened to the road sign of Altschauerberg multiple times?
+  - text: Was passierte mit dem Ortschaftsschild von Altschauerberg mehrfach?
     category: Place & Infrastructure
     tier: 2
     tags: [place, vandalism, altschauerberg, safe-core]
-    note: "The Altschauerberg road sign was repeatedly stolen or vandalized by visitors."
+    note: "Das Ortschaftsschild von Altschauerberg wurde von Besuchern wiederholt gestohlen oder beschädigt."
     created_by: PlayBox quiz seed
     answers: ["Es wurde wiederholt gestohlen oder beschädigt", ["Es wurde unter Denkmalschutz gestellt", "Es wurde nie verändert", "Es wurde an ein Museum gespendet"]]
 
-  - text: What term describes the act of physically traveling to a content creator's location to harass them?
+  - text: Wie nennt man das physische Aufsuchen des Wohnorts eines Content Creators zum Zweck der Belästigung?
     category: Scene Terms & Dynamics
     tier: 2
     tags: [terms, pilgrimage, harassment, safe-core]
-    note: "Real-world visits to content creators' homes for the purpose of confrontation are sometimes called 'pilgrimages' in the community."
+    note: "Reale Besuche bei Content Creatorn zu Konfrontationszwecken werden in der Community oft 'Pilgerfahrten' genannt."
     created_by: PlayBox quiz seed
     answers: ["Pilgerfahrt / Pilgrimage", ["Flashmob", "Convention", "Meetup"]]
 
-  - text: What game type is Imposter in the PlayBox collection?
+  - text: Welcher Spieltyp ist Imposter in der PlayBox-Sammlung?
     category: PlayBox Basics
     tier: 2
     tags: [starter, imposter, game-type]
-    note: "Imposter is a social deduction party game where one player has a different word and must blend in."
+    note: "Imposter ist ein Social-Deduction-Partyspiel, bei dem ein Spieler ein anderes Wort hat und sich nicht verraten darf."
     created_by: PlayBox quiz seed
-    answers: ["Social Deduction Party Game", ["Quizspiel", "Kartenspiel", "Brettspiel"]]
+    answers: ["Social-Deduction-Partyspiel", ["Quizspiel", "Kartenspiel", "Brettspiel"]]
 
-  # ===== Additional Tier 3 (hard) — variety for Millionär levels 11-15 =====
+  # ===== Zusätzliche Tier-3-Fragen (Abwechslung für Millionär-Level 11–15) =====
 
-  - text: What legal concept was tested when the BLM classified a personal livestream as broadcasting?
+  - text: Welches Rechtskonzept wurde auf die Probe gestellt, als die BLM einen privaten Livestream als rundfunkpflichtig einstufte?
     category: Legal & Regulation
     tier: 3
     tags: [legal, broadcasting, regulation, hard, safe-core]
-    note: "The Rundfunkstaatsvertrag (Interstate Broadcasting Treaty) was applied to classify the stream as requiring a license."
+    note: "Der Rundfunkstaatsvertrag (RStV) wurde angewandt, um den Stream als lizenzpflichtigen Rundfunk einzustufen."
     created_by: PlayBox quiz seed
     answers: ["Rundfunkstaatsvertrag", ["Telemediengesetz", "Urheberrechtsgesetz", "Bundesdatenschutzgesetz"]]
 
-  - text: Which psychological concept describes the audience dynamics in the Drachenlord phenomenon?
+  - text: Welches psychologische Konzept beschreibt die Zuschauerdynamik im Drachenlord-Phänomen?
     category: Scene Terms & Dynamics
     tier: 3
     tags: [dynamics, psychology, deindividuation, hard, safe-core]
-    note: "Deindividuation describes how people in groups lose self-awareness and engage in behavior they wouldn't individually."
+    note: "Deindividuation beschreibt, wie Menschen in Gruppen ihr Selbstbewusstsein verlieren und Verhaltensweisen zeigen, die sie alleine nie zeigen würden."
     created_by: PlayBox quiz seed
     answers: ["Deindividuation", ["Kognitive Dissonanz", "Stockholm-Syndrom", "Dunning-Kruger-Effekt"]]
 
-  - text: What ethical dilemma do journalists face when covering the Drachenlord case?
+  - text: Vor welchem ethischen Dilemma stehen Journalisten bei der Berichterstattung über den Drachenlord-Fall?
     category: Media & Documentation
     tier: 3
     tags: [media, ethics, journalism, hard, safe-core]
-    note: "Covering the case risks amplifying the harassment while ignoring it means missing an important societal phenomenon."
+    note: "Berichterstattung riskiert, das Mobbing zu verstärken; Schweigen bedeutet, ein wichtiges gesellschaftliches Phänomen zu ignorieren."
     created_by: PlayBox quiz seed
     answers: ["Berichterstattung kann das Mobbing verstärken, Schweigen ignoriert das Phänomen", ["Es gibt kein ethisches Dilemma", "Nur die Polizei darf berichten", "Journalisten sind gesetzlich zur Berichterstattung verpflichtet"]]
 
-  - text: What term from media studies describes the cycle where negative attention generates more content and more negative attention?
+  - text: Welcher Begriff aus der Medienwissenschaft beschreibt den Kreislauf, bei dem negative Aufmerksamkeit noch mehr negative Aufmerksamkeit erzeugt?
     category: Media & Documentation
     tier: 3
     tags: [media, attention-economy, cycle, hard, safe-core]
-    note: "The attention economy concept explains how engagement (positive or negative) feeds algorithmic amplification."
+    note: "Die Aufmerksamkeitsökonomie erklärt, wie Engagement — positiv wie negativ — algorithmische Verstärkung auslöst."
     created_by: PlayBox quiz seed
     answers: ["Aufmerksamkeitsökonomie", ["Filterblaseneffekt", "Echokammertheorie", "Mediensättigung"]]
 
-  - text: What is the estimated total cost of police operations in Altschauerberg over the years?
+  - text: Auf wie viel belaufen sich die geschätzten Gesamtkosten der Polizeieinsätze in Altschauerberg über die Jahre?
     category: Legal & Regulation
     tier: 3
     tags: [legal, police, costs, hard, safe-core]
-    note: "The cumulative police costs were estimated in the hundreds of thousands of euros due to repeated deployments."
+    note: "Die kumulierten Polizeikosten wurden aufgrund der wiederholten Einsätze auf hunderttausende Euro geschätzt."
     created_by: PlayBox quiz seed
     answers: ["Hunderttausende Euro", ["Unter 10.000 Euro", "Genau 1 Million Euro", "Die Kosten wurden nie erfasst"]]
 
-  - text: What makes the Drachenlord case unique in German legal history regarding online-to-offline harassment?
+  - text: Was macht den Drachenlord-Fall in der deutschen Rechtsgeschichte bezüglich Online-zu-Offline-Belästigung einzigartig?
     category: Legal & Regulation
     tier: 3
     tags: [legal, precedent, unique, hard, safe-core]
-    note: "It was one of the first cases where sustained online harassment systematically transitioned into years of physical intimidation, exposing gaps in German harassment law."
+    note: "Es war einer der ersten Fälle, in dem anhaltende Online-Belästigung systematisch in jahrelange physische Einschüchterung überging und Lücken im deutschen Belästigungsrecht aufdeckte."
     created_by: PlayBox quiz seed
     answers: ["Erstmaliger Fall von jahrelanger systematischer Online-zu-Offline-Belästigung", ["Es war ein normaler Nachbarschaftsstreit", "Es betraf nur einen einzelnen Vorfall", "Es gab bereits viele vergleichbare Fälle"]]
 
-  - text: In which format did the Drachenlord respond to the Cui Bono podcast about him?
+  - text: In welchem Format reagierte Drachenlord auf den Cui-Bono-Podcast über ihn?
     category: Media & Documentation
     tier: 3
     tags: [media, cui-bono, response, hard, safe-core]
-    note: "Drachenlord did not produce a formal response; his reactions came through subsequent streams and social media posts."
+    note: "Drachenlord reagierte nicht mit einem formellen Statement, sondern über nachfolgende Streams und Social-Media-Posts."
     created_by: PlayBox quiz seed
     answers: ["Durch nachfolgende Streams und Social-Media-Posts", ["Mit einem offiziellen Pressestatement", "Mit einem eigenen Podcast", "Er hat nicht reagiert"]]
+
+
+# ===== Ordering Questions (WWM Kandidaten-Auswahlfrage) =====
+# Answers are listed in the CORRECT order. The API shuffles them for the player.
+
+ordering_questions:
+  - text: "Bringe die folgenden Drachenlord-Plattformen in die Reihenfolge, in der er sie zuerst genutzt hat!"
+    ordered_answers:
+      - "YouTube"
+      - "Facebook"
+      - "Instagram"
+      - "TikTok"
+    language: de
+
+  - text: "Ordne die folgenden Ereignisse chronologisch (frühestes zuerst)!"
+    ordered_answers:
+      - "Erstes YouTube-Video"
+      - "Beginn der Haider-Besuche"
+      - "Allgemeines Betretungsverbot"
+      - "Zwangsversteigerung des Hauses"
+    language: de
+
+  - text: "Bringe die folgenden Drachenlord-Zitate nach geschätzter Bekanntheit (bekanntestes zuerst)!"
+    ordered_answers:
+      - "Meddl Leude"
+      - "Etzala"
+      - "Tschüssikowski"
+      - "Ich bin der Drache"
+    language: de
+
 

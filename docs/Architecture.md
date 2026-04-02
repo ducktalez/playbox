@@ -221,6 +221,8 @@ As the community plays, question ELOs self-calibrate through the ELO update form
 | GET | `/sessions/{id}` | Get session state |
 | POST | `/sessions/{id}/finish` | Finish session, persist score |
 | GET | `/leaderboard` | Player leaderboard by ELO |
+| GET | `/ordering-question` | Random ordering question (shuffled answers) |
+| POST | `/ordering-question/{id}/check` | Validate ordering answer sequence |
 
 #### Chess — `/api/v1/chess/` _(low priority)_
 

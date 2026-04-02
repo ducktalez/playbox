@@ -19,6 +19,7 @@ from app.games.quiz.models import (
     Answer,
     Category,
     GameSession,
+    OrderingQuestion,
     Player,
     Question,
     QuestionAttempt,
@@ -38,6 +39,9 @@ from app.games.quiz.schemas import (
     FiftyFiftyOut,
     LeaderboardEntry,
     MediaUploadOut,
+    OrderingCheckIn,
+    OrderingCheckOut,
+    OrderingQuestionOut,
     PhoneJokerOut,
     PlayerCreateIn,
     PlayerOut,
@@ -75,29 +79,31 @@ class QuizService:
         self,
         category_id: uuid.UUID | None = None,
         tag: str | None = None,
+        language: str | None = None,
         elo_min: float | None = None,
         elo_max: float | None = None,
         balanced_categories: bool = False,
         order_by_elo: str | None = None,
         limit: int = 20,
         offset: int = 0,
+        pun_first: bool = False,
+        randomize: bool = False,
     ) -> QuestionListOut:
         """List questions with optional filters.
 
         Args:
+            language: ISO 639-1 code to filter by (e.g. "de", "en"). None = no filter.
             order_by_elo: "asc" for ascending ELO (easy→hard, Millionär mode),
                           "desc" for descending. None keeps default ordering.
+            pun_first: If True, ensure the first question in the result is a Wortspiel/pun
+                       (is_pun=True) when one exists in the filtered pool.
+            randomize: If True and order_by_elo=asc, randomly sample from ELO bands so each
+                       game gets a different question set instead of always the lowest-ELO ones.
         """
         query = select(Question).where(Question.deleted_at.is_(None))
 
-        # Apply ordering
-        if order_by_elo == "asc":
-            query = query.order_by(Question.elo_score.asc(), Question.id.asc())
-        elif order_by_elo == "desc":
-            query = query.order_by(Question.elo_score.desc(), Question.id.asc())
-        else:
-            query = query.order_by(Question.created_at.asc(), Question.id.asc())
-
+        if language:
+            query = query.where(Question.language == language)
         if category_id:
             query = query.where(Question.category_id == category_id)
         if elo_min is not None:
@@ -107,19 +113,46 @@ class QuizService:
         if tag:
             query = query.join(QuestionTag).join(Tag).where(Tag.name == tag)
 
+        # Apply ordering for non-balanced path
+        if order_by_elo == "asc":
+            query = query.order_by(Question.elo_score.asc(), Question.id.asc())
+        elif order_by_elo == "desc":
+            query = query.order_by(Question.elo_score.desc(), Question.id.asc())
+        else:
+            query = query.order_by(Question.created_at.asc(), Question.id.asc())
+
         total = self.db.scalar(select(func.count()).select_from(query.subquery()))
 
         if balanced_categories and category_id is None:
-            filtered_questions = self.db.execute(query).scalars().all()
-            if order_by_elo:
-                # Combine ELO ordering with category interleaving:
-                # split into ELO bands, interleave categories within each band, then recombine.
-                questions = self._balance_within_elo_bands(filtered_questions, band_size=5)
+            all_matching = self.db.execute(query).scalars().all()
+
+            # Pre-select a pun question so it's guaranteed in the result
+            pun_question: Question | None = None
+            pool = list(all_matching)
+            effective_limit = limit
+
+            if pun_first:
+                pun_candidates = [q for q in pool if q.is_pun]
+                if pun_candidates:
+                    pun_question = random.choice(pun_candidates)  # noqa: S311
+                    pool = [q for q in pool if q.id != pun_question.id]
+                    effective_limit = limit - 1
+
+            if order_by_elo and randomize:
+                selected = self._random_sample_by_elo_bands(pool, effective_limit)
+            elif order_by_elo:
+                sorted_pool = sorted(pool, key=lambda q: (q.elo_score, str(q.id)))
+                balanced = self._balance_within_elo_bands(sorted_pool, band_size=5)
+                selected = balanced[offset : offset + effective_limit]
             else:
-                questions = self._balance_questions_by_category(filtered_questions)
-            questions = questions[offset : offset + limit]
+                balanced = self._balance_questions_by_category(pool)
+                selected = balanced[offset : offset + effective_limit]
+
+            questions: list[Question] = (
+                [pun_question] + list(selected) if pun_question else list(selected)
+            )
         else:
-            questions = self.db.execute(query.offset(offset).limit(limit)).scalars().all()
+            questions = list(self.db.execute(query.offset(offset).limit(limit)).scalars().all())
 
         return QuestionListOut(
             items=[self._question_to_out(q) for q in questions],
@@ -152,17 +185,50 @@ class QuizService:
         Splits the ELO-ordered question list into bands of ``band_size`` and
         interleaves categories within each band. This preserves the overall
         difficulty progression while avoiding long runs of the same category.
-
-        Example with band_size=5 and 15 questions:
-          Band 1 (levels 1-5):  easy questions, categories interleaved
-          Band 2 (levels 6-10): medium questions, categories interleaved
-          Band 3 (levels 11-15): hard questions, categories interleaved
         """
         result: list[Question] = []
         for start in range(0, len(questions), band_size):
             band = questions[start : start + band_size]
             result.extend(self._balance_questions_by_category(band))
         return result
+
+    def _random_sample_by_elo_bands(self, questions: list[Question], limit: int) -> list[Question]:
+        """Randomly sample ``limit`` questions from three ELO difficulty bands.
+
+        Splits the pool into easy (<1150), medium (1150–1350) and hard (>1350) bands,
+        then draws approximately limit//3 questions from each.  This ensures every
+        Millionär game uses a different question set while preserving the easy→hard
+        difficulty curve.
+
+        ELO thresholds are based on TIER_ELO_MAP seed values (1000 / 1200 / 1400)
+        and will self-calibrate over time as players answer questions.
+        """
+        easy = [q for q in questions if q.elo_score < 1150]
+        medium = [q for q in questions if 1150 <= q.elo_score < 1350]
+        hard = [q for q in questions if q.elo_score >= 1350]
+
+        per_band = limit // 3
+        remainder = limit % 3
+        # Distribute extra slots to lower bands (more variety in easy questions)
+        band_limits = [per_band + (1 if i < remainder else 0) for i in range(3)]
+
+        sampled: list[Question] = []
+        for band, k in zip((easy, medium, hard), band_limits):
+            actual_k = min(k, len(band))
+            if actual_k > 0:
+                sampled.extend(random.sample(band, actual_k))  # noqa: S311
+
+        # Fill any remaining slots if a band did not have enough questions
+        if len(sampled) < limit:
+            taken_ids = {q.id for q in sampled}
+            leftover = [q for q in questions if q.id not in taken_ids]
+            extra = min(limit - len(sampled), len(leftover))
+            if extra > 0:
+                sampled.extend(random.sample(leftover, extra))  # noqa: S311
+
+        # Re-sort by ELO ascending to maintain difficulty curve
+        sampled.sort(key=lambda q: (q.elo_score, str(q.id)))
+        return sampled
 
     def create_question(self, data: QuestionCreateIn) -> QuestionOut:
         """Create a new question with answers and tags."""
@@ -175,6 +241,9 @@ class QuizService:
             text=data.text,
             note=data.note,
             category_id=data.category_id,
+            wwm_difficulty=data.wwm_difficulty,
+            language=data.language,
+            is_pun=data.is_pun,
             media_url=data.media_url,
             media_type=data.media_type,
             created_by=data.created_by,
@@ -236,6 +305,12 @@ class QuizService:
             question.note = data.note
         if data.category_id is not None:
             question.category_id = data.category_id
+        if data.wwm_difficulty is not None:
+            question.wwm_difficulty = data.wwm_difficulty
+        if data.language is not None:
+            question.language = data.language
+        if data.is_pun is not None:
+            question.is_pun = data.is_pun
         if data.media_url is not None:
             question.media_url = data.media_url
         if data.media_type is not None:
@@ -637,6 +712,43 @@ class QuizService:
         self.db.refresh(question)
         return self._question_to_out(question)
 
+    # --- Ordering Questions (WWM Kandidatenfrage) ---
+
+    def get_random_ordering_question(self, language: str | None = None) -> OrderingQuestionOut:
+        """Return a random ordering question with shuffled answers."""
+        query = select(OrderingQuestion)
+        if language:
+            query = query.where(OrderingQuestion.language == language)
+
+        all_oqs = self.db.execute(query).scalars().all()
+        if not all_oqs:
+            raise AppError(404, "No ordering questions available", "NO_ORDERING_QUESTIONS")
+
+        oq: OrderingQuestion = random.choice(all_oqs)  # noqa: S311
+        shuffled = list(oq.ordered_answers)
+        random.shuffle(shuffled)  # noqa: S311
+
+        return OrderingQuestionOut(
+            id=oq.id,
+            text=oq.text,
+            shuffled_answers=shuffled,
+        )
+
+    def check_ordering_question(self, question_id: uuid.UUID, data: OrderingCheckIn) -> OrderingCheckOut:
+        """Validate a player's ordering attempt."""
+        oq = self.db.get(OrderingQuestion, question_id)
+        if not oq:
+            raise AppError(404, "Ordering question not found", "ORDERING_QUESTION_NOT_FOUND")
+
+        correct_order = oq.ordered_answers
+        is_correct = data.submitted_order == correct_order
+
+        return OrderingCheckOut(
+            correct=is_correct,
+            correct_order=correct_order,
+            time_taken_ms=data.time_taken_ms,
+        )
+
     # --- Helpers ---
 
     def _question_to_out(self, question: Question) -> QuestionOut:
@@ -648,6 +760,9 @@ class QuizService:
             category=question.category.name if question.category else None,
             tags=[t.name for t in question.tags] if question.tags else [],
             elo_score=question.elo_score,
+            wwm_difficulty=question.wwm_difficulty,
+            language=question.language,
+            is_pun=question.is_pun,
             media_url=question.media_url,
             media_type=question.media_type,
             answers=[AnswerOut(id=a.id, text=a.text, is_correct=a.is_correct) for a in question.answers],
