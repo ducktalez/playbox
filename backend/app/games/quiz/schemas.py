@@ -245,6 +245,56 @@ class MediaUploadOut(BaseModel):
 # --- Ordering Questions (WWM Kandidatenfrage) ---
 
 
+# --- Question Feedback ---
+
+# Allowed follow-up categories per feedback type
+THUMBS_DOWN_CATEGORIES = {
+    "PROBLEM_WITH_QUESTION",
+    "PROBLEM_WITH_ANSWERS",
+    "TOO_HARD",
+    "TOO_EASY",
+    "NOT_A_GOOD_QUESTION",
+    "DUPLICATE",
+}
+
+REPORT_CATEGORIES = {
+    "QUESTION_INACCURATE",
+    "ANSWER_INCORRECT",
+    "OFFENSIVE_CONTENT",
+    "OTHER",
+}
+
+THUMBS_UP_CATEGORIES = {
+    "GREAT_QUESTION",
+    "LEARNED_SOMETHING",
+}
+
+FEEDBACK_TYPES = {"THUMBS_UP", "THUMBS_DOWN", "REPORT"}
+
+
+class QuestionFeedbackIn(BaseModel):
+    """Request to submit feedback on a question."""
+
+    feedback_type: str = Field(..., description="THUMBS_UP, THUMBS_DOWN, or REPORT")
+    category: str | None = Field(default=None, max_length=50, description="Follow-up reason category")
+    comment: str | None = Field(default=None, max_length=500)
+    player_id: uuid.UUID | None = None
+    session_id: uuid.UUID | None = None
+
+
+class QuestionFeedbackOut(BaseModel):
+    """Feedback entry in a response."""
+
+    id: uuid.UUID
+    question_id: uuid.UUID
+    feedback_type: str
+    category: str | None = None
+    created_at: datetime
+
+
+# --- Ordering Questions (WWM Kandidatenfrage) ---
+
+
 class OrderingQuestionOut(BaseModel):
     """An ordering question with shuffled answers."""
 

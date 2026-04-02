@@ -1709,3 +1709,228 @@ def test_millionaire_answer_and_next(quiz_client) -> None:
     resp = quiz_client.get(f"/api/v1/quiz/questions/{q2['id']}?num_answers=4")
     assert resp.status_code == 200
     assert resp.json()["text"] == "Zweite Frage?"
+
+
+# ===== Question Feedback Tests =====
+
+
+def test_submit_feedback_thumbs_up(quiz_client) -> None:
+    """POST feedback with THUMBS_UP should succeed without category."""
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = q_resp.json()["id"]
+
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={"feedback_type": "THUMBS_UP"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["feedback_type"] == "THUMBS_UP"
+    assert data["question_id"] == qid
+    assert data["category"] is None
+
+
+def test_submit_feedback_thumbs_up_with_category(quiz_client) -> None:
+    """POST feedback THUMBS_UP with optional category should succeed."""
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = q_resp.json()["id"]
+
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={"feedback_type": "THUMBS_UP", "category": "GREAT_QUESTION"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["category"] == "GREAT_QUESTION"
+
+
+def test_submit_feedback_thumbs_down_with_category(quiz_client) -> None:
+    """POST feedback THUMBS_DOWN with category should succeed."""
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = q_resp.json()["id"]
+
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={"feedback_type": "THUMBS_DOWN", "category": "TOO_HARD"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["feedback_type"] == "THUMBS_DOWN"
+    assert data["category"] == "TOO_HARD"
+
+
+def test_submit_feedback_thumbs_down_without_category_fails(quiz_client) -> None:
+    """POST feedback THUMBS_DOWN without category should return 422."""
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = q_resp.json()["id"]
+
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={"feedback_type": "THUMBS_DOWN"},
+    )
+    assert resp.status_code == 422
+    assert resp.json()["code"] == "CATEGORY_REQUIRED"
+
+
+def test_submit_feedback_report_with_category(quiz_client) -> None:
+    """POST feedback REPORT with category should succeed."""
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = q_resp.json()["id"]
+
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={"feedback_type": "REPORT", "category": "QUESTION_INACCURATE"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["feedback_type"] == "REPORT"
+    assert data["category"] == "QUESTION_INACCURATE"
+
+
+def test_submit_feedback_report_without_category_fails(quiz_client) -> None:
+    """POST feedback REPORT without category should return 422."""
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = q_resp.json()["id"]
+
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={"feedback_type": "REPORT"},
+    )
+    assert resp.status_code == 422
+    assert resp.json()["code"] == "CATEGORY_REQUIRED"
+
+
+def test_submit_feedback_invalid_category_fails(quiz_client) -> None:
+    """POST feedback with invalid category should return 422."""
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = q_resp.json()["id"]
+
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={"feedback_type": "THUMBS_DOWN", "category": "NONEXISTENT"},
+    )
+    assert resp.status_code == 422
+    assert resp.json()["code"] == "INVALID_FEEDBACK_CATEGORY"
+
+
+def test_submit_feedback_invalid_type_fails(quiz_client) -> None:
+    """POST feedback with invalid feedback_type should return 422."""
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = q_resp.json()["id"]
+
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={"feedback_type": "INVALID_TYPE"},
+    )
+    assert resp.status_code == 422
+    assert resp.json()["code"] == "INVALID_FEEDBACK_TYPE"
+
+
+def test_submit_feedback_question_not_found(quiz_client) -> None:
+    """POST feedback for unknown question should return 404."""
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{uuid.uuid4()}/feedback",
+        json={"feedback_type": "THUMBS_UP"},
+    )
+    assert resp.status_code == 404
+    assert resp.json()["code"] == "QUESTION_NOT_FOUND"
+
+
+def test_submit_feedback_with_player_and_session(quiz_client) -> None:
+    """POST feedback with player_id and session_id should store them."""
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = q_resp.json()["id"]
+
+    player = quiz_client.post("/api/v1/quiz/players", json={"name": "Feedback Player"}).json()
+    session = quiz_client.post("/api/v1/quiz/sessions", json={
+        "mode": "speed", "player_id": player["id"],
+    }).json()
+
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={
+            "feedback_type": "THUMBS_DOWN",
+            "category": "PROBLEM_WITH_ANSWERS",
+            "player_id": player["id"],
+            "session_id": session["id"],
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["feedback_type"] == "THUMBS_DOWN"
+    assert data["category"] == "PROBLEM_WITH_ANSWERS"
+
+
+def test_list_feedback(quiz_client) -> None:
+    """GET feedback should return submitted feedback entries."""
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = q_resp.json()["id"]
+
+    # Submit multiple feedbacks
+    quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={"feedback_type": "THUMBS_UP"},
+    )
+    quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={"feedback_type": "THUMBS_DOWN", "category": "TOO_EASY"},
+    )
+    quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={"feedback_type": "REPORT", "category": "QUESTION_INACCURATE"},
+    )
+
+    resp = quiz_client.get(f"/api/v1/quiz/questions/{qid}/feedback")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 3
+    # Newest first
+    types = [e["feedback_type"] for e in data]
+    assert "THUMBS_UP" in types
+    assert "THUMBS_DOWN" in types
+    assert "REPORT" in types
+
+
+def test_list_feedback_empty(quiz_client) -> None:
+    """GET feedback for a question with no feedback should return empty list."""
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = q_resp.json()["id"]
+
+    resp = quiz_client.get(f"/api/v1/quiz/questions/{qid}/feedback")
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+def test_list_feedback_question_not_found(quiz_client) -> None:
+    """GET feedback for unknown question should return 404."""
+    resp = quiz_client.get(f"/api/v1/quiz/questions/{uuid.uuid4()}/feedback")
+    assert resp.status_code == 404
+    assert resp.json()["code"] == "QUESTION_NOT_FOUND"
+
+
+def test_submit_feedback_all_thumbs_down_categories(quiz_client) -> None:
+    """All valid THUMBS_DOWN categories should be accepted."""
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = q_resp.json()["id"]
+
+    for category in ["PROBLEM_WITH_QUESTION", "PROBLEM_WITH_ANSWERS", "TOO_HARD", "TOO_EASY", "NOT_A_GOOD_QUESTION", "DUPLICATE"]:
+        resp = quiz_client.post(
+            f"/api/v1/quiz/questions/{qid}/feedback",
+            json={"feedback_type": "THUMBS_DOWN", "category": category},
+        )
+        assert resp.status_code == 200, f"Category {category} should be accepted"
+        assert resp.json()["category"] == category
+
+
+def test_submit_feedback_all_report_categories(quiz_client) -> None:
+    """All valid REPORT categories should be accepted."""
+    q_resp = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload())
+    qid = q_resp.json()["id"]
+
+    for category in ["QUESTION_INACCURATE", "ANSWER_INCORRECT", "OFFENSIVE_CONTENT", "OTHER"]:
+        resp = quiz_client.post(
+            f"/api/v1/quiz/questions/{qid}/feedback",
+            json={"feedback_type": "REPORT", "category": category},
+        )
+        assert resp.status_code == 200, f"Category {category} should be accepted"
+        assert resp.json()["category"] == category
+

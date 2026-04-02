@@ -18,6 +18,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import QuestionFeedback from "./QuestionFeedback";
 
 const API_BASE =
   typeof window !== "undefined"
@@ -237,14 +238,38 @@ type OrderingQuestionOut = { id: string; text: string; shuffled_answers: string[
 /** Max level (inclusive) at which the extra life from the ordering question works. */
 const EXTRA_LIFE_MAX_LEVEL = 11; // €32,000
 
-/** Live-updating timer for the ordering question. */
-function OrderingTimer({ startTime }: { startTime: number }) {
-  const [elapsed, setElapsed] = useState(0);
+/** Time limit for the ordering question (in milliseconds). */
+const ORDERING_TIME_LIMIT_MS = 30_000;
+
+/** Live countdown timer for the ordering question. */
+function OrderingTimer({
+  startTime,
+  limitMs,
+  onTimeout,
+}: {
+  startTime: number;
+  limitMs: number;
+  onTimeout: () => void;
+}) {
+  const [remaining, setRemaining] = useState(limitMs);
   useEffect(() => {
-    const interval = setInterval(() => setElapsed(Date.now() - startTime), 100);
+    const interval = setInterval(() => {
+      const left = Math.max(0, limitMs - (Date.now() - startTime));
+      setRemaining(left);
+      if (left <= 0) {
+        clearInterval(interval);
+        onTimeout();
+      }
+    }, 100);
     return () => clearInterval(interval);
-  }, [startTime]);
-  return <div className="wwm-ordering__timer">{(elapsed / 1000).toFixed(1)}s</div>;
+  }, [startTime, limitMs, onTimeout]);
+  const secs = remaining / 1000;
+  const urgent = secs <= 5;
+  return (
+    <div className={`wwm-ordering__timer${urgent ? " wwm-ordering__timer--urgent" : ""}`}>
+      {secs.toFixed(1)}s
+    </div>
+  );
 }
 
 export default function MillionaireGame({ onBack }: { onBack: () => void }) {
@@ -283,12 +308,14 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
 
   // --- Ordering question (Kandidaten-Auswahlfrage) ---
   const [orderingPhase, setOrderingPhase] = useState(true);
+  const [orderingReady, setOrderingReady] = useState(false); // "Bereit" pressed?
   const [orderingQ, setOrderingQ] = useState<OrderingQuestionOut | null>(null);
   const [orderingSelected, setOrderingSelected] = useState<string[]>([]);
   const [orderingTimerStart, setOrderingTimerStart] = useState<number | null>(null);
   const [orderingTimerMs, setOrderingTimerMs] = useState<number | null>(null);
   const [orderingResult, setOrderingResult] = useState<{ correct: boolean; correct_order: string[] } | null>(null);
   const [orderingChecking, setOrderingChecking] = useState(false);
+  const [orderingTimedOut, setOrderingTimedOut] = useState(false);
 
   // Extra life: earned by solving ordering question correctly
   const [hasExtraLife, setHasExtraLife] = useState(false);
@@ -337,10 +364,9 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
           const oqData: OrderingQuestionOut = await oqRes.json();
           setOrderingQ(oqData);
           setOrderingPhase(true);
-          setOrderingTimerStart(Date.now()); // Timer starts immediately
+          setOrderingReady(false); // Show question first, wait for "Bereit"
           setLoading(false);
-          // Play BG music directly — intro.mp3 is NOT used (see file header)
-          playBg(1);
+          // BG music starts when the player presses "Bereit" (see startOrdering)
           return; // Wait for ordering phase to complete before loading main game
         }
         // If no ordering questions exist, skip to main game
@@ -409,8 +435,36 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
   };
 
   // --- Ordering question interaction ---
+  /** Player pressed "Bereit" — show answers and start countdown. */
+  const startOrdering = useCallback(() => {
+    setOrderingReady(true);
+    setOrderingTimerStart(Date.now());
+    // Play BG music when the real challenge starts
+    playBg(1);
+  }, []);
+
+  /** Timer ran out before all answers were selected. */
+  const handleOrderingTimeout = useCallback(() => {
+    if (orderingResult || orderingChecking) return; // already resolved
+    setOrderingTimedOut(true);
+    const elapsed = orderingTimerStart ? Date.now() - orderingTimerStart : ORDERING_TIME_LIMIT_MS;
+    setOrderingTimerMs(elapsed);
+    // If the player already placed all answers, check them; otherwise treat as wrong
+    if (orderingQ && orderingSelected.length === orderingQ.shuffled_answers.length) {
+      checkOrdering(orderingSelected, elapsed);
+    } else {
+      // Not all placed — automatic fail; still fetch correct order for display
+      checkOrdering(
+        orderingQ
+          ? [...orderingSelected, ...orderingQ.shuffled_answers.filter((a) => !orderingSelected.includes(a))]
+          : orderingSelected,
+        elapsed,
+      );
+    }
+  }, [orderingResult, orderingChecking, orderingTimerStart, orderingQ, orderingSelected]);
+
   const orderingSelectAnswer = (answer: string) => {
-    if (orderingResult || orderingChecking) return;
+    if (orderingResult || orderingChecking || orderingTimedOut) return;
     if (orderingSelected.includes(answer)) return;
 
     const newSelected = [...orderingSelected, answer];
@@ -425,7 +479,7 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
   };
 
   const orderingReset = () => {
-    if (orderingResult || orderingChecking) return;
+    if (orderingResult || orderingChecking || orderingTimedOut) return;
     setOrderingSelected([]);
     // Timer keeps running — no restart on reset (measures total time from question appearance)
   };
@@ -665,60 +719,83 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
 
         <div className="wwm-ordering">
           <div className="wwm-ordering__question">{orderingQ.text}</div>
-          <div className="wwm-ordering__body">
-            <div className="wwm-ordering__selected">
-              {orderingSelected.map((a, i) => {
-                const isCorrectPos = orderingResult && orderingResult.correct_order[i] === a;
-                return (
-                  <div
-                    key={`sel-${i}`}
-                    className={`wwm-ordering__slot wwm-ordering__slot--filled${orderingResult ? (isCorrectPos ? " wwm-ordering__slot--correct" : " wwm-ordering__slot--wrong") : ""}`}
-                  >
-                    <span className="wwm-ordering__slot-num">{i + 1}.</span>
-                    <span className="wwm-ordering__slot-text">{a}</span>
-                  </div>
-                );
-              })}
-              {Array.from(
-                { length: orderingQ.shuffled_answers.length - orderingSelected.length },
-                (_, i) => (
-                  <div key={`empty-${i}`} className="wwm-ordering__slot wwm-ordering__slot--empty">
-                    <span className="wwm-ordering__slot-num">{orderingSelected.length + i + 1}.</span>
-                    <span className="wwm-ordering__slot-text">—</span>
-                  </div>
-                ),
-              )}
+
+          {/* Phase 1: Read the question, then press "Bereit" */}
+          {!orderingReady && (
+            <div className="wwm-ordering__ready">
+              <p className="wwm-ordering__ready-hint">
+                Du hast <strong>{ORDERING_TIME_LIMIT_MS / 1000} Sekunden</strong> Zeit, die Antworten in die richtige Reihenfolge zu bringen.
+              </p>
+              <button className="wwm-btn wwm-btn--primary wwm-ordering__ready-btn" onClick={startOrdering}>
+                Bereit!
+              </button>
             </div>
-            <div className="wwm-ordering__choices">
-              {!orderingResult && (
-                <>
-                  {orderingQ.shuffled_answers.map((a) => {
-                    const isUsed = orderingSelected.includes(a);
+          )}
+
+          {/* Phase 2: Answers + countdown */}
+          {orderingReady && (
+            <>
+              <div className="wwm-ordering__body">
+                <div className="wwm-ordering__selected">
+                  {orderingSelected.map((a, i) => {
+                    const isCorrectPos = orderingResult && orderingResult.correct_order[i] === a;
                     return (
-                      <button
-                        key={a}
-                        className={`wwm-ordering__choice${isUsed ? " wwm-ordering__choice--used" : ""}`}
-                        onClick={() => orderingSelectAnswer(a)}
-                        disabled={isUsed || orderingChecking}
+                      <div
+                        key={`sel-${i}`}
+                        className={`wwm-ordering__slot wwm-ordering__slot--filled${orderingResult ? (isCorrectPos ? " wwm-ordering__slot--correct" : " wwm-ordering__slot--wrong") : ""}`}
                       >
-                        {a}
-                      </button>
+                        <span className="wwm-ordering__slot-num">{i + 1}.</span>
+                        <span className="wwm-ordering__slot-text">{a}</span>
+                      </div>
                     );
                   })}
-                  <button
-                    className="wwm-ordering__reset"
-                    onClick={orderingReset}
-                    disabled={orderingSelected.length === 0 || orderingChecking}
-                    title="Auswahl zurücksetzen"
-                  >↺ Reset</button>
-                </>
-              )}
-            </div>
-          </div>
+                  {Array.from(
+                    { length: orderingQ.shuffled_answers.length - orderingSelected.length },
+                    (_, i) => (
+                      <div key={`empty-${i}`} className="wwm-ordering__slot wwm-ordering__slot--empty">
+                        <span className="wwm-ordering__slot-num">{orderingSelected.length + i + 1}.</span>
+                        <span className="wwm-ordering__slot-text">—</span>
+                      </div>
+                    ),
+                  )}
+                </div>
+                <div className="wwm-ordering__choices">
+                  {!orderingResult && !orderingTimedOut && (
+                    <>
+                      {orderingQ.shuffled_answers.map((a) => {
+                        const isUsed = orderingSelected.includes(a);
+                        return (
+                          <button
+                            key={a}
+                            className={`wwm-ordering__choice${isUsed ? " wwm-ordering__choice--used" : ""}`}
+                            onClick={() => orderingSelectAnswer(a)}
+                            disabled={isUsed || orderingChecking}
+                          >
+                            {a}
+                          </button>
+                        );
+                      })}
+                      <button
+                        className="wwm-ordering__reset"
+                        onClick={orderingReset}
+                        disabled={orderingSelected.length === 0 || orderingChecking}
+                        title="Auswahl zurücksetzen"
+                      >↺ Reset</button>
+                    </>
+                  )}
+                </div>
+              </div>
 
-          {orderingTimerStart && !orderingResult && <OrderingTimer startTime={orderingTimerStart} />}
-          {orderingTimerMs !== null && orderingResult && (
-            <div className="wwm-ordering__timer">{(orderingTimerMs / 1000).toFixed(1)}s</div>
+              {orderingTimerStart && !orderingResult && !orderingTimedOut && (
+                <OrderingTimer startTime={orderingTimerStart} limitMs={ORDERING_TIME_LIMIT_MS} onTimeout={handleOrderingTimeout} />
+              )}
+              {orderingTimerMs !== null && orderingResult && (
+                <div className="wwm-ordering__timer">{(orderingTimerMs / 1000).toFixed(1)}s</div>
+              )}
+              {orderingTimedOut && !orderingResult && (
+                <div className="wwm-ordering__timer wwm-ordering__timer--urgent">⏰ Zeit abgelaufen!</div>
+              )}
+            </>
           )}
 
           {orderingResult && (
@@ -784,12 +861,14 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
       setRevealing(false);
       setCelebratingSafety(null);
       setOrderingPhase(true);
+      setOrderingReady(false);
       setOrderingQ(null);
       setOrderingSelected([]);
       setOrderingTimerStart(null);
       setOrderingTimerMs(null);
       setOrderingResult(null);
       setOrderingChecking(false);
+      setOrderingTimedOut(false);
       setHasExtraLife(false);
       setExtraLifeUsed(false);
       setExtraLifeWrongId(null);
@@ -1029,6 +1108,13 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
                           {attempt.note}
                         </div>
                       )}
+                      {currentQuestion && (
+                        <QuestionFeedback
+                          questionId={currentQuestion.id}
+                          playerId={player?.id}
+                          sessionId={session?.id}
+                        />
+                      )}
                       <button className="wwm-btn wwm-btn--primary" onClick={nextQuestion}>
                         {currentLevel >= 15 ? "🏆 Gewinn einlösen" : "Nächste Frage →"}
                       </button>
@@ -1061,6 +1147,13 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
                           <div className="wwm-explanation__title">💡 Hinweis</div>
                           {attempt.note}
                         </div>
+                      )}
+                      {currentQuestion && (
+                        <QuestionFeedback
+                          questionId={currentQuestion.id}
+                          playerId={player?.id}
+                          sessionId={session?.id}
+                        />
                       )}
                       <p className="wwm-feedback__safety">
                         Du gehst mit {getSafetyPrize()} nach Hause.

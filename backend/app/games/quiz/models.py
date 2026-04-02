@@ -126,6 +126,24 @@ class QuestionAttempt(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class QuestionFeedback(SQLModel, table=True):
+    """Player feedback / report on a quiz question."""
+
+    __tablename__ = "question_feedback"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    question_id: uuid.UUID = Field(foreign_key="questions.id")
+    player_id: uuid.UUID | None = Field(default=None, foreign_key="players.id")
+    session_id: uuid.UUID | None = Field(default=None, foreign_key="game_sessions.id")
+    # THUMBS_UP, THUMBS_DOWN, REPORT
+    feedback_type: str = Field(max_length=20)
+    # Optional follow-up category, e.g. TOO_HARD, PROBLEM_WITH_ANSWERS, ...
+    category: str | None = Field(default=None, max_length=50)
+    # Free-text comment (future use)
+    comment: str | None = Field(default=None, max_length=500)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
 class OrderingQuestion(SQLModel, table=True):
     """A question where answers must be placed in the correct order (WWM Kandidatenfrage)."""
 

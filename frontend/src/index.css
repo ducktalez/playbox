@@ -917,6 +917,105 @@ a:hover {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* --- Question Feedback (👍/👎/🚩) --- */
+
+.q-feedback {
+  margin-top: 1rem;
+  animation: quiz-fade-in 0.25s ease;
+}
+
+.q-feedback--idle {
+  text-align: center;
+}
+
+.q-feedback__actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.q-feedback__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  font-size: 1.3rem;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--bg-elevated);
+  cursor: pointer;
+  transition: background var(--transition), transform 0.15s ease;
+}
+
+.q-feedback__btn:hover {
+  background: rgba(108, 99, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.q-feedback__btn--report {
+  font-size: 1.1rem;
+}
+
+.q-feedback--category {
+  text-align: center;
+}
+
+.q-feedback__prompt {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.6rem;
+}
+
+.q-feedback__chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.q-feedback__chip {
+  font-size: 0.8rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.q-feedback__chip:hover {
+  background: rgba(108, 99, 255, 0.2);
+  border-color: var(--accent);
+}
+
+.q-feedback__chip--skip {
+  color: var(--text-muted);
+  border-style: dashed;
+}
+
+.q-feedback__chip--back {
+  color: var(--text-muted);
+  background: transparent;
+  border-color: transparent;
+}
+
+.q-feedback__chip--back:hover {
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.05);
+}
+
+.q-feedback--submitted {
+  text-align: center;
+}
+
+.q-feedback__done {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
 /* --- Setup screen --- */
 
 .quiz-setup {
@@ -1674,6 +1773,55 @@ a:hover {
   font-weight: 700;
   color: #f0a500;
   font-variant-numeric: tabular-nums;
+  transition: color 0.3s;
+}
+
+.wwm-ordering__timer--urgent {
+  color: #ef4444;
+  animation: wwm-timer-pulse 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes wwm-timer-pulse {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0.7; transform: scale(1.08); }
+}
+
+/* "Bereit" ready phase */
+.wwm-ordering__ready {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2rem;
+  margin-top: 1rem;
+  text-align: center;
+  animation: wwm-fade-in 0.4s ease;
+}
+
+.wwm-ordering__ready-hint {
+  color: #8bacd0;
+  font-size: 1rem;
+  line-height: 1.5;
+  max-width: 400px;
+}
+
+.wwm-ordering__ready-hint strong {
+  color: #f0a500;
+}
+
+.wwm-ordering__ready-btn {
+  font-size: 1.15rem;
+  padding: 0.8rem 2.5rem;
+  animation: wwm-ready-glow 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes wwm-ready-glow {
+  from { box-shadow: 0 0 8px rgba(240, 165, 0, 0.3); }
+  to { box-shadow: 0 0 20px rgba(240, 165, 0, 0.6); }
+}
+
+@keyframes wwm-fade-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .wwm-ordering__result {

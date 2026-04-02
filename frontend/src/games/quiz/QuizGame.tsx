@@ -15,6 +15,7 @@ import DuelGame from "./DuelGame";
 import LeaderboardView from "./LeaderboardView";
 import PlayerProfile from "./PlayerProfile";
 import QuestionForm from "./QuestionForm";
+import QuestionFeedback from "./QuestionFeedback";
 
 const API_BASE =
   typeof window !== "undefined"
@@ -545,6 +546,14 @@ export default function QuizGame() {
                   <div className="quiz-explanation__title">💡 Hinweis</div>
                   {attempt.note}
                 </div>
+              )}
+
+              {currentQuestion && (
+                <QuestionFeedback
+                  questionId={currentQuestion.id}
+                  playerId={player?.id}
+                  sessionId={session?.id}
+                />
               )}
 
               <button className="quiz-next-btn" onClick={nextQuestion}>

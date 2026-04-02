@@ -110,6 +110,8 @@ from app.games.quiz.schemas import (
     PlayerOut,
     PlayerProfileOut,
     QuestionCreateIn,
+    QuestionFeedbackIn,
+    QuestionFeedbackOut,
     QuestionListOut,
     QuestionOut,
     QuestionUpdateIn,
@@ -247,6 +249,30 @@ async def delete_media(
 ) -> QuestionOut:
     """Remove media from a question."""
     return service.delete_media(question_id=question_id)
+
+
+# --- Question Feedback ---
+
+
+@router.post("/questions/{question_id}/feedback", response_model=QuestionFeedbackOut)
+async def submit_feedback(
+    question_id: uuid.UUID,
+    body: QuestionFeedbackIn,
+    service: QuizService = Depends(get_service),
+) -> QuestionFeedbackOut:
+    """Submit feedback (thumbs up/down or report) on a question."""
+    return service.submit_feedback(question_id=question_id, data=body)
+
+
+@router.get("/questions/{question_id}/feedback", response_model=list[QuestionFeedbackOut])
+async def list_feedback(
+    question_id: uuid.UUID,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    service: QuizService = Depends(get_service),
+) -> list[QuestionFeedbackOut]:
+    """List feedback entries for a question (newest first)."""
+    return service.list_feedback(question_id=question_id, limit=limit, offset=offset)
 
 
 # --- Ordering Questions (WWM Kandidatenfrage) ---

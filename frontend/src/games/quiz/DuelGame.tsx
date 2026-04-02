@@ -7,6 +7,7 @@
  */
 
 import { useState, useCallback } from "react";
+import QuestionFeedback from "./QuestionFeedback";
 
 const API_BASE =
   typeof window !== "undefined"
@@ -362,6 +363,14 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
                   <div className="quiz-explanation__title">💡 Hinweis</div>
                   {attempt.note}
                 </div>
+              )}
+
+              {currentQuestion && (
+                <QuestionFeedback
+                  questionId={currentQuestion.id}
+                  playerId={activePlayer?.id}
+                  sessionId={activeSession?.id}
+                />
               )}
 
               <button className="quiz-next-btn" onClick={nextQuestion}>

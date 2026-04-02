@@ -23,6 +23,7 @@ from app.games.quiz.models import (
     Player,
     Question,
     QuestionAttempt,
+    QuestionFeedback,
     QuestionTag,
     Tag,
 )
@@ -35,6 +36,7 @@ from app.games.quiz.schemas import (
     AudiencePollOut,
     CategoryIn,
     CategoryOut,
+    FEEDBACK_TYPES,
     FiftyFiftyIn,
     FiftyFiftyOut,
     LeaderboardEntry,
@@ -47,12 +49,17 @@ from app.games.quiz.schemas import (
     PlayerOut,
     PlayerProfileOut,
     QuestionCreateIn,
+    QuestionFeedbackIn,
+    QuestionFeedbackOut,
     QuestionListOut,
     QuestionOut,
     QuestionUpdateIn,
+    REPORT_CATEGORIES,
     SessionCreateIn,
     SessionOut,
     TagOut,
+    THUMBS_DOWN_CATEGORIES,
+    THUMBS_UP_CATEGORIES,
 )
 
 # Allowed MIME types for media uploads
@@ -711,6 +718,97 @@ class QuizService:
         self.db.commit()
         self.db.refresh(question)
         return self._question_to_out(question)
+
+    # --- Question Feedback ---
+
+    def submit_feedback(self, question_id: uuid.UUID, data: QuestionFeedbackIn) -> QuestionFeedbackOut:
+        """Submit feedback (thumbs up/down or report) on a question."""
+        # Validate feedback_type
+        if data.feedback_type not in FEEDBACK_TYPES:
+            raise AppError(
+                422,
+                f"Invalid feedback_type '{data.feedback_type}'. Must be one of: {', '.join(sorted(FEEDBACK_TYPES))}",
+                "INVALID_FEEDBACK_TYPE",
+            )
+
+        # Validate question exists
+        question = self.db.get(Question, question_id)
+        if not question or question.deleted_at is not None:
+            raise AppError(404, "Question not found", "QUESTION_NOT_FOUND")
+
+        # Validate category based on feedback_type
+        if data.feedback_type == "THUMBS_DOWN":
+            if not data.category:
+                raise AppError(422, "Category is required for THUMBS_DOWN feedback", "CATEGORY_REQUIRED")
+            if data.category not in THUMBS_DOWN_CATEGORIES:
+                raise AppError(
+                    422,
+                    f"Invalid category '{data.category}' for THUMBS_DOWN. Allowed: {', '.join(sorted(THUMBS_DOWN_CATEGORIES))}",
+                    "INVALID_FEEDBACK_CATEGORY",
+                )
+        elif data.feedback_type == "REPORT":
+            if not data.category:
+                raise AppError(422, "Category is required for REPORT feedback", "CATEGORY_REQUIRED")
+            if data.category not in REPORT_CATEGORIES:
+                raise AppError(
+                    422,
+                    f"Invalid category '{data.category}' for REPORT. Allowed: {', '.join(sorted(REPORT_CATEGORIES))}",
+                    "INVALID_FEEDBACK_CATEGORY",
+                )
+        elif data.feedback_type == "THUMBS_UP":
+            if data.category and data.category not in THUMBS_UP_CATEGORIES:
+                raise AppError(
+                    422,
+                    f"Invalid category '{data.category}' for THUMBS_UP. Allowed: {', '.join(sorted(THUMBS_UP_CATEGORIES))}",
+                    "INVALID_FEEDBACK_CATEGORY",
+                )
+
+        feedback = QuestionFeedback(
+            question_id=question_id,
+            player_id=data.player_id,
+            session_id=data.session_id,
+            feedback_type=data.feedback_type,
+            category=data.category,
+            comment=data.comment,
+        )
+        self.db.add(feedback)
+        self.db.commit()
+        self.db.refresh(feedback)
+
+        return QuestionFeedbackOut(
+            id=feedback.id,
+            question_id=feedback.question_id,
+            feedback_type=feedback.feedback_type,
+            category=feedback.category,
+            created_at=feedback.created_at,
+        )
+
+    def list_feedback(
+        self, question_id: uuid.UUID, limit: int = 50, offset: int = 0
+    ) -> list[QuestionFeedbackOut]:
+        """List feedback entries for a question (newest first)."""
+        question = self.db.get(Question, question_id)
+        if not question or question.deleted_at is not None:
+            raise AppError(404, "Question not found", "QUESTION_NOT_FOUND")
+
+        entries = self.db.execute(
+            select(QuestionFeedback)
+            .where(QuestionFeedback.question_id == question_id)
+            .order_by(QuestionFeedback.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+        ).scalars().all()
+
+        return [
+            QuestionFeedbackOut(
+                id=e.id,
+                question_id=e.question_id,
+                feedback_type=e.feedback_type,
+                category=e.category,
+                created_at=e.created_at,
+            )
+            for e in entries
+        ]
 
     # --- Ordering Questions (WWM Kandidatenfrage) ---
 
