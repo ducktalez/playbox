@@ -45,8 +45,12 @@ htmlcov/
 *.sqlite3
 pg_data/
 
-# Media uploads
+# Media uploads and generated assets (too large / not committed)
 media/
 frontend/public/media/*
 !frontend/public/media/.gitkeep
+# Keep the wwm/ sounds subfolder skeleton in Git (MP3s are downloaded via scripts/download_sounds.py)
+!frontend/public/media/sounds/
+!frontend/public/media/sounds/wwm/
+!frontend/public/media/sounds/wwm/.gitkeep
 

@@ -14,7 +14,11 @@ import sys
 import time
 from pathlib import Path
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+# Scripts directory is next to this file
+sys.path.insert(0, str(Path(__file__).parent / "scripts"))
+from download_sounds import download_sounds, missing_sounds  # noqa: E402
+
+logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -165,7 +169,6 @@ def generate_pycharm_configs(project_root: Path) -> list[Path]:
         for target in (shared_run_cfg_dir / shared_filename, local_run_cfg_dir / local_filename):
             target.write_text(content, encoding="utf-8")
             created.append(target)
-            logger.info("Written: %s", target.relative_to(project_root))
 
     return created
 
@@ -230,7 +233,6 @@ def _find_or_create_venv(project_root: Path, backend_dir: Path) -> Path:
     for venv_root in candidates:
         candidate = venv_root / rel
         if candidate.exists():
-            logger.info("Using venv: %s", venv_root)
             return candidate
 
     # None found — create one at backend/.venv
@@ -267,6 +269,8 @@ def serve_all(project_root: Path) -> None:
         BACKEND_BIND_HOST,
         "--port",
         str(BACKEND_PORT),
+        "--log-level",
+        "warning",
     ]
     frontend_cmd = [npm_cmd, "run", "dev"]
 
@@ -296,7 +300,6 @@ def serve_all(project_root: Path) -> None:
     backend_proc = subprocess.Popen(backend_cmd, cwd=backend_dir)
     frontend_proc = subprocess.Popen(frontend_cmd, cwd=frontend_dir)
 
-    logger.info("Started backend pid=%s, frontend pid=%s", backend_proc.pid, frontend_proc.pid)
 
     try:
         while True:
@@ -331,13 +334,15 @@ def main() -> None:
     _ensure_env_file(project_root)
 
     # 2. Generate PyCharm run configurations
-    _print("🔧  Generating PyCharm run configurations...")
-    configs = generate_pycharm_configs(project_root)
-    for cfg in configs:
-        _print(f"    ✓ {cfg.relative_to(project_root)}")
-    _print("    Shared configs are stored in .run/ and local IDE copies in .idea/runConfigurations/.\n")
+    generate_pycharm_configs(project_root)
 
-    # 3. Start backend + frontend
+    # 3. Download missing game sounds (WWM MP3s, ~20 MB, not committed to Git)
+    missing = missing_sounds()
+    if missing:
+        _print(f"🎵  {len(missing)} sound file(s) missing — downloading from archive.org ...")
+        download_sounds()
+
+    # 4. Start backend + frontend
     serve_all(project_root)
 
 

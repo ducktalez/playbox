@@ -72,10 +72,11 @@ export default defineConfig({
         target: "http://localhost:8015",
         changeOrigin: true,
       },
-      "/media": {
-        target: "http://localhost:8015",
-        changeOrigin: true,
-      },
+      // NOTE: /media is NOT proxied here on purpose.
+      // Static game assets (sounds, images) live in frontend/public/media/
+      // and are served directly by Vite in dev and by the built bundle in prod.
+      // Backend-uploaded user content is only accessible at http://localhost:8015/media/
+      // during development — no frontend feature currently reads it.
     },
   },
 });

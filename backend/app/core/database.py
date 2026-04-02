@@ -15,11 +15,11 @@ _data_dir.mkdir(exist_ok=True)
 
 # PostgreSQL engine (Quiz game) - Supports SQLite fallback
 pg_connect_args = {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
-pg_engine = create_engine(settings.database_url, echo=settings.debug, connect_args=pg_connect_args)
+pg_engine = create_engine(settings.database_url, echo=False, connect_args=pg_connect_args)
 PgSessionLocal = sessionmaker(bind=pg_engine, class_=Session, expire_on_commit=False)
 
 # SQLite engine (Imposter/Piccolo local data)
-sqlite_engine = create_engine(settings.sqlite_url, echo=settings.debug, connect_args={"check_same_thread": False})
+sqlite_engine = create_engine(settings.sqlite_url, echo=False, connect_args={"check_same_thread": False})
 SqliteSessionLocal = sessionmaker(bind=sqlite_engine, class_=Session, expire_on_commit=False)
 
 
