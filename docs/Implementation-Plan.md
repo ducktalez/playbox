@@ -237,8 +237,8 @@
 
 ## Phase 4 — Quiz ELO + Media
 
-- Done: ELO engine and per-attempt ELO update for player and question are implemented. Media upload/delete endpoints, static file serving, and frontend media display are implemented.
-- Open: ELO history chart, difficulty badges, moderation queue, bulk import.
+- Done: ELO engine and per-attempt ELO update for player and question are implemented. Media upload/delete endpoints, static file serving, and frontend media display are implemented. Bulk question import endpoint is available.
+- Open: ELO history chart, difficulty badges, moderation queue.
 
 ### High Priority
 
@@ -258,7 +258,7 @@
 - [ ] ELO history / progression chart per player
 - [ ] Question difficulty badge (based on ELO range)
 - [ ] Moderation queue for user-submitted questions
-- [ ] Bulk question import (CSV/JSON)
+- [x] Bulk question import (JSON via API)
 
 ## Phase 5 — Chess Variants (Low Priority)
 
@@ -317,7 +317,7 @@
 - Shared PyCharm run configurations (`.run/`) and local IDE copies via `setup.py`
 - Drachenlord seed question set (75+ questions across 8 categories, tier-based ELO)
 - ELO-based question ordering for Millionär mode (ascending difficulty)
-- Backend tests: `test_imposter.py` (9), `test_piccolo.py` (18), `test_quiz.py` (91), `test_elo.py` (8), `test_smoke.py` (6), `test_health` (1) — total 133 (all green)
+- Backend tests: `test_imposter.py` (11), `test_piccolo.py` (20), `test_quiz.py` (118), `test_elo.py` (8), `test_smoke.py` (6), `test_health` (1) — total 164 (all green)
 - WWM sound system: 25 MP3 files, tier-appropriate bg music, lock-in sting, 1.8s reveal delay, joker/safety/win sounds
 - WWM visual: orange-gold lock-in color, pulsing reveal animation, diamond answer buttons
 - WWM visual: safety-mark confetti celebration overlay (Level 5/10), win confetti rain, spotlight flash between questions
@@ -350,7 +350,10 @@
 - Piccolo offline support: client-side fallback with cached challenge templates (localStorage), offline session with category-balanced challenge ordering, "Offline-Modus" indicator
 - Tier field evaluation: 3 tiers (1→1000, 2→1200, 3→1400) confirmed sufficient for current question pool size (~75). ELO self-calibrates; no model expansion needed.
 - Quiz media system: upload (`POST /questions/{id}/media`), delete (`DELETE /questions/{id}/media`), static serving (`/media/` mount), frontend display (image, video, document) in all quiz modes, media upload in QuestionForm, MIME type validation (JPEG/PNG/GIF/WebP/MP4/WebM/PDF), configurable size limit, Vite dev proxy for `/media`, 8 new tests (all green)
-- Backend tests: `test_imposter.py` (9), `test_piccolo.py` (18), `test_quiz.py` (72), `test_elo.py` (8), `test_smoke.py` (6), `test_health` (1) — total 118 (all green)
+- Question feedback system: `POST /questions/{id}/feedback` + `GET /questions/{id}/feedback`, three feedback types (THUMBS_UP, THUMBS_DOWN, REPORT), category sets per type, optional free-text comment, consistent with cross-game reporting conventions, 16 tests (all green)
+- Bulk question import: `POST /api/v1/quiz/questions/import` — accepts JSON in seed file format, deduplicates by text, auto-creates categories/tags, reuses `seed_quiz_dataset()`, 6 tests (all green)
+- Draft seeds (drachenlord-seed-draft.yaml) evaluated: all 6 questions already present in German in seed_questions.yaml — no promotion needed
+- Backend tests: `test_imposter.py` (11), `test_piccolo.py` (20), `test_quiz.py` (118), `test_elo.py` (8), `test_smoke.py` (6), `test_health` (1) — total 164 (all green)
 
 ## Dependencies
 

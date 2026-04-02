@@ -43,7 +43,7 @@ The project is in early development. Only implement what is **technically necess
 - Quiz ELO: both questions and players have ELO scores. Always update **both** after an attempt.
 - Quiz answers: exactly 1 correct, N wrong (N ≥ 1). The pool can be arbitrarily large; the API selects a random subset per request.
 - Media (clips, images, docs) are stored as **files**, referenced by URL — never binary in the DB.
-- After `db.commit()` + `db.close()`, do **not** access ORM attributes on detached objects → `DetachedInstanceError`.
+- See `.github/instructions/database.instructions.md` for full ORM/SQL conventions (session handling, query style, transaction patterns, test DB strategy).
 
 ## Maintaining These Instructions
 When a change introduces new conventions, pitfalls, or architectural decisions, **update the relevant instruction file** (this file, or `.github/instructions/*.instructions.md`). Keep them accurate and lean.

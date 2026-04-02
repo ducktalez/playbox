@@ -242,6 +242,17 @@ class MediaUploadOut(BaseModel):
     media_type: str
 
 
+# --- Bulk Import ---
+
+class BulkImportOut(BaseModel):
+    """Summary returned after a bulk question import."""
+
+    created_categories: int
+    created_tags: int
+    created_questions: int
+    skipped_questions: int
+
+
 # --- Ordering Questions (WWM Kandidatenfrage) ---
 
 

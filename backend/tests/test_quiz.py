@@ -1983,3 +1983,134 @@ def test_submit_feedback_with_comment(quiz_client) -> None:
     assert data["category"] == "PROBLEM_WITH_QUESTION"
 
 
+# --- Bulk Import endpoint ---
+
+
+def _bulk_import_payload(
+    questions: list[dict] | None = None,
+    categories: list[dict] | None = None,
+) -> dict:
+    """Build a minimal bulk import payload."""
+    return {
+        "categories": categories or [{"name": "BulkCat", "description": "Test category"}],
+        "questions": questions or [
+            {
+                "text": "Bulk-Frage 1?",
+                "category": "BulkCat",
+                "tier": 1,
+                "tags": ["bulk-test"],
+                "answers": ["Richtig", ["Falsch A", "Falsch B", "Falsch C"]],
+            },
+            {
+                "text": "Bulk-Frage 2?",
+                "category": "BulkCat",
+                "tier": 2,
+                "tags": ["bulk-test"],
+                "answers": ["Korrekt", ["Nope A", "Nope B"]],
+            },
+        ],
+    }
+
+
+def test_bulk_import_creates_questions(quiz_client) -> None:
+    """POST /questions/import should create categories, tags, and questions."""
+    resp = quiz_client.post("/api/v1/quiz/questions/import", json=_bulk_import_payload())
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["created_categories"] == 1
+    assert data["created_questions"] == 2
+    assert data["created_tags"] == 1  # "bulk-test" shared by both
+    assert data["skipped_questions"] == 0
+
+    # Verify questions are actually queryable
+    q_resp = quiz_client.get("/api/v1/quiz/questions")
+    texts = [q["text"] for q in q_resp.json()["items"]]
+    assert "Bulk-Frage 1?" in texts
+    assert "Bulk-Frage 2?" in texts
+
+
+def test_bulk_import_idempotent(quiz_client) -> None:
+    """Importing the same payload twice should skip existing questions."""
+    payload = _bulk_import_payload()
+
+    resp1 = quiz_client.post("/api/v1/quiz/questions/import", json=payload)
+    assert resp1.status_code == 200
+    assert resp1.json()["created_questions"] == 2
+
+    resp2 = quiz_client.post("/api/v1/quiz/questions/import", json=payload)
+    assert resp2.status_code == 200
+    data2 = resp2.json()
+    assert data2["created_questions"] == 0
+    assert data2["skipped_questions"] == 2
+    assert data2["created_categories"] == 0  # Already exists
+
+
+def test_bulk_import_invalid_payload(quiz_client) -> None:
+    """Invalid payload (missing correct answer) should return 422."""
+    bad_payload = {
+        "questions": [
+            {
+                "text": "Kaputte Frage?",
+                "answers": [
+                    {"text": "A", "is_correct": False},
+                    {"text": "B", "is_correct": False},
+                ],
+            }
+        ]
+    }
+    resp = quiz_client.post("/api/v1/quiz/questions/import", json=bad_payload)
+    assert resp.status_code == 422
+    assert resp.json()["code"] == "INVALID_IMPORT_PAYLOAD"
+
+
+def test_bulk_import_empty(quiz_client) -> None:
+    """Importing an empty payload should succeed with zero counts."""
+    resp = quiz_client.post(
+        "/api/v1/quiz/questions/import",
+        json={"categories": [], "questions": []},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["created_categories"] == 0
+    assert data["created_questions"] == 0
+    assert data["skipped_questions"] == 0
+
+
+def test_bulk_import_creates_new_category_on_the_fly(quiz_client) -> None:
+    """If a question references an unknown category, it should be auto-created."""
+    payload = {
+        "categories": [],
+        "questions": [
+            {
+                "text": "Frage mit neuer Kategorie?",
+                "category": "AutoKategorie",
+                "answers": ["Ja", ["Nein", "Vielleicht"]],
+            }
+        ],
+    }
+    resp = quiz_client.post("/api/v1/quiz/questions/import", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["created_categories"] == 1
+    assert data["created_questions"] == 1
+
+    # Verify category was created
+    cats = quiz_client.get("/api/v1/quiz/categories").json()
+    assert any(c["name"] == "AutoKategorie" for c in cats)
+
+
+def test_bulk_import_maps_tier_to_elo(quiz_client) -> None:
+    """Imported questions should have ELO based on tier: 1→1000, 2→1200, 3→1400."""
+    payload = {
+        "questions": [
+            {"text": "Tier-1-Frage?", "tier": 1, "answers": ["Ja", ["Nein"]]},
+            {"text": "Tier-3-Frage?", "tier": 3, "answers": ["Ja", ["Nein"]]},
+        ]
+    }
+    resp = quiz_client.post("/api/v1/quiz/questions/import", json=payload)
+    assert resp.status_code == 200
+
+    q_resp = quiz_client.get("/api/v1/quiz/questions")
+    questions = {q["text"]: q for q in q_resp.json()["items"]}
+    assert questions["Tier-1-Frage?"]["elo_score"] == 1000.0
+    assert questions["Tier-3-Frage?"]["elo_score"] == 1400.0

@@ -34,6 +34,7 @@ from app.games.quiz.schemas import (
     AudiencePollEntry,
     AudiencePollIn,
     AudiencePollOut,
+    BulkImportOut,
     CategoryIn,
     CategoryOut,
     FEEDBACK_TYPES,
@@ -891,5 +892,35 @@ class QuizService:
             player_id=session.player_id,
             score=session.score,
             finished_at=session.finished_at,
+        )
+
+    # --- Bulk Import ---
+
+    def bulk_import(self, payload: dict) -> BulkImportOut:
+        """Import questions in bulk using the seed file format.
+
+        Accepts the same JSON structure as ``seed_questions.yaml``:
+        ``{ categories: [...], questions: [...], ordering_questions: [...] }``
+
+        Deduplicates by question text — existing questions are skipped.
+        """
+        from app.games.quiz.seed import QuizSeedFile, seed_quiz_dataset
+
+        try:
+            dataset = QuizSeedFile.model_validate(payload)
+        except Exception as exc:
+            raise AppError(
+                status_code=422,
+                detail=f"Invalid import payload: {exc}",
+                code="INVALID_IMPORT_PAYLOAD",
+            ) from exc
+
+        result = seed_quiz_dataset(db=self.db, dataset=dataset)
+
+        return BulkImportOut(
+            created_categories=result.created_categories,
+            created_tags=result.created_tags,
+            created_questions=result.created_questions,
+            skipped_questions=result.skipped_questions,
         )
 

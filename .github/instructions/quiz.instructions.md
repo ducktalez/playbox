@@ -12,7 +12,7 @@ These instructions apply to both backend and frontend files for the Quiz game.
 
 ## Backend Rules
 - Preserve UUID-based persistent models and the current Alembic-backed schema flow.
-- Do not access detached ORM entities after commit/close.
+- Do not access detached ORM entities after commit/close (see `database.instructions.md` for full ORM rules).
 - Any new question/attempt/session endpoint must have backend tests.
 - Prefer category-balanced question selection when listing general question pools so large categories do not crowd out the smaller ones.
 - Keep quiz starter seed data file-based for now; use `python -m app.games.quiz.seed` with `backend/app/games/quiz/seed_questions.yaml` for minimal local data imports.

@@ -204,6 +204,7 @@ As the community plays, question ELOs self-calibrate through the ELO update form
 | GET | `/questions/{id}` | Get question with randomized answer subset (`num_answers`) |
 | PATCH | `/questions/{id}` | Partial update of question fields |
 | DELETE | `/questions/{id}` | Soft-delete a question |
+| POST | `/questions/import` | Bulk import questions (JSON seed format) |
 | POST | `/questions/{id}/attempt` | Submit an answer, returns result + ELO update |
 | POST | `/questions/{id}/fifty-fifty` | 50:50 joker — remove 2 wrong answers |
 | POST | `/questions/{id}/audience-poll` | Audience poll joker — vote percentages |

@@ -96,6 +96,7 @@ from app.games.quiz.schemas import (
     AttemptOut,
     AudiencePollIn,
     AudiencePollOut,
+    BulkImportOut,
     CategoryIn,
     CategoryOut,
     FiftyFiftyIn,
@@ -193,6 +194,23 @@ async def delete_question(
 ) -> QuestionOut:
     """Soft-delete a question (sets deleted_at)."""
     return service.delete_question(question_id=question_id)
+
+
+# --- Bulk Import ---
+
+
+@router.post("/questions/import", response_model=BulkImportOut)
+async def bulk_import(
+    body: dict,
+    service: QuizService = Depends(get_service),
+) -> BulkImportOut:
+    """Import questions in bulk (same JSON format as seed_questions.yaml).
+
+    Accepts: ``{ categories: [...], questions: [...], ordering_questions: [...] }``
+    Deduplicates by question text — existing questions are skipped.
+    """
+    # TODO: post-dev — add admin API-key guard
+    return service.bulk_import(payload=body)
 
 
 @router.post("/questions/{question_id}/attempt", response_model=AttemptOut)
