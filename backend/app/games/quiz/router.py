@@ -87,10 +87,11 @@ FUTURE ENHANCEMENTS:
 
 import uuid
 
-from fastapi import APIRouter, Depends, Query, UploadFile, File
+from fastapi import APIRouter, Depends, Header, Query, UploadFile, File
 from sqlalchemy.orm import Session
 
 from app.core.database import get_pg_session
+from app.core.errors import AppError
 from app.games.quiz.schemas import (
     AttemptIn,
     AttemptOut,
@@ -103,6 +104,7 @@ from app.games.quiz.schemas import (
     FiftyFiftyIn,
     FiftyFiftyOut,
     LeaderboardEntry,
+    ModerationActionIn,
     MediaUploadOut,
     OrderingCheckIn,
     OrderingCheckOut,
@@ -167,8 +169,14 @@ async def list_questions(
 
 @router.post("/questions", response_model=QuestionOut)
 async def create_question(body: QuestionCreateIn, service: QuizService = Depends(get_service)) -> QuestionOut:
-    """Submit a new question with answers."""
-    return service.create_question(data=body)
+    """Create a new question with answers (admin — auto-approved)."""
+    return service.create_question(data=body, approved=True)
+
+
+@router.post("/questions/submit", response_model=QuestionOut)
+async def submit_question(body: QuestionCreateIn, service: QuizService = Depends(get_service)) -> QuestionOut:
+    """Submit a user-created question for moderation (starts as PENDING)."""
+    return service.create_question(data=body, approved=False)
 
 
 @router.get("/questions/{question_id}", response_model=QuestionOut)
@@ -413,4 +421,39 @@ async def leaderboard(
 ) -> list[LeaderboardEntry]:
     """Get the player leaderboard sorted by ELO."""
     return service.get_leaderboard(limit=limit)
+
+
+# --- Admin / Moderation ---
+
+
+def require_admin(x_admin_token: str | None = Header(default=None)) -> None:
+    """Placeholder admin auth — checks for a header token.
+
+    # TODO: post-dev — replace with proper auth / API key validation.
+    """
+    if not x_admin_token or x_admin_token != "playbox-admin":
+        raise AppError(403, "Admin access required", "ADMIN_REQUIRED")
+
+
+@router.get("/admin/questions/pending", response_model=QuestionListOut)
+async def list_pending_questions(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    service: QuizService = Depends(get_service),
+    _admin: None = Depends(require_admin),
+) -> QuestionListOut:
+    """List questions awaiting moderation (admin only)."""
+    return service.list_pending_questions(limit=limit, offset=offset)
+
+
+@router.post("/admin/questions/{question_id}/moderate", response_model=QuestionOut)
+async def moderate_question(
+    question_id: uuid.UUID,
+    body: ModerationActionIn,
+    service: QuizService = Depends(get_service),
+    _admin: None = Depends(require_admin),
+) -> QuestionOut:
+    """Approve or reject a question (admin only)."""
+    return service.moderate_question(question_id=question_id, data=body)
+
 

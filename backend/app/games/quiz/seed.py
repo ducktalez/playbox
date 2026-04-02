@@ -203,6 +203,7 @@ def seed_quiz_dataset(db: Session, dataset: QuizSeedFile) -> QuizSeedResult:
             media_url=question_data.media_url,
             media_type=question_data.media_type,
             created_by=question_data.created_by,
+            moderation_status="APPROVED",  # Seed/import questions skip moderation
         )
         db.add(question)
         db.flush()

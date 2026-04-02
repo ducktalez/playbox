@@ -238,10 +238,7 @@ As the community plays, question ELOs self-calibrate through the ELO update form
 | GET | `/leaderboard` | Player leaderboard by ELO |
 | GET | `/ordering-question` | Random ordering question (shuffled answers) |
 | POST | `/ordering-question/{id}/check` | Validate ordering answer sequence |
-
-#### Chess — `/api/v1/chess/` _(low priority)_
-
-| Method | Endpoint | Description |
+| GET | `/admin/questions/pending` | List questions awaiting moderation (admin) |
 |--------|----------|-------------|
 | POST | `/games` | Create a new game (variant, players) |
 | GET | `/games/{id}` | Get game state |

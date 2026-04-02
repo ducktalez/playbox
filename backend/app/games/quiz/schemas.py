@@ -56,6 +56,7 @@ class QuestionOut(BaseModel):
     is_pun: bool = False
     media_url: str | None = None
     media_type: str | None = None
+    moderation_status: str = "APPROVED"  # PENDING / APPROVED / REJECTED
     answers: list[AnswerOut] = []
 
 
@@ -339,5 +340,17 @@ class EloHistoryEntryOut(BaseModel):
     elo_after: float
     answered_correctly: bool
     created_at: datetime
+
+
+# --- Moderation ---
+
+MODERATION_STATUSES = {"PENDING", "APPROVED", "REJECTED"}
+
+
+class ModerationActionIn(BaseModel):
+    """Request to approve or reject a question."""
+
+    status: str = Field(..., description="APPROVED or REJECTED")
+    reason: str | None = Field(default=None, max_length=500)
 
 

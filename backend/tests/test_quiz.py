@@ -1830,3 +1830,185 @@ def test_bulk_import_with_ordering_questions(quiz_client) -> None:
     assert resp.status_code == 200
     # Ordering questions are created via seed; verify endpoint at least succeeded
     assert resp.json()["created_questions"] == 0
+
+
+# --- Moderation Queue ---
+
+_ADMIN_HEADERS = {"X-Admin-Token": "playbox-admin"}
+
+
+def test_submitted_question_starts_as_pending(quiz_client) -> None:
+    """POST /questions/submit should create a PENDING question."""
+    resp = quiz_client.post("/api/v1/quiz/questions/submit", json={
+        "text": "User submitted question?",
+        "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
+    })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["moderation_status"] == "PENDING"
+
+
+def test_admin_created_question_is_approved(quiz_client) -> None:
+    """POST /questions (admin) should create an APPROVED question."""
+    resp = quiz_client.post("/api/v1/quiz/questions", json={
+        "text": "Admin created question?",
+        "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
+    })
+    assert resp.status_code == 200
+    assert resp.json()["moderation_status"] == "APPROVED"
+
+
+def test_pending_question_hidden_from_list(quiz_client) -> None:
+    """PENDING questions should not appear in the gameplay question list."""
+    quiz_client.post("/api/v1/quiz/questions/submit", json={
+        "text": "Hidden pending question?",
+        "answers": [{"text": "Yes", "is_correct": True}, {"text": "No", "is_correct": False}],
+    })
+    resp = quiz_client.get("/api/v1/quiz/questions")
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    assert all(q["text"] != "Hidden pending question?" for q in items)
+
+
+def test_pending_question_hidden_from_get(quiz_client) -> None:
+    """GET /questions/{id} should return 404 for PENDING questions."""
+    q = quiz_client.post("/api/v1/quiz/questions/submit", json={
+        "text": "Pending get test?",
+        "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
+    }).json()
+    resp = quiz_client.get(f"/api/v1/quiz/questions/{q['id']}")
+    assert resp.status_code == 404
+
+
+def test_approve_question_makes_it_visible(quiz_client) -> None:
+    """Approving a PENDING question should make it appear in gameplay queries."""
+    q = quiz_client.post("/api/v1/quiz/questions/submit", json={
+        "text": "Will be approved?",
+        "answers": [{"text": "Yes", "is_correct": True}, {"text": "No", "is_correct": False}],
+    }).json()
+    qid = q["id"]
+
+    # Approve via admin endpoint
+    resp = quiz_client.post(
+        f"/api/v1/quiz/admin/questions/{qid}/moderate",
+        json={"status": "APPROVED"},
+        headers=_ADMIN_HEADERS,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["moderation_status"] == "APPROVED"
+
+    # Should now appear in list
+    list_resp = quiz_client.get("/api/v1/quiz/questions")
+    texts = [q["text"] for q in list_resp.json()["items"]]
+    assert "Will be approved?" in texts
+
+    # Should be accessible via GET
+    get_resp = quiz_client.get(f"/api/v1/quiz/questions/{qid}")
+    assert get_resp.status_code == 200
+
+
+def test_reject_question_keeps_it_hidden(quiz_client) -> None:
+    """Rejecting a PENDING question should keep it hidden from gameplay."""
+    q = quiz_client.post("/api/v1/quiz/questions/submit", json={
+        "text": "Will be rejected?",
+        "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
+    }).json()
+    qid = q["id"]
+
+    resp = quiz_client.post(
+        f"/api/v1/quiz/admin/questions/{qid}/moderate",
+        json={"status": "REJECTED"},
+        headers=_ADMIN_HEADERS,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["moderation_status"] == "REJECTED"
+
+    # Should not appear in gameplay list
+    list_resp = quiz_client.get("/api/v1/quiz/questions")
+    texts = [q["text"] for q in list_resp.json()["items"]]
+    assert "Will be rejected?" not in texts
+
+
+def test_list_pending_questions(quiz_client) -> None:
+    """GET /admin/questions/pending should list PENDING questions."""
+    quiz_client.post("/api/v1/quiz/questions/submit", json={
+        "text": "Pending Q1?",
+        "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
+    })
+    quiz_client.post("/api/v1/quiz/questions/submit", json={
+        "text": "Pending Q2?",
+        "answers": [{"text": "X", "is_correct": True}, {"text": "Y", "is_correct": False}],
+    })
+
+    resp = quiz_client.get("/api/v1/quiz/admin/questions/pending", headers=_ADMIN_HEADERS)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] >= 2
+    assert all(q["moderation_status"] == "PENDING" for q in data["items"])
+
+
+def test_moderate_question_not_found(quiz_client) -> None:
+    """Moderating nonexistent question should return 404."""
+    resp = quiz_client.post(
+        f"/api/v1/quiz/admin/questions/{uuid.uuid4()}/moderate",
+        json={"status": "APPROVED"},
+        headers=_ADMIN_HEADERS,
+    )
+    assert resp.status_code == 404
+
+
+def test_moderate_invalid_status(quiz_client) -> None:
+    """Invalid moderation status should return 422."""
+    q = quiz_client.post("/api/v1/quiz/questions/submit", json={
+        "text": "Invalid status test?",
+        "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
+    }).json()
+
+    resp = quiz_client.post(
+        f"/api/v1/quiz/admin/questions/{q['id']}/moderate",
+        json={"status": "INVALID"},
+        headers=_ADMIN_HEADERS,
+    )
+    assert resp.status_code == 422
+    assert resp.json()["code"] == "INVALID_MODERATION_STATUS"
+
+
+def test_admin_endpoint_requires_header(quiz_client) -> None:
+    """Admin endpoints without X-Admin-Token should return 403."""
+    resp = quiz_client.get("/api/v1/quiz/admin/questions/pending")
+    assert resp.status_code == 403
+    assert resp.json()["code"] == "ADMIN_REQUIRED"
+
+    q = quiz_client.post("/api/v1/quiz/questions/submit", json={
+        "text": "No admin token?",
+        "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
+    }).json()
+    resp = quiz_client.post(
+        f"/api/v1/quiz/admin/questions/{q['id']}/moderate",
+        json={"status": "APPROVED"},
+    )
+    assert resp.status_code == 403
+
+
+def test_seed_imported_questions_are_approved(quiz_client) -> None:
+    """Bulk-imported (seed) questions should be immediately APPROVED."""
+    payload = {
+        "categories": [{"name": "SeedMod", "description": "Seed moderation test"}],
+        "questions": [
+            {
+                "text": "Seeded approved question?",
+                "category": "SeedMod",
+                "answers": [
+                    {"text": "A", "is_correct": True},
+                    {"text": "B", "is_correct": False},
+                ],
+            },
+        ],
+    }
+    quiz_client.post("/api/v1/quiz/questions/import", json=payload)
+
+    # Should appear in gameplay list (APPROVED)
+    resp = quiz_client.get("/api/v1/quiz/questions")
+    texts = [q["text"] for q in resp.json()["items"]]
+    assert "Seeded approved question?" in texts
+

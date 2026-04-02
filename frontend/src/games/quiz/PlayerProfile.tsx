@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from "react";
+import EloChart from "./EloChart";
 
 const API_BASE =
   typeof window !== "undefined"
@@ -114,6 +115,9 @@ export default function PlayerProfile({
             <span className="player-profile__stat-label">Trefferquote</span>
           </div>
         </div>
+
+        <h2 className="player-profile__section-title">ELO-Verlauf</h2>
+        <EloChart playerId={playerId} />
 
         <h2 className="player-profile__section-title">Letzte Spiele</h2>
 

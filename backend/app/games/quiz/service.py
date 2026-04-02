@@ -44,6 +44,8 @@ from app.games.quiz.schemas import (
     FiftyFiftyOut,
     LeaderboardEntry,
     MediaUploadOut,
+    MODERATION_STATUSES,
+    ModerationActionIn,
     OrderingCheckIn,
     OrderingCheckOut,
     OrderingQuestionOut,
@@ -124,7 +126,10 @@ class QuizService:
             randomize: If True and order_by_elo=asc, randomly sample from ELO bands so each
                        game gets a different question set instead of always the lowest-ELO ones.
         """
-        query = select(Question).where(Question.deleted_at.is_(None))
+        query = select(Question).where(
+            Question.deleted_at.is_(None),
+            Question.moderation_status == "APPROVED",
+        )
 
         if language:
             query = query.where(Question.language == language)
@@ -254,8 +259,13 @@ class QuizService:
         sampled.sort(key=lambda q: (q.elo_score, str(q.id)))
         return sampled
 
-    def create_question(self, data: QuestionCreateIn) -> QuestionOut:
-        """Create a new question with answers and tags."""
+    def create_question(self, data: QuestionCreateIn, approved: bool = True) -> QuestionOut:
+        """Create a new question with answers and tags.
+
+        Args:
+            approved: If True (default), the question is immediately APPROVED.
+                      Set to False for user-submitted questions that need moderation.
+        """
         # Validate: at least one correct answer
         correct_count = sum(1 for a in data.answers if a.is_correct)
         if correct_count < 1:
@@ -271,6 +281,7 @@ class QuizService:
             media_url=data.media_url,
             media_type=data.media_type,
             created_by=data.created_by,
+            moderation_status="APPROVED" if approved else "PENDING",
         )
         self.db.add(question)
         self.db.flush()
@@ -296,7 +307,7 @@ class QuizService:
     def get_question(self, question_id: uuid.UUID, num_answers: int = 4) -> QuestionOut:
         """Get a question with a randomized subset of answers (1 correct + N-1 wrong)."""
         question = self.db.get(Question, question_id)
-        if not question or question.deleted_at is not None:
+        if not question or question.deleted_at is not None or question.moderation_status != "APPROVED":
             raise AppError(404, "Question not found", "QUESTION_NOT_FOUND")
 
         correct = [a for a in question.answers if a.is_correct]
@@ -931,6 +942,7 @@ class QuizService:
             is_pun=question.is_pun,
             media_url=question.media_url,
             media_type=question.media_type,
+            moderation_status=question.moderation_status,
             answers=[AnswerOut(id=a.id, text=a.text, is_correct=a.is_correct) for a in question.answers],
         )
 
@@ -953,6 +965,37 @@ class QuizService:
             score=session.score,
             finished_at=session.finished_at,
         )
+
+    # --- Moderation ---
+
+    def list_pending_questions(self, limit: int = 20, offset: int = 0) -> QuestionListOut:
+        """List questions awaiting moderation (PENDING status)."""
+        query = select(Question).where(
+            Question.deleted_at.is_(None),
+            Question.moderation_status == "PENDING",
+        ).order_by(Question.created_at.asc())
+
+        total = self.db.scalar(select(func.count()).select_from(query.subquery()))
+        questions = self.db.execute(query.offset(offset).limit(limit)).scalars().all()
+        return QuestionListOut(
+            items=[self._question_to_out(q) for q in questions],
+            total=total or 0,
+        )
+
+    def moderate_question(self, question_id: uuid.UUID, data: ModerationActionIn) -> QuestionOut:
+        """Approve or reject a question."""
+        if data.status not in ("APPROVED", "REJECTED"):
+            raise AppError(422, "Status must be APPROVED or REJECTED", "INVALID_MODERATION_STATUS")
+
+        question = self.db.get(Question, question_id)
+        if not question or question.deleted_at is not None:
+            raise AppError(404, "Question not found", "QUESTION_NOT_FOUND")
+
+        question.moderation_status = data.status
+        question.updated_at = datetime.now(timezone.utc)
+        self.db.commit()
+        self.db.refresh(question)
+        return self._question_to_out(question)
 
     # --- Bulk Import ---
 

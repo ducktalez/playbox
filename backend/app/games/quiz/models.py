@@ -61,6 +61,9 @@ class Question(SQLModel, table=True):
     is_pun: bool = Field(default=False)
     media_url: str | None = Field(default=None, max_length=500)
     media_type: str | None = Field(default=None, max_length=50)  # image, video, document
+    # Moderation status: PENDING → APPROVED | REJECTED
+    # New user-submitted questions start as PENDING; seeded/imported are APPROVED.
+    moderation_status: str = Field(default="PENDING", max_length=20)
     created_by: str | None = Field(default=None, max_length=200)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime | None = Field(default=None)

@@ -237,8 +237,8 @@
 
 ## Phase 4 — Quiz ELO + Media
 
-- Done: ELO engine and per-attempt ELO update for player and question are implemented. Media upload/delete endpoints, static file serving, and frontend media display are implemented. Bulk question import endpoint is available. **Question difficulty badges** (EASY/MEDIUM/HARD based on ELO) and **ELO history tracking** per player (new `PlayerEloHistory` model + `GET /players/{id}/elo-history` endpoint) are implemented.
-- Open: ELO history frontend chart, moderation queue.
+- Done: ELO engine and per-attempt ELO update for player and question are implemented. Media upload/delete endpoints, static file serving, and frontend media display are implemented. Bulk question import endpoint is available. **Question difficulty badges** (EASY/MEDIUM/HARD based on ELO) and **ELO history tracking** per player (new `PlayerEloHistory` model + `GET /players/{id}/elo-history` endpoint) are implemented. **Moderation queue** for user-submitted questions is implemented (PENDING/APPROVED/REJECTED workflow, admin endpoints, placeholder auth). **ELO history chart** in PlayerProfile (SVG line chart, no external deps).
+- Open: —
 
 ### High Priority
 
@@ -255,10 +255,10 @@
 
 ### Medium Priority
 
-- [ ] ELO history / progression chart per player (frontend)
+- [x] ELO history / progression chart per player (frontend)
 - [x] Question difficulty badge (based on ELO range: EASY < 1100, MEDIUM 1100–1300, HARD ≥ 1300)
 - [x] ELO history tracking per player (`PlayerEloHistory` model + `GET /players/{id}/elo-history`)
-- [ ] Moderation queue for user-submitted questions
+- [x] Moderation queue for user-submitted questions
 - [x] Bulk question import (JSON via API)
 
 ## Phase 5 — Chess Variants (Low Priority)
@@ -318,7 +318,7 @@
 - Shared PyCharm run configurations (`.run/`) and local IDE copies via `setup.py`
 - Drachenlord seed question set (75+ questions across 8 categories, tier-based ELO)
 - ELO-based question ordering for Millionär mode (ascending difficulty)
-- Backend tests: `test_imposter.py` (11), `test_piccolo.py` (20), `test_quiz.py` (101), `test_elo.py` (8), `test_smoke.py` (6) — total 146 (all green)
+- Backend tests: `test_imposter.py` (11), `test_piccolo.py` (20), `test_quiz.py` (119), `test_elo.py` (8), `test_smoke.py` (6) — total 165 (all green)
 - WWM sound system: 25 MP3 files, tier-appropriate bg music, lock-in sting, 1.8s reveal delay, joker/safety/win sounds
 - WWM visual: orange-gold lock-in color, pulsing reveal animation, diamond answer buttons
 - WWM visual: safety-mark confetti celebration overlay (Level 5/10), win confetti rain, spotlight flash between questions
@@ -356,7 +356,10 @@
 - Draft seeds (drachenlord-seed-draft.yaml) evaluated: all 6 questions already present in German in seed_questions.yaml — no promotion needed
 - Question difficulty badge: computed `difficulty` field (EASY/MEDIUM/HARD) on `QuestionOut` based on ELO thresholds (<1100 / 1100–1300 / ≥1300), 4 tests
 - ELO history tracking: `PlayerEloHistory` model records every ELO change per attempt, `GET /players/{id}/elo-history` endpoint (oldest first for charting), 6 tests
-- Backend tests: `test_imposter.py` (11), `test_piccolo.py` (20), `test_quiz.py` (101), `test_elo.py` (8), `test_smoke.py` (6) — total 146 (all green)
+- Bulk import tests restored: 6 tests covering create, dedup, tags, invalid payload, empty, ordering questions
+- Moderation queue: `moderation_status` field (PENDING/APPROVED/REJECTED) on Question model, `POST /questions/submit` (user → PENDING), `POST /questions` (admin → APPROVED), `GET /admin/questions/pending`, `POST /admin/questions/{id}/moderate`, placeholder `X-Admin-Token` auth, seed/import auto-APPROVED, 11 tests
+- ELO history chart: SVG-based line chart in `PlayerProfile.tsx` (EloChart component), fetches `GET /players/{id}/elo-history`, touch-friendly tooltips, correct/wrong color-coded dots, gradient fill, responsive viewBox, no external charting dependency
+- Backend tests: `test_imposter.py` (11), `test_piccolo.py` (20), `test_quiz.py` (120), `test_elo.py` (8), `test_smoke.py` (6) — total 165 (all green)
 
 ## Dependencies
 
