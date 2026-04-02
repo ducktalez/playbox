@@ -110,6 +110,19 @@ PlayBox is a multi-game platform serving browser-based party and quiz games as a
 │ created_at   │       │ finished_at      │       │ time_taken_ms      │
 │ updated_at   │       └──────────────────┘       │ created_at         │
 └──────────────┘                                   └────────────────────┘
+
+┌──────────────────────┐       ┌──────────────────────┐
+│  question_feedback   │       │  player_elo_history   │
+├──────────────────────┤       ├──────────────────────┤
+│ id (UUID PK)         │       │ id (UUID PK)         │
+│ question_id          │       │ player_id            │
+│ player_id (optional) │       │ question_id          │
+│ session_id (optional)│       │ session_id (optional)│
+│ feedback_type        │       │ elo_before           │
+│ category (optional)  │       │ elo_after            │
+│ comment (optional)   │       │ answered_correctly   │
+│ created_at           │       │ created_at           │
+└──────────────────────┘       └──────────────────────┘
 ```
 
 ### Imposter Game (SQLite / bundled JSON)
@@ -218,6 +231,7 @@ As the community plays, question ELOs self-calibrate through the ELO update form
 | GET | `/players/{id}` | Player profile + stats |
 | GET | `/players/{id}/profile` | Extended profile with accuracy + recent sessions |
 | GET | `/players/{id}/sessions` | List player's sessions (newest first) |
+| GET | `/players/{id}/elo-history` | ELO progression history (oldest first, for charts) |
 | POST | `/sessions` | Start a quiz session (mode: millionaire / duel / speed) |
 | GET | `/sessions/{id}` | Get session state |
 | POST | `/sessions/{id}/finish` | Finish session, persist score |

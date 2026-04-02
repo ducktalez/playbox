@@ -99,6 +99,7 @@ from app.games.quiz.schemas import (
     BulkImportOut,
     CategoryIn,
     CategoryOut,
+    EloHistoryEntryOut,
     FiftyFiftyIn,
     FiftyFiftyOut,
     LeaderboardEntry,
@@ -368,6 +369,17 @@ async def get_player_sessions(
 ) -> list[SessionOut]:
     """List sessions for a player (newest first)."""
     return service.get_player_sessions(player_id=player_id, limit=limit)
+
+
+@router.get("/players/{player_id}/elo-history", response_model=list[EloHistoryEntryOut])
+async def get_elo_history(
+    player_id: uuid.UUID,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    service: QuizService = Depends(get_service),
+) -> list[EloHistoryEntryOut]:
+    """Get ELO progression history for a player (oldest first, suitable for charts)."""
+    return service.get_elo_history(player_id=player_id, limit=limit, offset=offset)
 
 
 # --- Sessions ---

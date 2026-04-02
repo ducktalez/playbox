@@ -21,6 +21,7 @@ from app.games.quiz.models import (
     GameSession,
     OrderingQuestion,
     Player,
+    PlayerEloHistory,
     Question,
     QuestionAttempt,
     QuestionFeedback,
@@ -37,6 +38,7 @@ from app.games.quiz.schemas import (
     BulkImportOut,
     CategoryIn,
     CategoryOut,
+    EloHistoryEntryOut,
     FEEDBACK_TYPES,
     FiftyFiftyIn,
     FiftyFiftyOut,
@@ -72,6 +74,21 @@ ALLOWED_MEDIA_TYPES: dict[str, str] = {
     "video/webm": "video",
     "application/pdf": "document",
 }
+
+# ELO → difficulty badge thresholds (aligned with TIER_ELO_MAP 1000/1200/1400)
+_DIFFICULTY_THRESHOLDS: list[tuple[float, str]] = [
+    (1100.0, "EASY"),
+    (1300.0, "MEDIUM"),
+]
+_DIFFICULTY_DEFAULT = "HARD"
+
+
+def elo_to_difficulty(elo: float) -> str:
+    """Map an ELO score to a difficulty badge string."""
+    for threshold, label in _DIFFICULTY_THRESHOLDS:
+        if elo < threshold:
+            return label
+    return _DIFFICULTY_DEFAULT
 
 
 class QuizService:
@@ -358,6 +375,9 @@ class QuizService:
         question_elo_before = question.elo_score
         new_player_elo, new_question_elo = update_elo(player.elo_score, question.elo_score, answer.is_correct)
 
+        # Find correct answer id BEFORE adding new rows (avoids autoflush on lazy load)
+        correct_answer = next(a for a in question.answers if a.is_correct)
+
         # Update scores
         player.elo_score = new_player_elo
         player.updated_at = datetime.now(timezone.utc)
@@ -376,8 +396,16 @@ class QuizService:
         )
         self.db.add(attempt)
 
-        # Find correct answer id
-        correct_answer = next(a for a in question.answers if a.is_correct)
+        # Record ELO history snapshot
+        elo_entry = PlayerEloHistory(
+            player_id=data.player_id,
+            question_id=question_id,
+            session_id=data.session_id,
+            elo_before=player_elo_before,
+            elo_after=new_player_elo,
+            answered_correctly=answer.is_correct,
+        )
+        self.db.add(elo_entry)
 
         self.db.commit()
 
@@ -484,6 +512,37 @@ class QuizService:
         ).scalars().all()
 
         return [self._session_to_out(s) for s in sessions]
+
+    # --- ELO History ---
+
+    def get_elo_history(
+        self, player_id: uuid.UUID, limit: int = 100, offset: int = 0
+    ) -> list[EloHistoryEntryOut]:
+        """Return ELO change history for a player (oldest first for charting)."""
+        player = self.db.get(Player, player_id)
+        if not player:
+            raise AppError(404, "Player not found", "PLAYER_NOT_FOUND")
+
+        entries = self.db.execute(
+            select(PlayerEloHistory)
+            .where(PlayerEloHistory.player_id == player_id)
+            .order_by(PlayerEloHistory.created_at.asc())
+            .offset(offset)
+            .limit(limit)
+        ).scalars().all()
+
+        return [
+            EloHistoryEntryOut(
+                id=e.id,
+                question_id=e.question_id,
+                session_id=e.session_id,
+                elo_before=e.elo_before,
+                elo_after=e.elo_after,
+                answered_correctly=e.answered_correctly,
+                created_at=e.created_at,
+            )
+            for e in entries
+        ]
 
     # --- Sessions ---
 
@@ -866,6 +925,7 @@ class QuizService:
             category=question.category.name if question.category else None,
             tags=[t.name for t in question.tags] if question.tags else [],
             elo_score=question.elo_score,
+            difficulty=elo_to_difficulty(question.elo_score),
             wwm_difficulty=question.wwm_difficulty,
             language=question.language,
             is_pun=question.is_pun,

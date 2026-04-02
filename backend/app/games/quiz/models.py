@@ -169,3 +169,18 @@ class OrderingQuestion(SQLModel, table=True):
         self.ordered_answers_json = json.dumps(value, ensure_ascii=False)
 
 
+class PlayerEloHistory(SQLModel, table=True):
+    """Snapshot of a player's ELO change after a question attempt."""
+
+    __tablename__ = "player_elo_history"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    player_id: uuid.UUID = Field(foreign_key="players.id", index=True)
+    question_id: uuid.UUID = Field(foreign_key="questions.id")
+    session_id: uuid.UUID | None = Field(default=None, foreign_key="game_sessions.id")
+    elo_before: float = Field(...)
+    elo_after: float = Field(...)
+    answered_correctly: bool = Field(...)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+

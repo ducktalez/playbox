@@ -50,6 +50,7 @@ class QuestionOut(BaseModel):
     category: str | None = None
     tags: list[str] = []
     elo_score: float
+    difficulty: str | None = None  # EASY / MEDIUM / HARD — computed from elo_score
     wwm_difficulty: int | None = None
     language: str = "de"
     is_pun: bool = False
@@ -323,5 +324,20 @@ class OrderingCheckOut(BaseModel):
     correct: bool
     correct_order: list[str]
     time_taken_ms: int | None = None
+
+
+# --- ELO History ---
+
+
+class EloHistoryEntryOut(BaseModel):
+    """A single ELO change event."""
+
+    id: uuid.UUID
+    question_id: uuid.UUID
+    session_id: uuid.UUID | None = None
+    elo_before: float
+    elo_after: float
+    answered_correctly: bool
+    created_at: datetime
 
 
