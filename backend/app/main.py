@@ -16,6 +16,7 @@ from app.core.errors import AppError, STATUS_CODE_MAP
 from app.games.imposter.router import router as imposter_router
 from app.games.piccolo.router import router as piccolo_router
 from app.games.quiz.router import router as quiz_router
+from app.games.chess.router import router as chess_router
 from app.games.quiz.seed import seed_questions
 
 
@@ -57,8 +58,7 @@ def create_app() -> FastAPI:
     application.include_router(imposter_router, prefix="/api/v1/imposter", tags=["Imposter"])
     application.include_router(piccolo_router, prefix="/api/v1/piccolo", tags=["Piccolo"])
     application.include_router(quiz_router, prefix="/api/v1/quiz", tags=["Quiz"])
-    # TODO: mount chess router when implemented
-    # application.include_router(chess_router, prefix="/api/v1/chess", tags=["Chess"])
+    application.include_router(chess_router, prefix="/api/v1/chess", tags=["Chess"])
 
     # Serve uploaded media files at /media/
     media_path = Path(settings.media_dir)
@@ -68,6 +68,15 @@ def create_app() -> FastAPI:
     @application.get("/health", tags=["System"])
     async def health_check() -> dict[str, str]:
         return {"status": "ok"}
+
+    @application.get("/api/v1/config/offline", tags=["System"])
+    async def offline_config() -> dict[str, int]:
+        """Return configured offline cache sizes so the frontend knows how much to request."""
+        return {
+            "quiz_questions": settings.offline_quiz_questions,
+            "imposter_words": settings.offline_imposter_words,
+            "piccolo_challenges": settings.offline_piccolo_challenges,
+        }
 
     # --- Standardized error responses: { "detail": "...", "code": "..." } ---
 

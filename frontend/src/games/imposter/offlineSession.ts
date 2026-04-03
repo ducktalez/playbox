@@ -2,8 +2,11 @@
  * Imposter Offline Fallback — creates local game sessions when backend is unreachable.
  *
  * Uses the cached word list (fetched from GET /api/v1/imposter/words) to run
- * the game entirely on the client when offline.
+ * the game entirely on the client when offline. Tries localStorage first,
+ * then falls back to IndexedDB (populated by the OfflineManager).
  */
+
+import { getOfflineImposterWords, type OfflineWord } from "../../core/offlineManager";
 
 type WordEntry = {
   id: string;
@@ -45,6 +48,24 @@ export function getCachedWordList(): WordEntry[] {
   return [];
 }
 
+/** Load cached word list from IndexedDB (async fallback). */
+async function getCachedWordListAsync(): Promise<WordEntry[]> {
+  // Try localStorage first (sync, fast)
+  const local = getCachedWordList();
+  if (local.length > 0) return local;
+
+  // Fall back to IndexedDB (populated by OfflineManager)
+  const idbWords = await getOfflineImposterWords();
+  return idbWords.map((w: OfflineWord) => ({
+    id: w.id,
+    text: w.text,
+    category: w.category,
+    source: w.source,
+    uploaded_by: w.uploaded_by,
+    description: w.description,
+  }));
+}
+
 /** Generate a pseudo-random UUID v4 (good enough for offline sessions). */
 function randomUUID(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -57,13 +78,12 @@ function randomUUID(): string {
   });
 }
 
-/** Create a local Imposter session from the cached word list. */
-export function createOfflineSession(
+function buildSession(
+  allWords: WordEntry[],
   playerNames: string[],
   category: string | null,
   timerSeconds: number,
 ): OfflineSession | null {
-  const allWords = getCachedWordList();
   if (allWords.length === 0) return null;
 
   const filtered = category
@@ -82,6 +102,25 @@ export function createOfflineSession(
     imposter_index: imposterIndex,
     timer_seconds: timerSeconds,
   };
+}
+
+/** Create a local Imposter session from the cached word list (sync — localStorage only). */
+export function createOfflineSession(
+  playerNames: string[],
+  category: string | null,
+  timerSeconds: number,
+): OfflineSession | null {
+  return buildSession(getCachedWordList(), playerNames, category, timerSeconds);
+}
+
+/** Create a local Imposter session, trying IndexedDB if localStorage is empty. */
+export async function createOfflineSessionAsync(
+  playerNames: string[],
+  category: string | null,
+  timerSeconds: number,
+): Promise<OfflineSession | null> {
+  const words = await getCachedWordListAsync();
+  return buildSession(words, playerNames, category, timerSeconds);
 }
 
 /** Compute what a player sees offline — the word or "IMPOSTER". */

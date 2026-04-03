@@ -87,9 +87,12 @@ FUTURE ENHANCEMENTS:
 
 import uuid
 
+import random
+
 from fastapi import APIRouter, Depends, Header, Query, UploadFile, File
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_pg_session
 from app.core.errors import AppError
 from app.games.quiz.schemas import (
@@ -346,6 +349,53 @@ async def create_category(body: CategoryIn, service: QuizService = Depends(get_s
 async def list_tags(service: QuizService = Depends(get_service)) -> list[TagOut]:
     """List all tags."""
     return service.list_tags()
+
+
+@router.get("/offline-bundle")
+async def offline_bundle(
+    limit: int | None = Query(default=None, ge=1, le=500),
+    service: QuizService = Depends(get_service),
+) -> dict:
+    """Return questions with full answer data (incl. is_correct) for offline play.
+
+    The frontend caches this bundle in IndexedDB so games work without a server
+    connection.  No ELO tracking happens offline — it's a practice mode.
+    """
+    configured = settings.offline_quiz_questions  # 0 = all
+    effective_limit = limit or (configured if configured > 0 else 10_000)
+    result = service.list_questions(
+        limit=effective_limit,
+        balanced_categories=True,
+        randomize=True,
+        order_by_elo="asc",
+    )
+    categories = service.list_categories()
+    tags = service.list_tags()
+
+    questions = []
+    for q in result.items:
+        answers = [{"id": str(a.id), "text": a.text, "is_correct": a.is_correct} for a in q.answers]
+        random.shuffle(answers)
+        questions.append({
+            "id": str(q.id),
+            "text": q.text,
+            "note": q.note,
+            "category": q.category,
+            "tags": q.tags,
+            "elo_score": q.elo_score,
+            "difficulty": q.difficulty,
+            "is_pun": q.is_pun,
+            "media_url": q.media_url,
+            "media_type": q.media_type,
+            "answers": answers,
+        })
+
+    return {
+        "questions": questions,
+        "categories": [{"id": str(c.id), "name": c.name} for c in categories],
+        "tags": [{"id": str(t.id), "name": t.name} for t in tags],
+        "total": result.total,
+    }
 
 
 # --- Players ---

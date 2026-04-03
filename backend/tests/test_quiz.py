@@ -1601,7 +1601,7 @@ def test_difficulty_badge_medium(quiz_client) -> None:
     assert 1100 <= q["elo_score"] < 1300
 
 
-def test_difficulty_badge_hard(quiz_client) -> None:
+def test_difficulty_badge_hard( quiz_client) -> None:
     """A question with ELO >= 1300 should get difficulty HARD."""
     q = quiz_client.post("/api/v1/quiz/questions", json={
         "text": "Hard question?",
@@ -1610,6 +1610,7 @@ def test_difficulty_badge_hard(quiz_client) -> None:
     player = quiz_client.post("/api/v1/quiz/players", json={"name": "HighElo"}).json()
     sess = quiz_client.post("/api/v1/quiz/sessions", json={"mode": "speed", "player_id": player["id"]}).json()
     wrong_id = next(a["id"] for a in q["answers"] if not a["is_correct"])
+
     # Answering wrong raises question ELO
     for _ in range(15):
         quiz_client.post(f"/api/v1/quiz/questions/{q['id']}/attempt", json={
@@ -2011,4 +2012,52 @@ def test_seed_imported_questions_are_approved(quiz_client) -> None:
     resp = quiz_client.get("/api/v1/quiz/questions")
     texts = [q["text"] for q in resp.json()["items"]]
     assert "Seeded approved question?" in texts
+
+
+# --- Offline Bundle ---
+
+
+def test_quiz_offline_bundle_returns_questions_with_answers(seeded_quiz_client) -> None:
+    """GET /api/v1/quiz/offline-bundle should return questions with full answer data."""
+    resp = seeded_quiz_client.get("/api/v1/quiz/offline-bundle?limit=5")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "questions" in data
+    assert "categories" in data
+    assert "tags" in data
+    assert "total" in data
+    assert len(data["questions"]) <= 5
+    # Each question must have answers with is_correct field
+    for q in data["questions"]:
+        assert "id" in q
+        assert "text" in q
+        assert "answers" in q
+        assert len(q["answers"]) >= 2
+        for a in q["answers"]:
+            assert "id" in a
+            assert "text" in a
+            assert "is_correct" in a
+        # At least one correct answer
+        correct = [a for a in q["answers"] if a["is_correct"]]
+        assert len(correct) >= 1
+
+
+def test_quiz_offline_bundle_empty_db(quiz_client) -> None:
+    """Offline bundle with empty DB should return 0 questions (not error)."""
+    resp = quiz_client.get("/api/v1/quiz/offline-bundle")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["questions"] == []
+    assert data["total"] == 0
+
+
+def test_offline_config_endpoint(client) -> None:
+    """GET /api/v1/config/offline should return cache size config."""
+    resp = client.get("/api/v1/config/offline")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "quiz_questions" in data
+    assert "imposter_words" in data
+    assert "piccolo_challenges" in data
+    assert isinstance(data["quiz_questions"], int)
 

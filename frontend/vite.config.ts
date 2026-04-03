@@ -36,6 +36,30 @@ export default defineConfig({
         navigateFallbackAllowlist: [/^\/(?!api\/)/],
         runtimeCaching: [
           {
+            // Offline bundles — long-lived cache, updated on explicit sync
+            urlPattern: /\/api\/v1\/[^/]+\/offline-bundle/,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "offline-bundles",
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+              },
+            },
+          },
+          {
+            // Offline config endpoint
+            urlPattern: /\/api\/v1\/config\/offline/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "offline-config",
+              expiration: {
+                maxEntries: 1,
+                maxAgeSeconds: 24 * 60 * 60, // 1 day
+              },
+            },
+          },
+          {
             // API responses — network first, fall back to cache for offline
             urlPattern: /^\/api\/v1\/.*/,
             handler: "NetworkFirst",

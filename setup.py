@@ -190,7 +190,7 @@ def _ensure_env_file(project_root: Path) -> None:
 def _ensure_backend_deps(backend_dir: Path, venv_python: Path) -> None:
     """Install backend requirements if the venv cannot import server dependencies."""
     backend_ready = subprocess.run(
-        [str(venv_python), "-c", "import fastapi, uvicorn"],
+        [str(venv_python), "-c", "import fastapi, uvicorn, chess, sqlmodel, yaml"],
         cwd=backend_dir,
         capture_output=True,
         text=True,

@@ -29,7 +29,7 @@ PlayBox is a multi-game platform serving browser-based party and quiz games as a
 - **No external API dependencies** — all game logic is self-contained
 - **Offline-first** for Imposter & Piccolo (Service Worker caches everything)
 - **Online required** for Quiz (question DB, ELO updates, media)
-- Chess: TBD (may use external engine library)
+- **Online required** for Chess (game state managed by backend via `python-chess`)
 
 ## Components
 
@@ -44,7 +44,7 @@ PlayBox is a multi-game platform serving browser-based party and quiz games as a
 | `frontend/src/games/imposter/` | Imposter UI (pass-and-play, timer) | React |
 | `frontend/src/games/piccolo/` | Piccolo UI (challenge display) | React |
 | `frontend/src/games/quiz/` | Quiz UI (both game modes, question submission) | React |
-| `frontend/src/games/chess/` | Chess variant UI (board rendering) | React, chessboard lib |
+| `frontend/src/games/chess/` | Chess variant UI (board rendering) | React, CSS Grid, Unicode pieces |
 
 ## Technology Stack
 
@@ -133,6 +133,24 @@ PlayBox is a multi-game platform serving browser-based party and quiz games as a
 | `word_reports` | `id`, `word_id`, `reason`, `created_at` |
 
 Game sessions are in-memory only (no persistence).
+
+### Chess Game (In-Memory)
+
+Chess games are **in-memory only** — no database. Data resets on server restart.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Unique game identifier |
+| `variant` | String | `STANDARD` (8×8), `MINI_6X8`, `MINI_7X8` |
+| `player_white` | String | White player name (default: "Player 1") |
+| `player_black` | String | Black player name (default: "Player 2") |
+| `engine` | ChessEngine | `python-chess` Board wrapper |
+| `status` | String | `ACTIVE`, `CHECK`, `CHECKMATE`, `STALEMATE`, `DRAW`, `RESIGNED` |
+| `move_history` | List[str] | UCI move strings (e.g. `["e2e4", "e7e5"]`) |
+| `captured_white` | List[str] | Pieces captured by white (Unicode symbols) |
+| `captured_black` | List[str] | Pieces captured by black (Unicode symbols) |
+
+**Engine abstraction:** `ChessEngine` (ABC) → `StandardEngine` (8×8 via `python-chess`). `VariantEngine` (6×8, 7×8) is stubbed with `NotImplementedError` — the extension point for future mini-board support.
 
 ### ELO Calculation
 
@@ -239,10 +257,18 @@ As the community plays, question ELOs self-calibrate through the ELO update form
 | GET | `/ordering-question` | Random ordering question (shuffled answers) |
 | POST | `/ordering-question/{id}/check` | Validate ordering answer sequence |
 | GET | `/admin/questions/pending` | List questions awaiting moderation (admin) |
+| POST | `/admin/questions/{id}/moderate` | Approve or reject a pending question (admin) |
+
+#### Chess — `/api/v1/chess/`
+
+| Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/games` | Create a new game (variant, players) |
-| GET | `/games/{id}` | Get game state |
-| POST | `/games/{id}/move` | Submit a move |
+| GET | `/status` | Module status (active, variant support info) |
+| POST | `/games` | Create a new game (variant, player names) |
+| GET | `/games` | List recent games (newest first) |
+| GET | `/games/{id}` | Get game state (FEN, legal moves, status) |
+| POST | `/games/{id}/move` | Submit a move in UCI notation (e.g. `e2e4`) |
+| POST | `/games/{id}/resign` | Resign for a given color (WHITE/BLACK) |
 
 #### System
 
@@ -279,7 +305,7 @@ PlayBox is delivered as a Progressive Web App via `vite-plugin-pwa` (Workbox und
 **Offline capability per game:**
 - **Imposter / Piccolo**: word lists and challenge pools are cached via the `api-cache` strategy after the first fetch. Fully playable offline once cached.
 - **Quiz**: requires online for ELO updates. Questions are cached briefly but new games need network.
-- **Chess**: TBD.
+- **Chess**: online required — game state managed server-side by `python-chess`.
 
 ## Deployment & Infrastructure
 
@@ -291,7 +317,7 @@ PlayBox is delivered as a Progressive Web App via `vite-plugin-pwa` (Workbox und
 ## Open Questions
 
 - CSS/UI framework: Tailwind CSS vs. MUI vs. custom?
-- Chess: build from scratch vs. fork/extend existing open-source project?
+- Chess: ~~build from scratch vs. fork/extend existing open-source project?~~ → **Resolved: `python-chess`** for 8×8 standard chess. Custom `VariantEngine` abstraction ready for 6×8/7×8 mini-boards when needed.
 - ~~Quiz media storage: local filesystem vs. S3-compatible object storage?~~ → **Resolved: local filesystem** (`./media/quiz/{question_id}/`), served via `/media/` static mount. Migrate to S3 post-dev if needed.
 - Piccolo: how large should the initial challenge database be?
 - Should there be a moderation queue for user-submitted quiz questions?

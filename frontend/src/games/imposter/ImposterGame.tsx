@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { PlayerNameFields } from "../../core/PlayerNameFields";
 import { countEnteredPlayerNames, normalizePlayerNames } from "../../core/playerRegistration";
-import { cacheWordList, createOfflineSession, revealOffline } from "./offlineSession";
+import { cacheWordList, createOfflineSession, createOfflineSessionAsync, revealOffline } from "./offlineSession";
+import { getOfflineImposterCategories } from "../../core/offlineManager";
 
 const API_BASE = "/api/v1/imposter";
 const MIN_PLAYERS = 3;
@@ -179,6 +180,15 @@ export default function ImposterGame() {
           setCategoriesError("");
         }
       } catch (error) {
+        // Try IndexedDB offline cache for categories
+        try {
+          const offlineCats = await getOfflineImposterCategories();
+          if (!ignore && offlineCats.length > 0) {
+            setCategories(offlineCats);
+            setCategoriesError("");
+            return;
+          }
+        } catch { /* ignore */ }
         if (!ignore) {
           setCategoriesError(
             error instanceof Error ? error.message : "Could not load categories.",
@@ -346,12 +356,20 @@ export default function ImposterGame() {
       setIsOffline(false);
       setStep("reveal");
     } catch {
-      // Backend unreachable — try offline fallback
-      const offlineSession = createOfflineSession(
+      // Backend unreachable — try offline fallback (localStorage first, then IndexedDB)
+      let offlineSession = createOfflineSession(
         players,
         selectedCategory || null,
         timerSeconds,
       );
+
+      if (!offlineSession) {
+        offlineSession = await createOfflineSessionAsync(
+          players,
+          selectedCategory || null,
+          timerSeconds,
+        );
+      }
 
       if (offlineSession) {
         setPlayerNames(players);

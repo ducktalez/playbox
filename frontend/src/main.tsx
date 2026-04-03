@@ -4,6 +4,10 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./index.css";
 import { Layout } from "./core/Layout";
 import { Home } from "./core/Home";
+import { syncAllOfflineData } from "./core/offlineManager";
+
+// Sync offline bundles on app start (non-blocking, best-effort)
+syncAllOfflineData().catch(() => {});
 
 const Fallback = () => (
   <div style={{ color: "var(--text-muted)", padding: "2rem" }}>Laden…</div>

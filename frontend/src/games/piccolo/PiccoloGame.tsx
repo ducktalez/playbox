@@ -5,9 +5,11 @@ import { normalizePlayerNames } from "../../core/playerRegistration";
 import {
   cacheChallenges,
   createOfflineSession,
+  createOfflineSessionAsync,
   nextOfflineChallenge,
   type OfflineSession,
 } from "./offlineSession";
+import { getOfflinePiccoloCategories } from "../../core/offlineManager";
 
 const API_BASE = "/api/v1/piccolo";
 const MIN_PLAYERS = 2;
@@ -101,6 +103,15 @@ export default function PiccoloGame() {
           setCategoriesError("");
         }
       } catch (error) {
+        // Try IndexedDB offline cache for categories
+        try {
+          const offlineCats = await getOfflinePiccoloCategories();
+          if (!ignore && offlineCats.length > 0) {
+            setCategories(offlineCats);
+            setCategoriesError("");
+            return;
+          }
+        } catch { /* ignore */ }
         if (!ignore) {
           setCategoriesError(
             error instanceof Error ? error.message : "Could not load categories.",
@@ -252,12 +263,20 @@ export default function PiccoloGame() {
       setIsOffline(false);
       await loadNextChallenge(payload.id);
     } catch {
-      // Backend unreachable — try offline fallback
-      const offSession = createOfflineSession(
+      // Backend unreachable — try offline fallback (localStorage first, then IndexedDB)
+      let offSession = createOfflineSession(
         players,
         intensity,
         selectedCategories.length > 0 ? selectedCategories : null,
       );
+
+      if (!offSession) {
+        offSession = await createOfflineSessionAsync(
+          players,
+          intensity,
+          selectedCategories.length > 0 ? selectedCategories : null,
+        );
+      }
 
       if (offSession) {
         offlineSessionRef.current = offSession;

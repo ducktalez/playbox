@@ -42,6 +42,12 @@ class Settings(BaseSettings):
     media_dir: str = "./media"
     max_media_size_mb: int = 50
 
+    # Offline cache sizes — how many items to include in offline bundles
+    # 0 = all available items (for small datasets like word lists / challenges)
+    offline_quiz_questions: int = 0
+    offline_imposter_words: int = 0
+    offline_piccolo_challenges: int = 0
+
     model_config = {"env_prefix": "PLAYBOX_", "env_file": ROOT_ENV_FILE}
 
 

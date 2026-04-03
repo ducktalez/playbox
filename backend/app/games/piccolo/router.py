@@ -4,11 +4,23 @@ import uuid
 
 from fastapi import APIRouter
 
+from app.core.config import settings
 from app.games.piccolo.schemas import ChallengeOut, ChallengeTemplateOut, SessionCreateIn, SessionOut
 from app.games.piccolo.service import PiccoloService
 
 router = APIRouter()
 service = PiccoloService()
+
+
+@router.get("/offline-bundle")
+async def offline_bundle() -> dict:
+    """Return all challenges + categories as a single JSON bundle for offline caching."""
+    challenges = service.get_challenges(category=None, intensity=None)
+    limit = settings.offline_piccolo_challenges
+    if limit > 0:
+        challenges = challenges[:limit]
+    categories = service.get_categories()
+    return {"challenges": [c.model_dump() for c in challenges], "categories": categories}
 
 
 @router.get("/categories")

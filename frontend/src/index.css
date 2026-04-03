@@ -166,6 +166,14 @@ a:hover {
   display: inline-block;
 }
 
+.offline-badge {
+  color: #4ade80;
+  font-size: 0.7rem;
+  margin-top: 0.4rem;
+  display: inline-block;
+  opacity: 0.8;
+}
+
 .placeholder-page {
   max-width: 720px;
 }

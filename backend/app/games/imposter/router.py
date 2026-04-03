@@ -4,6 +4,7 @@ import uuid
 
 from fastapi import APIRouter
 
+from app.core.config import settings
 from app.games.imposter.schemas import (
     SessionCreateIn,
     SessionOut,
@@ -15,6 +16,17 @@ from app.games.imposter.service import ImposterService
 
 router = APIRouter()
 service = ImposterService()
+
+
+@router.get("/offline-bundle")
+async def offline_bundle() -> dict:
+    """Return all words + categories as a single JSON bundle for offline caching."""
+    words = service.get_words(category=None)
+    limit = settings.offline_imposter_words
+    if limit > 0:
+        words = words[:limit]
+    categories = service.get_categories()
+    return {"words": [w.model_dump() for w in words], "categories": categories}
 
 
 @router.get("/words")

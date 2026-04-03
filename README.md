@@ -4,6 +4,13 @@
 
 ## Ablage/TODOs
 
+- WWM Hintergrund beim Spiel soll generiert werden. prinzipiell soll es drei Optionen geben
+  1. Rechts ein Bild/Video vom Drachenlord, wie er einfach dasitzt (rechts). Links ein generischer TV-Monitor, der clips abspielen kann
+  2. Quasi 1.), nur dass ein generisches "Wer wird Millionär?"-pult als Overlay bereitstellt. Ebenso generisches Publikum.
+  3. Ein grob modelliertes 3d-Studio mit generischen Avataren als Publikum. (Vorerst nicht implementieren) 
+      - Moderator ist Dorian/Drachenlord 
+      - Moderator kann mit KI Stimme reden. Haterkommentare kommen aus dem Publikum. 
+      - Fragen-sql-schema kann bezüglich clips erweitert werden, die dann eingeblendet werden.
 - "Story mode" für Winklerfragen (Jeden Tag zehn Versuche. Schaltet ein Legacy-Winkel-Video frei) 
   - Am Anfang: 6 Antworten
 - Option: Mehr als eine richtige Antwort

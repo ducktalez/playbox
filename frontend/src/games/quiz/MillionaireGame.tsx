@@ -17,8 +17,13 @@
  * See also: README.md "Ablage/TODOs".
  */
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import QuestionFeedback, { type PendingFeedback } from "./QuestionFeedback";
+import {
+  createOfflineQuizSession,
+  getCurrentQuestion as getOfflineCurrentQ,
+} from "./offlineSession";
+import { getOfflineQuizQuestions } from "../../core/offlineManager";
 
 const API_BASE =
   typeof window !== "undefined"
@@ -328,6 +333,71 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
   // Game-over is deferred: player sees feedback flow first, then advances to game-over screen
   const [gameOverPending, setGameOverPending] = useState(false);
 
+  // Offline mode
+  const [isOffline, setIsOffline] = useState(false);
+
+  // Reason the game ended due to offline — shown on game-over screen
+  const [offlineEndReason, setOfflineEndReason] = useState<string | null>(null);
+
+  // Pre-cached answer truth — maps questionId → full question data including is_correct.
+  // Populated at game init from (a) the server's /questions response AND (b) IndexedDB bundle.
+  type AnswerTruth = {
+    correctId: string;
+    answers: Map<string, boolean>;
+    note: string | null;
+    fullAnswers: { id: string; text: string; is_correct: boolean }[];
+    text: string;
+    category: string;
+    elo_score: number;
+    media_url: string | null;
+    media_type: string | null;
+  };
+  const answerTruthRef = useRef<Map<string, AnswerTruth>>(new Map());
+
+  /** Build the answer truth cache from IndexedDB (merges into existing entries). */
+  const buildAnswerTruthCache = async () => {
+    try {
+      const cached = await getOfflineQuizQuestions();
+      for (const q of cached) {
+        if (answerTruthRef.current.has(q.id)) continue; // game questions take precedence
+        const correct = q.answers.find((a) => a.is_correct);
+        if (correct) {
+          answerTruthRef.current.set(q.id, {
+            correctId: correct.id,
+            answers: new Map(q.answers.map((a) => [a.id, a.is_correct])),
+            note: q.note,
+            fullAnswers: q.answers,
+            text: q.text,
+            category: q.category ?? "",
+            elo_score: q.elo_score,
+            media_url: q.media_url,
+            media_type: q.media_type,
+          });
+        }
+      }
+    } catch { /* IndexedDB unavailable — cache stays empty */ }
+  };
+
+  /** Add questions from a server response (with is_correct) to the truth cache. */
+  const cacheGameQuestions = (items: any[]) => {
+    for (const q of items) {
+      const correct = q.answers?.find((a: any) => a.is_correct);
+      if (correct) {
+        answerTruthRef.current.set(q.id, {
+          correctId: correct.id,
+          answers: new Map(q.answers.map((a: any) => [a.id, a.is_correct])),
+          note: q.note ?? null,
+          fullAnswers: q.answers,
+          text: q.text,
+          category: q.category ?? "",
+          elo_score: q.elo_score ?? 0,
+          media_url: q.media_url ?? null,
+          media_type: q.media_type ?? null,
+        });
+      }
+    }
+  };
+
   // Sync React volume state → module-level variables → all audio elements
   useEffect(() => {
     _audioVolume = volume;
@@ -377,9 +447,10 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
         // If no ordering questions exist, skip to main game
         setOrderingPhase(false);
         await initMainGame();
-      } catch (e) {
-        alert(`Fehler: ${e instanceof Error ? e.message : e}`);
-        onBack();
+      } catch {
+        // Server unreachable — skip ordering phase and try offline main game
+        setOrderingPhase(false);
+        await initMainGame();
       }
     };
     init();
@@ -410,17 +481,50 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
       const ids = qData.items.map((q: { id: string }) => q.id);
       if (ids.length === 0) { alert("Keine Fragen vorhanden!"); onBack(); return; }
 
+      // Cache the 15 game questions from the server response (includes is_correct).
+      // These are the questions we'll actually play — they MUST be in the truth cache
+      // so offline evaluation works if the server drops mid-game.
+      cacheGameQuestions(qData.items);
+      // Augment with IndexedDB offline bundle (for any extra questions)
+      await buildAnswerTruthCache();
+
       setQuestionIds(ids);
       setLoading(false);
       // BG music will be started by loadQuestion — no intro sound
       loadQuestion(ids[0], 1);
     } catch (e) {
-      alert(`Fehler: ${e instanceof Error ? e.message : e}`);
-      onBack();
+      // Backend unreachable — try offline fallback
+      await buildAnswerTruthCache(); // populate truth cache from IndexedDB
+      const offSess = await createOfflineQuizSession("millionaire", 15);
+      if (offSess && offSess.questions.length > 0) {
+        setIsOffline(true);
+        const ids = offSess.questions.map((q) => q.id);
+        setQuestionIds(ids);
+        setLoading(false);
+        // Load first question from offline cache
+        const q = getOfflineCurrentQ(offSess);
+        if (q) {
+          setCurrentQuestion({
+            id: q.id,
+            text: q.text,
+            category: q.category ?? "",
+            elo_score: q.elo_score,
+            media_url: q.media_url,
+            media_type: q.media_type,
+            answers: q.answers.map((a) => ({ id: a.id, text: a.text })),
+          });
+          playBg(1);
+        }
+      } else {
+        alert(`Fehler: ${e instanceof Error ? e.message : e}\n\nKeine Offline-Daten verfügbar.`);
+        onBack();
+      }
     }
   };
 
   // --- Load Question ---
+  // Cache-first: all 15 game questions are pre-cached in answerTruthRef at init.
+  // The server is NEVER needed for individual question fetches.
   const loadQuestion = async (id: string, level: number) => {
     setSelectedAnswer(null);
     setAttempt(null);
@@ -431,11 +535,84 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
     setExtraLifeWrongId(null);
     setSlideKey((k) => k + 1);
 
-    const res = await fetch(`${API_BASE}/questions/${id}?num_answers=4`);
-    if (res.ok) {
-      setCurrentQuestion(await res.json());
-      // playBg is a no-op if the correct track is already playing (levels 1-5)
+    // 1. Always use the pre-built truth cache (populated from server response at initMainGame)
+    const truth = answerTruthRef.current.get(id);
+    if (truth) {
+      // Build 4-answer display: 1 correct + up to 3 wrong, shuffled
+      const correct = truth.fullAnswers.filter((a) => a.is_correct);
+      const wrong = truth.fullAnswers.filter((a) => !a.is_correct);
+      const picked = [
+        correct[Math.floor(Math.random() * correct.length)],
+        ...wrong.sort(() => Math.random() - 0.5).slice(0, 3),
+      ].sort(() => Math.random() - 0.5);
+      setCurrentQuestion({
+        id,
+        text: truth.text,
+        category: truth.category,
+        elo_score: truth.elo_score,
+        media_url: truth.media_url,
+        media_type: truth.media_type,
+        answers: picked.map((a) => ({ id: a.id, text: a.text })),
+      });
       playBg(level);
+      return;
+    }
+
+    // 2. Truth cache miss — try IndexedDB as fallback
+    try {
+      const allQ = await getOfflineQuizQuestions();
+      const offQ = allQ.find((q) => q.id === id);
+      if (offQ) {
+        const correctAns = offQ.answers.find((a) => a.is_correct);
+        if (correctAns) {
+          // Cache for future submitAnswer lookups
+          answerTruthRef.current.set(id, {
+            correctId: correctAns.id,
+            answers: new Map(offQ.answers.map((a) => [a.id, a.is_correct])),
+            note: offQ.note,
+            fullAnswers: offQ.answers,
+            text: offQ.text,
+            category: offQ.category ?? "",
+            elo_score: offQ.elo_score,
+            media_url: offQ.media_url,
+            media_type: offQ.media_type,
+          });
+          const wrong = offQ.answers.filter((a) => !a.is_correct);
+          const picked = [
+            correctAns,
+            ...wrong.sort(() => Math.random() - 0.5).slice(0, 3),
+          ].sort(() => Math.random() - 0.5);
+          setCurrentQuestion({
+            id,
+            text: offQ.text,
+            category: offQ.category ?? "",
+            elo_score: offQ.elo_score,
+            media_url: offQ.media_url,
+            media_type: offQ.media_type,
+            answers: picked.map((a) => ({ id: a.id, text: a.text })),
+          });
+          setIsOffline(true);
+          playBg(level);
+          return;
+        }
+      }
+    } catch { /* IndexedDB unavailable */ }
+
+    // 3. Last resort: try server directly
+    try {
+      const res = await fetch(`${API_BASE}/questions/${id}?num_answers=4`);
+      if (!res.ok) throw new Error(`Question fetch failed: ${res.status}`);
+      setCurrentQuestion(await res.json());
+      playBg(level);
+    } catch {
+      // Question not in any cache AND server unreachable — game cannot continue
+      setIsOffline(true);
+      stopBg();
+      setOfflineEndReason(
+        "Verbindung zum Server verloren. Für diese Stufe ist keine gecachte Frage verfügbar."
+      );
+      setGameOver(true);
+      playSfx(sfx.outro);
     }
   };
 
@@ -525,7 +702,7 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
   // --- Submit Answer ---
   const submitAnswer = useCallback(
     async (answerId: string) => {
-      if (selectedAnswer || revealing || !currentQuestion || !player || !session) return;
+      if (selectedAnswer || revealing || !currentQuestion) return;
       setSelectedAnswer(answerId);
       setRevealing(true);
 
@@ -535,6 +712,80 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
       }
 
       playSfx(sfx.lockIn);
+
+      // Offline mode — evaluate locally
+      if (isOffline) {
+        await new Promise((resolve) => setTimeout(resolve, 1800));
+        stopSfxTrack(sfx.lockIn);
+
+        // Try pre-cached truth first, then IndexedDB
+        const truth = answerTruthRef.current.get(currentQuestion.id);
+        let isCorrect: boolean;
+        let correctAnswerId: string;
+        let note: string | null;
+
+        if (truth) {
+          isCorrect = truth.answers.get(answerId) ?? false;
+          correctAnswerId = truth.correctId;
+          note = truth.note;
+        } else {
+          const allQ = await getOfflineQuizQuestions();
+          const offQ = allQ.find((q) => q.id === currentQuestion.id);
+          if (offQ) {
+            const correctAns = offQ.answers.find((a) => a.is_correct);
+            const selectedAns = offQ.answers.find((a) => a.id === answerId);
+            isCorrect = selectedAns?.is_correct ?? false;
+            correctAnswerId = correctAns?.id ?? "";
+            note = offQ.note;
+          } else {
+            // Question not in any cache — cannot evaluate
+            setRevealing(false);
+            setSelectedAnswer(null);
+            return;
+          }
+        }
+
+        const att: AttemptOut = {
+          correct: isCorrect,
+          correct_answer_id: correctAnswerId,
+          note,
+          player_elo_before: 1200,
+          player_elo_after: 1200,
+          question_elo_before: 1200,
+          question_elo_after: 1200,
+        };
+
+        setAttempt(att);
+        setRevealing(false);
+
+        if (isCorrect) {
+          if (currentLevel >= 15) {
+            stopBg();
+            setGameWon(true);
+            playSfx(sfx.win);
+          } else {
+            playSfx(getCorrectSfx(currentLevel));
+            if (SAFETY_LEVELS.has(currentLevel)) {
+              const safetySfx = currentLevel === 5 ? sfx.safety1 : sfx.safety2;
+              setTimeout(() => {
+                if (currentLevel === 5) stopBg();
+                playSfx(safetySfx);
+              }, 1500);
+              setCelebratingSafety(currentLevel as 5 | 10);
+            }
+          }
+        } else {
+          if (hasExtraLife && !extraLifeUsed && currentLevel <= EXTRA_LIFE_MAX_LEVEL) {
+            // Extra life still available
+          } else {
+            playSfx(getWrongSfx(currentLevel));
+            setGameOverPending(true);
+          }
+        }
+        return;
+      }
+
+      if (!player || !session) { setRevealing(false); return; }
 
       try {
         const res = await fetch(`${API_BASE}/questions/${currentQuestion.id}/attempt`, {
@@ -583,9 +834,80 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
             setGameOverPending(true);
           }
         }
-      } catch (e) { console.error(e); setRevealing(false); }
+      } catch {
+        // Server unreachable mid-game — evaluate locally
+        await new Promise((resolve) => setTimeout(resolve, 1800));
+        stopSfxTrack(sfx.lockIn);
+
+        // Try pre-cached truth first, then IndexedDB
+        const truth = answerTruthRef.current.get(currentQuestion.id);
+        let isCorrect: boolean;
+        let correctAnswerId: string;
+        let note: string | null;
+
+        if (truth) {
+          isCorrect = truth.answers.get(answerId) ?? false;
+          correctAnswerId = truth.correctId;
+          note = truth.note;
+        } else {
+          const allQ = await getOfflineQuizQuestions();
+          const offQ = allQ.find((q) => q.id === currentQuestion.id);
+          if (offQ) {
+            const correctAns = offQ.answers.find((a) => a.is_correct);
+            const selectedAns = offQ.answers.find((a) => a.id === answerId);
+            isCorrect = selectedAns?.is_correct ?? false;
+            correctAnswerId = correctAns?.id ?? "";
+            note = offQ.note;
+          } else {
+            // Question not in any cache — cannot evaluate, skip gracefully
+            setRevealing(false);
+            setSelectedAnswer(null);
+            setIsOffline(true);
+            return;
+          }
+        }
+
+        const att: AttemptOut = {
+          correct: isCorrect,
+          correct_answer_id: correctAnswerId,
+          note,
+          player_elo_before: player?.elo_score ?? 1200,
+          player_elo_after: player?.elo_score ?? 1200,
+          question_elo_before: 1200,
+          question_elo_after: 1200,
+        };
+
+        setAttempt(att);
+        setRevealing(false);
+        setIsOffline(true);
+
+        if (isCorrect) {
+          if (currentLevel >= 15) {
+            stopBg();
+            setGameWon(true);
+            playSfx(sfx.win);
+          } else {
+            playSfx(getCorrectSfx(currentLevel));
+            if (SAFETY_LEVELS.has(currentLevel)) {
+              const safetySfx = currentLevel === 5 ? sfx.safety1 : sfx.safety2;
+              setTimeout(() => {
+                if (currentLevel === 5) stopBg();
+                playSfx(safetySfx);
+              }, 1500);
+              setCelebratingSafety(currentLevel as 5 | 10);
+            }
+          }
+        } else {
+          if (hasExtraLife && !extraLifeUsed && currentLevel <= EXTRA_LIFE_MAX_LEVEL) {
+            // Extra life still available
+          } else {
+            playSfx(getWrongSfx(currentLevel));
+            setGameOverPending(true);
+          }
+        }
+      }
     },
-    [selectedAnswer, revealing, currentQuestion, player, session, phoneSecondChance, currentLevel, hasExtraLife, extraLifeUsed],
+    [selectedAnswer, revealing, currentQuestion, player, session, phoneSecondChance, currentLevel, hasExtraLife, extraLifeUsed, isOffline],
   );
 
   /** Fire-and-forget: POST pending feedback for the current question, then clear it. */
@@ -908,6 +1230,8 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
       setExtraLifeWrongId(null);
       setPendingFeedback(null);
       setGameOverPending(false);
+      setIsOffline(false);
+      setOfflineEndReason(null);
       setLoading(true);
       setInitTrigger((t) => t + 1);
     };
@@ -925,7 +1249,14 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
           {!gameWon && (
             <p className="wwm-result__safety">Gesichert bei: {getSafetyPrize()}</p>
           )}
-          <p className="wwm-result__elo">ELO: {Math.round(player?.elo_score || 1200)}</p>
+          <p className="wwm-result__elo">
+            {isOffline ? "📴 Offline — kein ELO-Tracking" : `ELO: ${Math.round(player?.elo_score || 1200)}`}
+          </p>
+          {offlineEndReason && (
+            <p className="wwm-result__offline-msg" style={{ color: "#facc15", fontSize: "0.85rem", marginTop: "0.5rem" }}>
+              📴 {offlineEndReason}
+            </p>
+          )}
           <div className="wwm-result__actions">
             <button className="wwm-btn wwm-btn--primary" onClick={replay}>
               🔄 Nochmal spielen
@@ -964,27 +1295,30 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
         <div className="wwm-jokers">
           <button
             className={`wwm-joker ${jokerFiftyUsed ? "wwm-joker--used" : ""}`}
-            disabled={jokerFiftyUsed || !!attempt}
+            disabled={jokerFiftyUsed || !!attempt || isOffline}
             onClick={useFiftyFifty}
-            title="50:50"
+            title={isOffline ? "50:50 — Offline nicht verfügbar" : "50:50"}
           >50:50</button>
           <button
             className={`wwm-joker ${jokerAudienceUsed ? "wwm-joker--used" : ""}`}
-            disabled={jokerAudienceUsed || !!attempt}
+            disabled={jokerAudienceUsed || !!attempt || isOffline}
             onClick={useAudience}
-            title="Publikumsjoker"
+            title={isOffline ? "Publikumsjoker — Offline nicht verfügbar" : "Publikumsjoker"}
           >👥</button>
           <button
             className={`wwm-joker ${jokerPhoneUsed ? "wwm-joker--used" : ""}`}
-            disabled={jokerPhoneUsed || !!attempt}
+            disabled={jokerPhoneUsed || !!attempt || isOffline}
             onClick={usePhone}
-            title="Telefonjoker"
+            title={isOffline ? "Telefonjoker — Offline nicht verfügbar" : "Telefonjoker"}
           >📞</button>
           {hasExtraLife && (
             <span
               className={`wwm-joker wwm-joker--extra-life${extraLifeUsed ? " wwm-joker--used" : ""}`}
               title={extraLifeUsed ? "Extra-Leben verbraucht" : "Extra-Leben (bis €32.000)"}
             >🛡️</span>
+          )}
+          {isOffline && (
+            <span className="wwm-joker" style={{ color: "#4ade80", fontSize: "0.7rem", cursor: "default" }} title="Offline-Modus — kein ELO-Tracking">📴</span>
           )}
         </div>
         <div className="wwm-header-right">

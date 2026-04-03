@@ -14,7 +14,7 @@
 | 2 | Piccolo — MVP | 2026-06 | in progress |
 | 3 | Quiz ("Wer wird Elite-Hater?") — MVP | 2026-07 | in progress |
 | 4 | Quiz — ELO system + media attachments | 2026-08 | in progress |
-| 5 | Chess Variants — MVP (low priority) | TBD | planned |
+| 5 | Chess Variants — MVP (low priority) | 2026-04 | in progress |
 | 6 | Polish, PWA optimization, offline hardening | TBD | planned |
 
 ---
@@ -263,11 +263,14 @@
 
 ## Phase 5 — Chess Variants (Low Priority)
 
-- [ ] Evaluate `python-chess` / `chess.js` for engine
-- [ ] Board rendering (6×8 and 7×8 variants)
-- [ ] Move validation for modified board sizes
-- [ ] Basic game flow: create, move, checkmate detection
-- [ ] Frontend: interactive chessboard component
+- Done: Standard 8×8 chess MVP is fully playable. `python-chess` engine integration, in-memory game store, API endpoints (create, move, resign, list), backend tests (24 passing), and interactive frontend (CSS Grid board with Unicode pieces, click-to-select/move, captured pieces, move history, resign, result screen). Engine abstraction ready for mini-board variants.
+- Open: 6×8 and 7×8 variant engine implementation, client-side offline support.
+
+- [x] Evaluate `python-chess` / `chess.js` for engine — **Result:** `python-chess` for 8×8 backend, custom `VariantEngine` ABC for mini-boards
+- [ ] Board rendering (6×8 and 7×8 variants) — **Stub ready**, engine raises `NotImplementedError`
+- [x] Move validation for standard board size (via `python-chess`)
+- [x] Basic game flow: create, move, checkmate detection, resign
+- [x] Frontend: interactive chessboard component (CSS Grid + Unicode pieces, mobile-first)
 
 ---
 
@@ -359,7 +362,8 @@
 - Bulk import tests restored: 6 tests covering create, dedup, tags, invalid payload, empty, ordering questions
 - Moderation queue: `moderation_status` field (PENDING/APPROVED/REJECTED) on Question model, `POST /questions/submit` (user → PENDING), `POST /questions` (admin → APPROVED), `GET /admin/questions/pending`, `POST /admin/questions/{id}/moderate`, placeholder `X-Admin-Token` auth, seed/import auto-APPROVED, 11 tests
 - ELO history chart: SVG-based line chart in `PlayerProfile.tsx` (EloChart component), fetches `GET /players/{id}/elo-history`, touch-friendly tooltips, correct/wrong color-coded dots, gradient fill, responsive viewBox, no external charting dependency
-- Backend tests: `test_imposter.py` (11), `test_piccolo.py` (20), `test_quiz.py` (120), `test_elo.py` (8), `test_smoke.py` (6) — total 165 (all green)
+- Chess MVP: `python-chess` integration, `StandardEngine` (8×8) + `VariantEngine` ABC (6×8/7×8 stub), in-memory game store, API endpoints (create/get/list/move/resign), 24 backend tests (all green), interactive frontend board (CSS Grid + Unicode pieces, click-to-select/move, captured pieces display, move history, resign, result screen, mobile-first), chess module mounted at `/api/v1/chess/`
+- Backend tests: `test_imposter.py` (11), `test_piccolo.py` (20), `test_quiz.py` (120), `test_elo.py` (8), `test_smoke.py` (6), `test_chess.py` (24) — total 189 (all green)
 
 ## Dependencies
 

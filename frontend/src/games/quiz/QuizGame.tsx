@@ -16,6 +16,14 @@ import LeaderboardView from "./LeaderboardView";
 import PlayerProfile from "./PlayerProfile";
 import QuestionForm from "./QuestionForm";
 import QuestionFeedback, { type PendingFeedback } from "./QuestionFeedback";
+import {
+  createOfflineQuizSession,
+  getCurrentQuestion,
+  submitOfflineAnswer,
+  advanceOfflineSession,
+  type OfflineQuizSession,
+} from "./offlineSession";
+import { getOfflineQuizQuestions } from "../../core/offlineManager";
 
 const API_BASE =
   typeof window !== "undefined"
@@ -98,6 +106,10 @@ export default function QuizGame() {
 
   // Deferred question feedback
   const [pendingFeedback, setPendingFeedback] = useState<PendingFeedback | null>(null);
+
+  // Offline mode
+  const [isOffline, setIsOffline] = useState(false);
+  const [offlineSession, setOfflineSession] = useState<OfflineQuizSession | null>(null);
 
   const isSpeedMode = duelMode === "duel-speed";
 
@@ -195,7 +207,7 @@ export default function QuizGame() {
       const sData: SessionOut = await sRes.json();
       setSession(sData);
 
-      const limit = selectedMode === "millionaire" ? 15 : 10;
+      const limit = 10; // speed mode always 10 questions
       const tagParam = selectedTag ? `&tag=${encodeURIComponent(selectedTag)}` : "";
       const qRes = await fetch(
         `${API_BASE}/questions?balanced_categories=true&limit=${limit}${tagParam}`,
@@ -216,6 +228,35 @@ export default function QuizGame() {
       setStep("playing");
       loadQuestion(ids[0], selectedMode === "duel-speed");
     } catch (e) {
+      // Backend unreachable — try offline fallback for speed mode
+      if (selectedMode === "duel-speed") {
+        const offSess = await createOfflineQuizSession("speed");
+        if (offSess && offSess.questions.length > 0) {
+          setOfflineSession(offSess);
+          setIsOffline(true);
+          setDuelMode("duel-speed");
+          const q = getCurrentQuestion(offSess);
+          if (q) {
+            setCurrentQuestion({
+              id: q.id,
+              text: q.text,
+              category: q.category ?? "",
+              elo_score: q.elo_score,
+              media_url: q.media_url,
+              media_type: q.media_type,
+              answers: q.answers.map((a) => ({ id: a.id, text: a.text })),
+            });
+            setQuestionIds(offSess.questions.map((oq) => oq.id));
+            setCurrentIdx(0);
+            setCorrectCount(0);
+            setStep("playing");
+            setTimeRemaining(20);
+            setTimerActive(true);
+            setSlideKey((k) => k + 1);
+          }
+          return;
+        }
+      }
       console.error("Error in startGame:", e);
       alert(
         `Fehler beim Spielstart:\n${e instanceof Error ? e.message : String(e)}\n\nIst das Backend auf Port 8015 erreichbar?`,
@@ -230,12 +271,80 @@ export default function QuizGame() {
     setTimedOut(false);
     setSlideKey((k) => k + 1);
 
-    const res = await fetch(`${API_BASE}/questions/${id}?num_answers=4`);
-    if (res.ok) {
+    try {
+      const res = await fetch(`${API_BASE}/questions/${id}?num_answers=4`);
+      if (!res.ok) throw new Error(`Question fetch failed: ${res.status}`);
       setCurrentQuestion(await res.json());
       if (startTimer) {
         setTimeRemaining(20);
         setTimerActive(true);
+      }
+    } catch {
+      // Server unreachable mid-game — fall back to offline
+      const allQ = await getOfflineQuizQuestions();
+      const offQ = allQ.find((q) => q.id === id);
+      if (offQ) {
+        // Pick 1 correct + up to 3 wrong (same as server logic)
+        const correct = offQ.answers.filter((a) => a.is_correct);
+        const wrong = offQ.answers.filter((a) => !a.is_correct);
+        const picked = [
+          correct[Math.floor(Math.random() * correct.length)],
+          ...wrong.sort(() => Math.random() - 0.5).slice(0, 3),
+        ].sort(() => Math.random() - 0.5);
+        setCurrentQuestion({
+          id: offQ.id,
+          text: offQ.text,
+          category: offQ.category ?? "",
+          elo_score: offQ.elo_score,
+          media_url: offQ.media_url,
+          media_type: offQ.media_type,
+          answers: picked.map((a) => ({ id: a.id, text: a.text })),
+        });
+        // Build an offline session from remaining questions
+        if (!isOffline) {
+          const remaining = questionIds.slice(currentIdx);
+          const offSess = await createOfflineQuizSession(
+            isSpeedMode ? "speed" : "millionaire",
+            remaining.length,
+          );
+          if (offSess) {
+            // Replace with matching questions from cache, keeping current one
+            setOfflineSession(offSess);
+          }
+          setIsOffline(true);
+        }
+        if (startTimer) {
+          setTimeRemaining(20);
+          setTimerActive(true);
+        }
+      } else {
+        // Question not in cache — try to create a full offline session from scratch
+        const offSess = await createOfflineQuizSession(
+          isSpeedMode ? "speed" : "millionaire",
+          questionIds.length - currentIdx,
+        );
+        if (offSess && offSess.questions.length > 0) {
+          setOfflineSession(offSess);
+          setIsOffline(true);
+          const q = getCurrentQuestion(offSess);
+          if (q) {
+            setCurrentQuestion({
+              id: q.id,
+              text: q.text,
+              category: q.category ?? "",
+              elo_score: q.elo_score,
+              media_url: q.media_url,
+              media_type: q.media_type,
+              answers: q.answers.map((a) => ({ id: a.id, text: a.text })),
+            });
+            setQuestionIds(offSess.questions.map((oq) => oq.id));
+            setCurrentIdx(0);
+          }
+          if (startTimer) {
+            setTimeRemaining(20);
+            setTimerActive(true);
+          }
+        }
       }
     }
   };
@@ -243,9 +352,27 @@ export default function QuizGame() {
   // --- Submit answer ---
   const submitAnswer = useCallback(
     async (answerId: string, isTimeout: boolean = false) => {
-      if (selectedAnswer || !currentQuestion || !player || !session) return;
+      if (selectedAnswer || !currentQuestion) return;
       setSelectedAnswer(answerId);
       setTimerActive(false);
+
+      // Offline mode — evaluate locally
+      if (isOffline && offlineSession) {
+        const result = submitOfflineAnswer(offlineSession, answerId);
+        setAttempt({
+          correct: result.correct,
+          correct_answer_id: result.correctAnswerId,
+          note: result.note,
+          player_elo_before: 1200,
+          player_elo_after: 1200,
+          question_elo_before: 1200,
+          question_elo_after: 1200,
+        });
+        if (result.correct) setCorrectCount((c) => c + 1);
+        return;
+      }
+
+      if (!player || !session) return;
 
       try {
         const res = await fetch(
@@ -271,16 +398,69 @@ export default function QuizGame() {
             prev ? { ...prev, elo_score: att.player_elo_after } : prev,
           );
         }
-      } catch (e) {
-        console.error("Submit error:", e);
+      } catch {
+        // Server unreachable mid-game — evaluate locally from cached data
+        const allQ = await getOfflineQuizQuestions();
+        const offQ = allQ.find((q) => q.id === currentQuestion.id);
+        if (offQ) {
+          const correctAns = offQ.answers.find((a) => a.is_correct);
+          const selectedAns = offQ.answers.find((a) => a.id === answerId);
+          const isCorrect = selectedAns?.is_correct ?? false;
+          setAttempt({
+            correct: isCorrect,
+            correct_answer_id: correctAns?.id ?? "",
+            note: offQ.note,
+            player_elo_before: player.elo_score,
+            player_elo_after: player.elo_score,
+            question_elo_before: 1200,
+            question_elo_after: 1200,
+          });
+          if (isCorrect) setCorrectCount((c) => c + 1);
+          setIsOffline(true);
+        } else {
+          console.error("Submit failed and question not in offline cache");
+        }
       }
     },
-    [selectedAnswer, currentQuestion, player, session, timeRemaining],
+    [selectedAnswer, currentQuestion, player, session, timeRemaining, isOffline, offlineSession],
   );
 
   // --- Next question ---
   const nextQuestion = async () => {
     flushFeedback();
+
+    // Offline mode — advance locally
+    if (isOffline && offlineSession) {
+      const hasMore = advanceOfflineSession(offlineSession);
+      if (!hasMore) {
+        setStep("result");
+        return;
+      }
+      const nextIdx = offlineSession.currentIndex;
+      setCurrentIdx(nextIdx);
+      const q = getCurrentQuestion(offlineSession);
+      if (q) {
+        setCurrentQuestion({
+          id: q.id,
+          text: q.text,
+          category: q.category ?? "",
+          elo_score: q.elo_score,
+          media_url: q.media_url,
+          media_type: q.media_type,
+          answers: q.answers.map((a) => ({ id: a.id, text: a.text })),
+        });
+        setSelectedAnswer(null);
+        setAttempt(null);
+        setTimedOut(false);
+        setSlideKey((k) => k + 1);
+        if (isSpeedMode) {
+          setTimeRemaining(20);
+          setTimerActive(true);
+        }
+      }
+      return;
+    }
+
     const nextIdx = currentIdx + 1;
     if (nextIdx >= questionIds.length) {
       if (session) {
@@ -311,6 +491,8 @@ export default function QuizGame() {
     setCorrectCount(0);
     setTimerActive(false);
     setTimedOut(false);
+    setIsOffline(false);
+    setOfflineSession(null);
   };
 
   // ========== RENDER ==========
@@ -433,10 +615,16 @@ export default function QuizGame() {
           <p className="quiz-result__details">
             Richtige Antworten
           </p>
-          <p className="quiz-result__details">
-            ELO: {Math.round(startElo)} → {Math.round(player?.elo_score || 1200)}{" "}
-            ({eloSign}{eloDelta})
-          </p>
+          {isOffline ? (
+            <p className="quiz-result__details" style={{ color: "#4ade80", fontSize: "0.85rem" }}>
+              📴 Offline-Modus — kein ELO-Tracking
+            </p>
+          ) : (
+            <p className="quiz-result__details">
+              ELO: {Math.round(startElo)} &rarr; {Math.round(player?.elo_score || 1200)}{" "}
+              ({eloSign}{eloDelta})
+            </p>
+          )}
           <button
             className="quiz-mode-btn quiz-mode-btn--primary"
             style={{ marginTop: "1rem" }}
@@ -444,12 +632,14 @@ export default function QuizGame() {
           >
             Nochmal spielen
           </button>
-          <button
-            className="quiz-mode-btn"
-            onClick={() => { setStep("setup"); setLeaderboardActive(true); }}
-          >
-            🏆 Leaderboard
-          </button>
+          {!isOffline && (
+            <button
+              className="quiz-mode-btn"
+              onClick={() => { setStep("setup"); setLeaderboardActive(true); }}
+            >
+              🏆 Leaderboard
+            </button>
+          )}
         </div>
       </div>
     );
@@ -484,7 +674,11 @@ export default function QuizGame() {
           <span>
             {currentIdx + 1}/{questionIds.length}
           </span>
-          <span>ELO {Math.round(player?.elo_score || 1200)}</span>
+          {isOffline ? (
+            <span style={{ color: "#4ade80", fontSize: "0.75rem" }}>📴 Offline</span>
+          ) : (
+            <span>ELO {Math.round(player?.elo_score || 1200)}</span>
+          )}
         </div>
         {isSpeedMode && (
           <span

@@ -8,6 +8,8 @@
 
 import { useState, useCallback } from "react";
 import QuestionFeedback, { type PendingFeedback } from "./QuestionFeedback";
+import { createOfflineQuizSession } from "./offlineSession";
+import { getOfflineQuizQuestions } from "../../core/offlineManager";
 
 const API_BASE =
   typeof window !== "undefined"
@@ -51,6 +53,9 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
   // Deferred question feedback
   const [pendingFeedback, setPendingFeedback] = useState<PendingFeedback | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Offline mode
+  const [isOffline, setIsOffline] = useState(false);
 
   // Current player: odd question index (0,2,4,...) = Player 1, even (1,3,5,...) = Player 2
   const activePlayerIdx = currentIdx % 2;
@@ -105,9 +110,25 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
       setQuestionIds(ids);
       setScores([0, 0]);
       setCurrentIdx(0);
+      setIsOffline(false);
       setDuelStep("handover");
-    } catch (e) {
-      alert(`Fehler: ${e instanceof Error ? e.message : e}`);
+    } catch {
+      // Backend unreachable — try offline fallback
+      const offSess = await createOfflineQuizSession("speed", TOTAL_QUESTIONS);
+      if (offSess && offSess.questions.length > 0) {
+        setIsOffline(true);
+        // Create fake player objects for display
+        setPlayers([
+          { id: "offline-p1", name: name1, elo_score: 1200 },
+          { id: "offline-p2", name: name2, elo_score: 1200 },
+        ]);
+        setQuestionIds(offSess.questions.map((q) => q.id));
+        setScores([0, 0]);
+        setCurrentIdx(0);
+        setDuelStep("handover");
+      } else {
+        alert("Offline und keine gecachten Fragen vorhanden. Bitte einmal online spielen.");
+      }
     } finally {
       setLoading(false);
     }
@@ -118,15 +139,97 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
     setSelectedAnswer(null);
     setAttempt(null);
     setSlideKey((k) => k + 1);
-    const res = await fetch(`${API_BASE}/questions/${id}?num_answers=4`);
-    if (res.ok) setCurrentQuestion(await res.json());
+
+    // Helper: pick 1 correct + 3 wrong from full answer list
+    const pickFour = (answers: { id: string; text: string; is_correct: boolean }[]) => {
+      const correct = answers.filter((a) => a.is_correct);
+      const wrong = answers.filter((a) => !a.is_correct);
+      return [
+        correct[Math.floor(Math.random() * correct.length)],
+        ...wrong.sort(() => Math.random() - 0.5).slice(0, 3),
+      ].sort(() => Math.random() - 0.5);
+    };
+
+    // Offline mode — load from cache
+    if (isOffline) {
+      const allQ = await getOfflineQuizQuestions();
+      const offQ = allQ.find((q) => q.id === id);
+      if (offQ) {
+        const picked = pickFour(offQ.answers);
+        setCurrentQuestion({
+          id: offQ.id,
+          text: offQ.text,
+          category: offQ.category ?? "",
+          elo_score: offQ.elo_score,
+          answers: picked.map((a) => ({ id: a.id, text: a.text })),
+        });
+      }
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/questions/${id}?num_answers=4`);
+      if (!res.ok) throw new Error("fetch failed");
+      setCurrentQuestion(await res.json());
+    } catch {
+      // Server unreachable mid-game — fall back to offline
+      const allQ = await getOfflineQuizQuestions();
+      const offQ = allQ.find((q) => q.id === id);
+      if (offQ) {
+        const picked = pickFour(offQ.answers);
+        setCurrentQuestion({
+          id: offQ.id,
+          text: offQ.text,
+          category: offQ.category ?? "",
+          elo_score: offQ.elo_score,
+          answers: picked.map((a) => ({ id: a.id, text: a.text })),
+        });
+        setIsOffline(true);
+      }
+    }
   };
 
   // --- Submit answer ---
   const submitAnswer = useCallback(
     async (answerId: string) => {
-      if (selectedAnswer || !currentQuestion || !activePlayer || !activeSession) return;
+      if (selectedAnswer || !currentQuestion) return;
       setSelectedAnswer(answerId);
+
+      // Offline mode — evaluate locally
+      if (isOffline) {
+        const allQ = await getOfflineQuizQuestions();
+        const offQ = allQ.find((q) => q.id === currentQuestion.id);
+        if (!offQ) {
+          // Question not in cache — cannot evaluate, skip gracefully
+          setSelectedAnswer(null);
+          return;
+        }
+        const correctAns = offQ.answers.find((a) => a.is_correct);
+        const selectedAns = offQ.answers.find((a) => a.id === answerId);
+        const isCorrect = selectedAns?.is_correct ?? false;
+
+        const att: AttemptOut = {
+          correct: isCorrect,
+          correct_answer_id: correctAns?.id ?? "",
+          note: offQ.note ?? null,
+          player_elo_before: 1200,
+          player_elo_after: 1200,
+          question_elo_before: 1200,
+          question_elo_after: 1200,
+        };
+        setAttempt(att);
+
+        if (isCorrect) {
+          setScores((prev) => {
+            const next: [number, number] = [...prev];
+            next[activePlayerIdx] += 1;
+            return next;
+          });
+        }
+        return;
+      }
+
+      if (!activePlayer || !activeSession) return;
 
       try {
         const res = await fetch(`${API_BASE}/questions/${currentQuestion.id}/attempt`, {
@@ -154,9 +257,42 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
           updated[activePlayerIdx] = { ...updated[activePlayerIdx], elo_score: att.player_elo_after };
           return updated;
         });
-      } catch (e) { console.error(e); }
+      } catch {
+        // Server unreachable mid-game — evaluate locally
+        const allQ = await getOfflineQuizQuestions();
+        const offQ = allQ.find((q) => q.id === currentQuestion.id);
+        if (!offQ) {
+          // Question not in cache — cannot evaluate, skip gracefully
+          setSelectedAnswer(null);
+          setIsOffline(true);
+          return;
+        }
+        const correctAns = offQ.answers.find((a) => a.is_correct);
+        const selectedAns = offQ.answers.find((a) => a.id === answerId);
+        const isCorrect = selectedAns?.is_correct ?? false;
+
+        const att: AttemptOut = {
+          correct: isCorrect,
+          correct_answer_id: correctAns?.id ?? "",
+          note: offQ.note ?? null,
+          player_elo_before: activePlayer?.elo_score ?? 1200,
+          player_elo_after: activePlayer?.elo_score ?? 1200,
+          question_elo_before: 1200,
+          question_elo_after: 1200,
+        };
+        setAttempt(att);
+        setIsOffline(true);
+
+        if (isCorrect) {
+          setScores((prev) => {
+            const next: [number, number] = [...prev];
+            next[activePlayerIdx] += 1;
+            return next;
+          });
+        }
+      }
     },
-    [selectedAnswer, currentQuestion, activePlayer, activeSession, activePlayerIdx],
+    [selectedAnswer, currentQuestion, activePlayer, activeSession, activePlayerIdx, isOffline],
   );
 
   /** Fire-and-forget: POST pending feedback for the current question, then clear it. */
@@ -180,11 +316,11 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
     flushFeedback();
     const nextIdx = currentIdx + 1;
     if (nextIdx >= questionIds.length) {
-      // Finish both sessions
-      if (sessions) {
+      // Finish both sessions (skip if offline)
+      if (sessions && !isOffline) {
         await Promise.all([
-          fetch(`${API_BASE}/sessions/${sessions[0].id}/finish`, { method: "POST" }),
-          fetch(`${API_BASE}/sessions/${sessions[1].id}/finish`, { method: "POST" }),
+          fetch(`${API_BASE}/sessions/${sessions[0].id}/finish`, { method: "POST" }).catch(() => {}),
+          fetch(`${API_BASE}/sessions/${sessions[1].id}/finish`, { method: "POST" }).catch(() => {}),
         ]);
       }
       setDuelStep("result");
@@ -295,19 +431,29 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
             <div className={`duel-result-player ${scores[0] >= scores[1] ? "duel-result-player--winner" : ""}`}>
               <span className="duel-result-player__name">{p1Name}</span>
               <span className="duel-result-player__score">{scores[0]}</span>
-              <span className="duel-result-player__elo">ELO {Math.round(players?.[0]?.elo_score ?? 1200)}</span>
+              <span className="duel-result-player__elo">
+                {isOffline ? "Offline" : `ELO ${Math.round(players?.[0]?.elo_score ?? 1200)}`}
+              </span>
             </div>
             <div className="duel-result-vs">vs</div>
             <div className={`duel-result-player ${scores[1] >= scores[0] ? "duel-result-player--winner" : ""}`}>
               <span className="duel-result-player__name">{p2Name}</span>
               <span className="duel-result-player__score">{scores[1]}</span>
-              <span className="duel-result-player__elo">ELO {Math.round(players?.[1]?.elo_score ?? 1200)}</span>
+              <span className="duel-result-player__elo">
+                {isOffline ? "Offline" : `ELO ${Math.round(players?.[1]?.elo_score ?? 1200)}`}
+              </span>
             </div>
           </div>
 
           <div className="quiz-result__details">
             {scores[0] + scores[1]} / {questionIds.length} Fragen richtig beantwortet
           </div>
+
+          {isOffline && (
+            <p className="quiz-result__details" style={{ color: "#4ade80", fontSize: "0.85rem" }}>
+              📴 Offline-Modus — kein ELO-Tracking
+            </p>
+          )}
 
           <button className="quiz-mode-btn quiz-mode-btn--primary" style={{ marginTop: "1rem" }} onClick={onBack}>
             Zurück zum Menü

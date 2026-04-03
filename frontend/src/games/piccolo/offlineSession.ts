@@ -1,6 +1,9 @@
 /**
  * Piccolo Offline Fallback — local game sessions when backend is unreachable.
+ * Tries localStorage first, then falls back to IndexedDB (populated by OfflineManager).
  */
+
+import { getOfflinePiccoloChallenges, type OfflineChallenge } from "../../core/offlineManager";
 
 type ChallengeTemplate = {
   text: string;
@@ -8,6 +11,8 @@ type ChallengeTemplate = {
   intensity: string;
   target_count: number;
 };
+
+// ...existing OfflineSession type, ChallengeResult type, STORAGE_KEY, INTENSITY_INCLUDES...
 
 export type OfflineSession = {
   id: string;
@@ -48,6 +53,20 @@ export function getCachedChallenges(): ChallengeTemplate[] {
     // Corrupted
   }
   return [];
+}
+
+/** Load cached challenges from localStorage, falling back to IndexedDB. */
+async function getCachedChallengesAsync(): Promise<ChallengeTemplate[]> {
+  const local = getCachedChallenges();
+  if (local.length > 0) return local;
+
+  const idbChallenges = await getOfflinePiccoloChallenges();
+  return idbChallenges.map((c: OfflineChallenge) => ({
+    text: c.text,
+    category: c.category,
+    intensity: c.intensity,
+    target_count: c.target_count,
+  }));
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -95,6 +114,25 @@ export function createOfflineSession(
   categories: string[] | null,
 ): OfflineSession | null {
   const all = getCachedChallenges();
+  return buildOfflineSession(all, playerNames, intensity, categories);
+}
+
+/** Create a local Piccolo session, trying IndexedDB if localStorage is empty. */
+export async function createOfflineSessionAsync(
+  playerNames: string[],
+  intensity: string,
+  categories: string[] | null,
+): Promise<OfflineSession | null> {
+  const all = await getCachedChallengesAsync();
+  return buildOfflineSession(all, playerNames, intensity, categories);
+}
+
+function buildOfflineSession(
+  all: ChallengeTemplate[],
+  playerNames: string[],
+  intensity: string,
+  categories: string[] | null,
+): OfflineSession | null {
   if (!all.length) return null;
 
   const allowed = INTENSITY_INCLUDES[intensity] ?? ["mild", "medium"];
