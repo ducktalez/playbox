@@ -2,11 +2,24 @@
 
 import random
 import uuid
+from datetime import datetime, timezone
 
-from app.games.piccolo.schemas import ChallengeOut, ChallengeTemplateOut, SessionOut
+from app.core.errors import AppError
+from app.games.piccolo.schemas import (
+    ChallengeOut,
+    ChallengeTemplateOut,
+    ChallengeFeedbackIn,
+    ChallengeFeedbackOut,
+    SessionOut,
+    FEEDBACK_TYPES,
+    REPORT_CATEGORIES,
+)
 
 # In-memory session storage
 _sessions: dict[uuid.UUID, dict] = {}
+
+# In-memory feedback storage (no persistence — resets on restart, like sessions)
+_feedback: list[dict] = []
 
 # Challenge templates — {player} is replaced with a random player name
 _CHALLENGES: list[dict] = [
@@ -199,3 +212,48 @@ class PiccoloService:
             targets=targets,
         )
 
+    # --- Challenge Feedback ---
+
+    def submit_feedback(self, data: ChallengeFeedbackIn) -> ChallengeFeedbackOut:
+        """Submit feedback on a challenge template."""
+        ft = data.feedback_type.upper()
+        if ft not in FEEDBACK_TYPES:
+            raise AppError(422, f"Invalid feedback_type '{data.feedback_type}'. Must be one of: {', '.join(sorted(FEEDBACK_TYPES))}", "INVALID_FEEDBACK_TYPE")
+
+        # Validate category rules per feedback type
+        if ft == "REPORT":
+            if not data.category:
+                raise AppError(422, "category is required for REPORT feedback.", "CATEGORY_REQUIRED")
+            # Validate each category in comma-separated set
+            cats = {c.strip() for c in data.category.split(",") if c.strip()}
+            invalid = cats - REPORT_CATEGORIES
+            if invalid:
+                raise AppError(422, f"Invalid report categories: {', '.join(sorted(invalid))}. Valid: {', '.join(sorted(REPORT_CATEGORIES))}", "INVALID_CATEGORY")
+        elif ft == "THUMBS_UP" and data.category:
+            raise AppError(422, "category is not allowed for THUMBS_UP feedback.", "CATEGORY_NOT_ALLOWED")
+
+        entry = {
+            "id": uuid.uuid4(),
+            "challenge_text": data.challenge_text,
+            "feedback_type": ft,
+            "category": data.category,
+            "comment": data.comment,
+            "created_at": datetime.now(timezone.utc),
+        }
+        _feedback.append(entry)
+
+        return ChallengeFeedbackOut(**entry)
+
+    def list_feedback(
+        self,
+        challenge_text: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[ChallengeFeedbackOut]:
+        """List feedback entries, optionally filtered by challenge_text. Newest first."""
+        items = _feedback
+        if challenge_text:
+            items = [f for f in items if f["challenge_text"] == challenge_text]
+        # Reverse gives newest-first (items are appended chronologically)
+        items = list(reversed(items))
+        return [ChallengeFeedbackOut(**f) for f in items[offset:offset + limit]]

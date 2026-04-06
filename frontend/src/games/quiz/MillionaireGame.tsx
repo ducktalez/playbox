@@ -24,6 +24,14 @@ import {
   getCurrentQuestion as getOfflineCurrentQ,
 } from "./offlineSession";
 import { getOfflineQuizQuestions } from "../../core/offlineManager";
+import {
+  type TruthCache,
+  createTruthCache,
+  cacheServerQuestions,
+  mergeIndexedDBQuestions,
+  truthToDisplayQuestion,
+  evaluateFromCache,
+} from "./questionTruthCache";
 
 const API_BASE =
   typeof window !== "undefined"
@@ -339,64 +347,9 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
   // Reason the game ended due to offline — shown on game-over screen
   const [offlineEndReason, setOfflineEndReason] = useState<string | null>(null);
 
-  // Pre-cached answer truth — maps questionId → full question data including is_correct.
-  // Populated at game init from (a) the server's /questions response AND (b) IndexedDB bundle.
-  type AnswerTruth = {
-    correctId: string;
-    answers: Map<string, boolean>;
-    note: string | null;
-    fullAnswers: { id: string; text: string; is_correct: boolean }[];
-    text: string;
-    category: string;
-    elo_score: number;
-    media_url: string | null;
-    media_type: string | null;
-  };
-  const answerTruthRef = useRef<Map<string, AnswerTruth>>(new Map());
-
-  /** Build the answer truth cache from IndexedDB (merges into existing entries). */
-  const buildAnswerTruthCache = async () => {
-    try {
-      const cached = await getOfflineQuizQuestions();
-      for (const q of cached) {
-        if (answerTruthRef.current.has(q.id)) continue; // game questions take precedence
-        const correct = q.answers.find((a) => a.is_correct);
-        if (correct) {
-          answerTruthRef.current.set(q.id, {
-            correctId: correct.id,
-            answers: new Map(q.answers.map((a) => [a.id, a.is_correct])),
-            note: q.note,
-            fullAnswers: q.answers,
-            text: q.text,
-            category: q.category ?? "",
-            elo_score: q.elo_score,
-            media_url: q.media_url,
-            media_type: q.media_type,
-          });
-        }
-      }
-    } catch { /* IndexedDB unavailable — cache stays empty */ }
-  };
-
-  /** Add questions from a server response (with is_correct) to the truth cache. */
-  const cacheGameQuestions = (items: any[]) => {
-    for (const q of items) {
-      const correct = q.answers?.find((a: any) => a.is_correct);
-      if (correct) {
-        answerTruthRef.current.set(q.id, {
-          correctId: correct.id,
-          answers: new Map(q.answers.map((a: any) => [a.id, a.is_correct])),
-          note: q.note ?? null,
-          fullAnswers: q.answers,
-          text: q.text,
-          category: q.category ?? "",
-          elo_score: q.elo_score ?? 0,
-          media_url: q.media_url ?? null,
-          media_type: q.media_type ?? null,
-        });
-      }
-    }
-  };
+  // Pre-cached answer truth — all game questions with is_correct.
+  // Populated at init from (a) server /questions response and (b) IndexedDB bundle.
+  const answerTruthRef = useRef<TruthCache>(createTruthCache());
 
   // Sync React volume state → module-level variables → all audio elements
   useEffect(() => {
@@ -484,9 +437,9 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
       // Cache the 15 game questions from the server response (includes is_correct).
       // These are the questions we'll actually play — they MUST be in the truth cache
       // so offline evaluation works if the server drops mid-game.
-      cacheGameQuestions(qData.items);
+      cacheServerQuestions(answerTruthRef.current, qData.items);
       // Augment with IndexedDB offline bundle (for any extra questions)
-      await buildAnswerTruthCache();
+      await mergeIndexedDBQuestions(answerTruthRef.current);
 
       setQuestionIds(ids);
       setLoading(false);
@@ -494,7 +447,7 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
       loadQuestion(ids[0], 1);
     } catch (e) {
       // Backend unreachable — try offline fallback
-      await buildAnswerTruthCache(); // populate truth cache from IndexedDB
+      await mergeIndexedDBQuestions(answerTruthRef.current); // populate truth cache from IndexedDB
       const offSess = await createOfflineQuizSession("millionaire", 15);
       if (offSess && offSess.questions.length > 0) {
         setIsOffline(true);
@@ -538,22 +491,7 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
     // 1. Always use the pre-built truth cache (populated from server response at initMainGame)
     const truth = answerTruthRef.current.get(id);
     if (truth) {
-      // Build 4-answer display: 1 correct + up to 3 wrong, shuffled
-      const correct = truth.fullAnswers.filter((a) => a.is_correct);
-      const wrong = truth.fullAnswers.filter((a) => !a.is_correct);
-      const picked = [
-        correct[Math.floor(Math.random() * correct.length)],
-        ...wrong.sort(() => Math.random() - 0.5).slice(0, 3),
-      ].sort(() => Math.random() - 0.5);
-      setCurrentQuestion({
-        id,
-        text: truth.text,
-        category: truth.category,
-        elo_score: truth.elo_score,
-        media_url: truth.media_url,
-        media_type: truth.media_type,
-        answers: picked.map((a) => ({ id: a.id, text: a.text })),
-      });
+      setCurrentQuestion(truthToDisplayQuestion(truth, id));
       playBg(level);
       return;
     }
@@ -565,32 +503,9 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
       if (offQ) {
         const correctAns = offQ.answers.find((a) => a.is_correct);
         if (correctAns) {
-          // Cache for future submitAnswer lookups
-          answerTruthRef.current.set(id, {
-            correctId: correctAns.id,
-            answers: new Map(offQ.answers.map((a) => [a.id, a.is_correct])),
-            note: offQ.note,
-            fullAnswers: offQ.answers,
-            text: offQ.text,
-            category: offQ.category ?? "",
-            elo_score: offQ.elo_score,
-            media_url: offQ.media_url,
-            media_type: offQ.media_type,
-          });
-          const wrong = offQ.answers.filter((a) => !a.is_correct);
-          const picked = [
-            correctAns,
-            ...wrong.sort(() => Math.random() - 0.5).slice(0, 3),
-          ].sort(() => Math.random() - 0.5);
-          setCurrentQuestion({
-            id,
-            text: offQ.text,
-            category: offQ.category ?? "",
-            elo_score: offQ.elo_score,
-            media_url: offQ.media_url,
-            media_type: offQ.media_type,
-            answers: picked.map((a) => ({ id: a.id, text: a.text })),
-          });
+          // Add to truth cache for future submitAnswer lookups
+          cacheServerQuestions(answerTruthRef.current, [offQ]);
+          setCurrentQuestion(truthToDisplayQuestion(answerTruthRef.current.get(id)!, id));
           setIsOffline(true);
           playBg(level);
           return;
@@ -718,37 +633,18 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
         await new Promise((resolve) => setTimeout(resolve, 1800));
         stopSfxTrack(sfx.lockIn);
 
-        // Try pre-cached truth first, then IndexedDB
-        const truth = answerTruthRef.current.get(currentQuestion.id);
-        let isCorrect: boolean;
-        let correctAnswerId: string;
-        let note: string | null;
-
-        if (truth) {
-          isCorrect = truth.answers.get(answerId) ?? false;
-          correctAnswerId = truth.correctId;
-          note = truth.note;
-        } else {
-          const allQ = await getOfflineQuizQuestions();
-          const offQ = allQ.find((q) => q.id === currentQuestion.id);
-          if (offQ) {
-            const correctAns = offQ.answers.find((a) => a.is_correct);
-            const selectedAns = offQ.answers.find((a) => a.id === answerId);
-            isCorrect = selectedAns?.is_correct ?? false;
-            correctAnswerId = correctAns?.id ?? "";
-            note = offQ.note;
-          } else {
-            // Question not in any cache — cannot evaluate
-            setRevealing(false);
-            setSelectedAnswer(null);
-            return;
-          }
+        // Evaluate from truth cache
+        const result = evaluateFromCache(answerTruthRef.current, currentQuestion.id, answerId);
+        if (!result) {
+          setRevealing(false);
+          setSelectedAnswer(null);
+          return;
         }
 
         const att: AttemptOut = {
-          correct: isCorrect,
-          correct_answer_id: correctAnswerId,
-          note,
+          correct: result.correct,
+          correct_answer_id: result.correctAnswerId,
+          note: result.note,
           player_elo_before: 1200,
           player_elo_after: 1200,
           question_elo_before: 1200,
@@ -758,7 +654,7 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
         setAttempt(att);
         setRevealing(false);
 
-        if (isCorrect) {
+        if (result.correct) {
           if (currentLevel >= 15) {
             stopBg();
             setGameWon(true);
@@ -839,38 +735,20 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
         await new Promise((resolve) => setTimeout(resolve, 1800));
         stopSfxTrack(sfx.lockIn);
 
-        // Try pre-cached truth first, then IndexedDB
-        const truth = answerTruthRef.current.get(currentQuestion.id);
-        let isCorrect: boolean;
-        let correctAnswerId: string;
-        let note: string | null;
-
-        if (truth) {
-          isCorrect = truth.answers.get(answerId) ?? false;
-          correctAnswerId = truth.correctId;
-          note = truth.note;
-        } else {
-          const allQ = await getOfflineQuizQuestions();
-          const offQ = allQ.find((q) => q.id === currentQuestion.id);
-          if (offQ) {
-            const correctAns = offQ.answers.find((a) => a.is_correct);
-            const selectedAns = offQ.answers.find((a) => a.id === answerId);
-            isCorrect = selectedAns?.is_correct ?? false;
-            correctAnswerId = correctAns?.id ?? "";
-            note = offQ.note;
-          } else {
-            // Question not in any cache — cannot evaluate, skip gracefully
-            setRevealing(false);
-            setSelectedAnswer(null);
-            setIsOffline(true);
-            return;
-          }
+        // Evaluate from truth cache
+        const result = evaluateFromCache(answerTruthRef.current, currentQuestion.id, answerId);
+        if (!result) {
+          // Question not in any cache — cannot evaluate, skip gracefully
+          setRevealing(false);
+          setSelectedAnswer(null);
+          setIsOffline(true);
+          return;
         }
 
         const att: AttemptOut = {
-          correct: isCorrect,
-          correct_answer_id: correctAnswerId,
-          note,
+          correct: result.correct,
+          correct_answer_id: result.correctAnswerId,
+          note: result.note,
           player_elo_before: player?.elo_score ?? 1200,
           player_elo_after: player?.elo_score ?? 1200,
           question_elo_before: 1200,
@@ -881,7 +759,7 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
         setRevealing(false);
         setIsOffline(true);
 
-        if (isCorrect) {
+        if (result.correct) {
           if (currentLevel >= 15) {
             stopBg();
             setGameWon(true);

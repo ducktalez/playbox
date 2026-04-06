@@ -225,6 +225,8 @@ As the community plays, question ELOs self-calibrate through the ELO update form
 | GET | `/challenges` | Get challenges (optional: `?intensity=&category=`) |
 | POST | `/session` | Start a new game session with player names |
 | GET | `/session/{id}/next` | Get next challenge for session |
+| POST | `/challenges/feedback` | Submit feedback on a challenge (THUMBS_UP/THUMBS_DOWN/REPORT) |
+| GET | `/challenges/feedback` | List feedback entries (optional: `?challenge_text=`) |
 
 #### Quiz — `/api/v1/quiz/`
 
@@ -258,6 +260,8 @@ As the community plays, question ELOs self-calibrate through the ELO update form
 | POST | `/ordering-question/{id}/check` | Validate ordering answer sequence |
 | GET | `/admin/questions/pending` | List questions awaiting moderation (admin) |
 | POST | `/admin/questions/{id}/moderate` | Approve or reject a pending question (admin) |
+| GET | `/offline-bundle` | All approved questions with answers (including `is_correct`) for IndexedDB caching |
+| GET | `/offline-config` | Cache-sync metadata (version, question count) |
 
 #### Chess — `/api/v1/chess/`
 
@@ -303,8 +307,8 @@ PlayBox is delivered as a Progressive Web App via `vite-plugin-pwa` (Workbox und
 | `/media/*` | CacheFirst | `media-cache` | 30 days, 100 entries | Sound files, images — rarely change |
 
 **Offline capability per game:**
-- **Imposter / Piccolo**: word lists and challenge pools are cached via the `api-cache` strategy after the first fetch. Fully playable offline once cached.
-- **Quiz**: requires online for ELO updates. Questions are cached briefly but new games need network.
+- **Imposter / Piccolo**: word lists and challenge pools are cached via the `api-cache` strategy after the first fetch. Client-side fallback with cached data in localStorage. Fully playable offline once cached. Both support content reporting (word reports / challenge feedback).
+- **Quiz**: playable offline after initial cache sync — questions with answer truth are pre-cached in IndexedDB via `/api/v1/quiz/offline-bundle`. All three modes (Millionär, Speed, 1v1) use a shared `questionTruthCache` module for cache-first question loading and local answer evaluation. ELO tracking requires online. Question feedback (THUMBS_UP/THUMBS_DOWN/REPORT) available when online.
 - **Chess**: online required — game state managed server-side by `python-chess`.
 
 ## Deployment & Infrastructure
@@ -320,7 +324,7 @@ PlayBox is delivered as a Progressive Web App via `vite-plugin-pwa` (Workbox und
 - Chess: ~~build from scratch vs. fork/extend existing open-source project?~~ → **Resolved: `python-chess`** for 8×8 standard chess. Custom `VariantEngine` abstraction ready for 6×8/7×8 mini-boards when needed.
 - ~~Quiz media storage: local filesystem vs. S3-compatible object storage?~~ → **Resolved: local filesystem** (`./media/quiz/{question_id}/`), served via `/media/` static mount. Migrate to S3 post-dev if needed.
 - Piccolo: how large should the initial challenge database be?
-- Should there be a moderation queue for user-submitted quiz questions?
+- ~~Should there be a moderation queue for user-submitted quiz questions?~~ → **Resolved: yes** — `moderation_status` field (PENDING/APPROVED/REJECTED), admin endpoints implemented in Phase 4.
 
 ## Deviations from Meta-Repo Standards
 

@@ -6,10 +6,18 @@
  * Winner = most correct answers. Ties are drawn.
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import QuestionFeedback, { type PendingFeedback } from "./QuestionFeedback";
 import { createOfflineQuizSession } from "./offlineSession";
 import { getOfflineQuizQuestions } from "../../core/offlineManager";
+import {
+  type TruthCache,
+  createTruthCache,
+  cacheServerQuestions,
+  mergeIndexedDBQuestions,
+  truthToDisplayQuestion,
+  evaluateFromCache,
+} from "./questionTruthCache";
 
 const API_BASE =
   typeof window !== "undefined"
@@ -23,6 +31,7 @@ type PlayerOut = { id: string; name: string; elo_score: number };
 type SessionOut = { id: string; mode: string; player_id: string; score: number };
 type QuestionOut = {
   id: string; text: string; category: string; elo_score: number;
+  media_url: string | null; media_type: string | null;
   answers: { id: string; text: string }[];
 };
 type AttemptOut = {
@@ -56,6 +65,9 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
 
   // Offline mode
   const [isOffline, setIsOffline] = useState(false);
+
+  // Pre-cached answer truth for cache-first question loading and offline evaluation
+  const truthCacheRef = useRef<TruthCache>(createTruthCache());
 
   // Current player: odd question index (0,2,4,...) = Player 1, even (1,3,5,...) = Player 2
   const activePlayerIdx = currentIdx % 2;
@@ -107,6 +119,10 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
       const ids = qData.items.map((q: { id: string }) => q.id);
       if (ids.length === 0) { alert("Keine Fragen vorhanden!"); onBack(); return; }
 
+      // Pre-cache all game questions (includes is_correct) for cache-first loading
+      cacheServerQuestions(truthCacheRef.current, qData.items);
+      await mergeIndexedDBQuestions(truthCacheRef.current);
+
       setQuestionIds(ids);
       setScores([0, 0]);
       setCurrentIdx(0);
@@ -134,56 +150,42 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
     }
   };
 
-  // --- Load question ---
+  // --- Load question (cache-first) ---
   const loadQuestion = async (id: string) => {
     setSelectedAnswer(null);
     setAttempt(null);
     setSlideKey((k) => k + 1);
 
-    // Helper: pick 1 correct + 3 wrong from full answer list
-    const pickFour = (answers: { id: string; text: string; is_correct: boolean }[]) => {
-      const correct = answers.filter((a) => a.is_correct);
-      const wrong = answers.filter((a) => !a.is_correct);
-      return [
-        correct[Math.floor(Math.random() * correct.length)],
-        ...wrong.sort(() => Math.random() - 0.5).slice(0, 3),
-      ].sort(() => Math.random() - 0.5);
-    };
+    // 1. Try truth cache first (populated at initGame from server response)
+    const truth = truthCacheRef.current.get(id);
+    if (truth) {
+      setCurrentQuestion(truthToDisplayQuestion(truth, id));
+      return;
+    }
 
-    // Offline mode — load from cache
+    // 2. Offline mode — load from IndexedDB
     if (isOffline) {
       const allQ = await getOfflineQuizQuestions();
       const offQ = allQ.find((q) => q.id === id);
       if (offQ) {
-        const picked = pickFour(offQ.answers);
-        setCurrentQuestion({
-          id: offQ.id,
-          text: offQ.text,
-          category: offQ.category ?? "",
-          elo_score: offQ.elo_score,
-          answers: picked.map((a) => ({ id: a.id, text: a.text })),
-        });
+        cacheServerQuestions(truthCacheRef.current, [offQ]);
+        setCurrentQuestion(truthToDisplayQuestion(truthCacheRef.current.get(id)!, id));
       }
       return;
     }
 
+    // 3. Server fallback
     try {
       const res = await fetch(`${API_BASE}/questions/${id}?num_answers=4`);
       if (!res.ok) throw new Error("fetch failed");
       setCurrentQuestion(await res.json());
     } catch {
-      // Server unreachable mid-game — fall back to offline
+      // Server unreachable mid-game — fall back to IndexedDB
       const allQ = await getOfflineQuizQuestions();
       const offQ = allQ.find((q) => q.id === id);
       if (offQ) {
-        const picked = pickFour(offQ.answers);
-        setCurrentQuestion({
-          id: offQ.id,
-          text: offQ.text,
-          category: offQ.category ?? "",
-          elo_score: offQ.elo_score,
-          answers: picked.map((a) => ({ id: a.id, text: a.text })),
-        });
+        cacheServerQuestions(truthCacheRef.current, [offQ]);
+        setCurrentQuestion(truthToDisplayQuestion(truthCacheRef.current.get(id)!, id));
         setIsOffline(true);
       }
     }
@@ -195,36 +197,41 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
       if (selectedAnswer || !currentQuestion) return;
       setSelectedAnswer(answerId);
 
-      // Offline mode — evaluate locally
+      // Offline mode — evaluate from truth cache
       if (isOffline) {
-        const allQ = await getOfflineQuizQuestions();
-        const offQ = allQ.find((q) => q.id === currentQuestion.id);
-        if (!offQ) {
-          // Question not in cache — cannot evaluate, skip gracefully
-          setSelectedAnswer(null);
+        const result = evaluateFromCache(truthCacheRef.current, currentQuestion.id, answerId);
+        if (!result) {
+          // Question not in cache — try IndexedDB directly
+          const allQ = await getOfflineQuizQuestions();
+          const offQ = allQ.find((q) => q.id === currentQuestion.id);
+          if (!offQ) { setSelectedAnswer(null); return; }
+          const correctAns = offQ.answers.find((a) => a.is_correct);
+          const selectedAns = offQ.answers.find((a) => a.id === answerId);
+          const isCorrect = selectedAns?.is_correct ?? false;
+          const att: AttemptOut = {
+            correct: isCorrect,
+            correct_answer_id: correctAns?.id ?? "",
+            note: offQ.note ?? null,
+            player_elo_before: 1200, player_elo_after: 1200,
+            question_elo_before: 1200, question_elo_after: 1200,
+          };
+          setAttempt(att);
+          if (isCorrect) {
+            setScores((prev) => { const next: [number, number] = [...prev]; next[activePlayerIdx] += 1; return next; });
+          }
           return;
         }
-        const correctAns = offQ.answers.find((a) => a.is_correct);
-        const selectedAns = offQ.answers.find((a) => a.id === answerId);
-        const isCorrect = selectedAns?.is_correct ?? false;
 
         const att: AttemptOut = {
-          correct: isCorrect,
-          correct_answer_id: correctAns?.id ?? "",
-          note: offQ.note ?? null,
-          player_elo_before: 1200,
-          player_elo_after: 1200,
-          question_elo_before: 1200,
-          question_elo_after: 1200,
+          correct: result.correct,
+          correct_answer_id: result.correctAnswerId,
+          note: result.note,
+          player_elo_before: 1200, player_elo_after: 1200,
+          question_elo_before: 1200, question_elo_after: 1200,
         };
         setAttempt(att);
-
-        if (isCorrect) {
-          setScores((prev) => {
-            const next: [number, number] = [...prev];
-            next[activePlayerIdx] += 1;
-            return next;
-          });
+        if (result.correct) {
+          setScores((prev) => { const next: [number, number] = [...prev]; next[activePlayerIdx] += 1; return next; });
         }
         return;
       }
@@ -258,37 +265,25 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
           return updated;
         });
       } catch {
-        // Server unreachable mid-game — evaluate locally
-        const allQ = await getOfflineQuizQuestions();
-        const offQ = allQ.find((q) => q.id === currentQuestion.id);
-        if (!offQ) {
-          // Question not in cache — cannot evaluate, skip gracefully
+        // Server unreachable mid-game — evaluate from truth cache
+        const result = evaluateFromCache(truthCacheRef.current, currentQuestion.id, answerId);
+        if (result) {
+          const att: AttemptOut = {
+            correct: result.correct,
+            correct_answer_id: result.correctAnswerId,
+            note: result.note,
+            player_elo_before: activePlayer?.elo_score ?? 1200,
+            player_elo_after: activePlayer?.elo_score ?? 1200,
+            question_elo_before: 1200, question_elo_after: 1200,
+          };
+          setAttempt(att);
+          setIsOffline(true);
+          if (result.correct) {
+            setScores((prev) => { const next: [number, number] = [...prev]; next[activePlayerIdx] += 1; return next; });
+          }
+        } else {
           setSelectedAnswer(null);
           setIsOffline(true);
-          return;
-        }
-        const correctAns = offQ.answers.find((a) => a.is_correct);
-        const selectedAns = offQ.answers.find((a) => a.id === answerId);
-        const isCorrect = selectedAns?.is_correct ?? false;
-
-        const att: AttemptOut = {
-          correct: isCorrect,
-          correct_answer_id: correctAns?.id ?? "",
-          note: offQ.note ?? null,
-          player_elo_before: activePlayer?.elo_score ?? 1200,
-          player_elo_after: activePlayer?.elo_score ?? 1200,
-          question_elo_before: 1200,
-          question_elo_after: 1200,
-        };
-        setAttempt(att);
-        setIsOffline(true);
-
-        if (isCorrect) {
-          setScores((prev) => {
-            const next: [number, number] = [...prev];
-            next[activePlayerIdx] += 1;
-            return next;
-          });
         }
       }
     },

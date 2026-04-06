@@ -9,7 +9,7 @@
  * STATE MACHINE: setup → playing → result
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import MillionaireGame from "./MillionaireGame";
 import DuelGame from "./DuelGame";
 import LeaderboardView from "./LeaderboardView";
@@ -24,6 +24,14 @@ import {
   type OfflineQuizSession,
 } from "./offlineSession";
 import { getOfflineQuizQuestions } from "../../core/offlineManager";
+import {
+  type TruthCache,
+  createTruthCache,
+  cacheServerQuestions,
+  mergeIndexedDBQuestions,
+  truthToDisplayQuestion,
+  evaluateFromCache,
+} from "./questionTruthCache";
 
 const API_BASE =
   typeof window !== "undefined"
@@ -110,6 +118,9 @@ export default function QuizGame() {
   // Offline mode
   const [isOffline, setIsOffline] = useState(false);
   const [offlineSession, setOfflineSession] = useState<OfflineQuizSession | null>(null);
+
+  // Pre-cached answer truth for cache-first question loading and offline evaluation
+  const truthCacheRef = useRef<TruthCache>(createTruthCache());
 
   const isSpeedMode = duelMode === "duel-speed";
 
@@ -222,6 +233,10 @@ export default function QuizGame() {
         return;
       }
 
+      // Pre-cache all game questions (includes is_correct) for cache-first loading
+      cacheServerQuestions(truthCacheRef.current, qData.items);
+      await mergeIndexedDBQuestions(truthCacheRef.current);
+
       setQuestionIds(ids);
       setCurrentIdx(0);
       setCorrectCount(0);
@@ -264,13 +279,41 @@ export default function QuizGame() {
     }
   };
 
-  // --- Load a question ---
+  // --- Load a question (cache-first) ---
   const loadQuestion = async (id: string, startTimer: boolean = isSpeedMode) => {
     setSelectedAnswer(null);
     setAttempt(null);
     setTimedOut(false);
     setSlideKey((k) => k + 1);
 
+    // 1. Try truth cache first (populated at startGame from server response)
+    const truth = truthCacheRef.current.get(id);
+    if (truth) {
+      setCurrentQuestion(truthToDisplayQuestion(truth, id));
+      if (startTimer) {
+        setTimeRemaining(20);
+        setTimerActive(true);
+      }
+      return;
+    }
+
+    // 2. Try IndexedDB fallback
+    try {
+      const allQ = await getOfflineQuizQuestions();
+      const offQ = allQ.find((q) => q.id === id);
+      if (offQ) {
+        cacheServerQuestions(truthCacheRef.current, [offQ]);
+        setCurrentQuestion(truthToDisplayQuestion(truthCacheRef.current.get(id)!, id));
+        setIsOffline(true);
+        if (startTimer) {
+          setTimeRemaining(20);
+          setTimerActive(true);
+        }
+        return;
+      }
+    } catch { /* IndexedDB unavailable */ }
+
+    // 3. Last resort: fetch from server
     try {
       const res = await fetch(`${API_BASE}/questions/${id}?num_answers=4`);
       if (!res.ok) throw new Error(`Question fetch failed: ${res.status}`);
@@ -280,70 +323,31 @@ export default function QuizGame() {
         setTimerActive(true);
       }
     } catch {
-      // Server unreachable mid-game — fall back to offline
-      const allQ = await getOfflineQuizQuestions();
-      const offQ = allQ.find((q) => q.id === id);
-      if (offQ) {
-        // Pick 1 correct + up to 3 wrong (same as server logic)
-        const correct = offQ.answers.filter((a) => a.is_correct);
-        const wrong = offQ.answers.filter((a) => !a.is_correct);
-        const picked = [
-          correct[Math.floor(Math.random() * correct.length)],
-          ...wrong.sort(() => Math.random() - 0.5).slice(0, 3),
-        ].sort(() => Math.random() - 0.5);
-        setCurrentQuestion({
-          id: offQ.id,
-          text: offQ.text,
-          category: offQ.category ?? "",
-          elo_score: offQ.elo_score,
-          media_url: offQ.media_url,
-          media_type: offQ.media_type,
-          answers: picked.map((a) => ({ id: a.id, text: a.text })),
-        });
-        // Build an offline session from remaining questions
-        if (!isOffline) {
-          const remaining = questionIds.slice(currentIdx);
-          const offSess = await createOfflineQuizSession(
-            isSpeedMode ? "speed" : "millionaire",
-            remaining.length,
-          );
-          if (offSess) {
-            // Replace with matching questions from cache, keeping current one
-            setOfflineSession(offSess);
-          }
-          setIsOffline(true);
+      // Server unreachable and not in cache — create offline session from scratch
+      const offSess = await createOfflineQuizSession(
+        isSpeedMode ? "speed" : "millionaire",
+        questionIds.length - currentIdx,
+      );
+      if (offSess && offSess.questions.length > 0) {
+        setOfflineSession(offSess);
+        setIsOffline(true);
+        const q = getCurrentQuestion(offSess);
+        if (q) {
+          setCurrentQuestion({
+            id: q.id,
+            text: q.text,
+            category: q.category ?? "",
+            elo_score: q.elo_score,
+            media_url: q.media_url,
+            media_type: q.media_type,
+            answers: q.answers.map((a) => ({ id: a.id, text: a.text })),
+          });
+          setQuestionIds(offSess.questions.map((oq) => oq.id));
+          setCurrentIdx(0);
         }
         if (startTimer) {
           setTimeRemaining(20);
           setTimerActive(true);
-        }
-      } else {
-        // Question not in cache — try to create a full offline session from scratch
-        const offSess = await createOfflineQuizSession(
-          isSpeedMode ? "speed" : "millionaire",
-          questionIds.length - currentIdx,
-        );
-        if (offSess && offSess.questions.length > 0) {
-          setOfflineSession(offSess);
-          setIsOffline(true);
-          const q = getCurrentQuestion(offSess);
-          if (q) {
-            setCurrentQuestion({
-              id: q.id,
-              text: q.text,
-              category: q.category ?? "",
-              elo_score: q.elo_score,
-              media_url: q.media_url,
-              media_type: q.media_type,
-              answers: q.answers.map((a) => ({ id: a.id, text: a.text })),
-            });
-            setQuestionIds(offSess.questions.map((oq) => oq.id));
-            setCurrentIdx(0);
-          }
-          if (startTimer) {
-            setTimeRemaining(20);
-            setTimerActive(true);
-          }
         }
       }
     }
@@ -399,26 +403,22 @@ export default function QuizGame() {
           );
         }
       } catch {
-        // Server unreachable mid-game — evaluate locally from cached data
-        const allQ = await getOfflineQuizQuestions();
-        const offQ = allQ.find((q) => q.id === currentQuestion.id);
-        if (offQ) {
-          const correctAns = offQ.answers.find((a) => a.is_correct);
-          const selectedAns = offQ.answers.find((a) => a.id === answerId);
-          const isCorrect = selectedAns?.is_correct ?? false;
+        // Server unreachable mid-game — evaluate from truth cache
+        const result = evaluateFromCache(truthCacheRef.current, currentQuestion.id, answerId);
+        if (result) {
           setAttempt({
-            correct: isCorrect,
-            correct_answer_id: correctAns?.id ?? "",
-            note: offQ.note,
+            correct: result.correct,
+            correct_answer_id: result.correctAnswerId,
+            note: result.note,
             player_elo_before: player.elo_score,
             player_elo_after: player.elo_score,
             question_elo_before: 1200,
             question_elo_after: 1200,
           });
-          if (isCorrect) setCorrectCount((c) => c + 1);
+          if (result.correct) setCorrectCount((c) => c + 1);
           setIsOffline(true);
         } else {
-          console.error("Submit failed and question not in offline cache");
+          console.error("Submit failed and question not in truth cache");
         }
       }
     },

@@ -88,6 +88,13 @@ export default function PiccoloGame() {
   const [isOffline, setIsOffline] = useState(false);
   const offlineSessionRef = useRef<OfflineSession | null>(null);
 
+  // Challenge report state
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportCategory, setReportCategory] = useState<string | null>(null);
+  const [reportComment, setReportComment] = useState("");
+  const [reportSent, setReportSent] = useState(false);
+  const [reportSending, setReportSending] = useState(false);
+
   const selectedIntensity = INTENSITY_OPTIONS.find((option) => option.value === intensity);
 
   useEffect(() => {
@@ -176,11 +183,46 @@ export default function PiccoloGame() {
     setSession(null);
     setCurrentChallenge(null);
     setErrorMessage("");
+    setReportOpen(false);
+    setReportCategory(null);
+    setReportComment("");
+    setReportSent(false);
+  }
+
+  function resetReportState() {
+    setReportOpen(false);
+    setReportCategory(null);
+    setReportComment("");
+    setReportSent(false);
+  }
+
+  async function submitReport() {
+    if (!currentChallenge || !reportCategory) return;
+    setReportSending(true);
+    try {
+      await fetch(`${API_BASE}/challenges/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          challenge_text: currentChallenge.text,
+          feedback_type: "REPORT",
+          category: reportCategory,
+          comment: reportComment || null,
+        }),
+      });
+      setReportSent(true);
+    } catch {
+      // Offline — silently ignore
+      setReportSent(true);
+    } finally {
+      setReportSending(false);
+    }
   }
 
   async function loadNextChallenge(sessionId: string) {
     setIsLoadingChallenge(true);
     setErrorMessage("");
+    resetReportState();
 
     // Offline mode — compute challenge locally
     if (isOffline && offlineSessionRef.current) {
@@ -396,6 +438,91 @@ export default function PiccoloGame() {
       >
         ←
       </button>
+
+      {/* Report button — top right */}
+      {!isOffline && currentChallenge && (
+        <button
+          type="button"
+          className="button button--ghost piccolo-fullscreen__report"
+          onClick={(e) => { e.stopPropagation(); setReportOpen(!reportOpen); setReportSent(false); }}
+          title="Challenge melden"
+          style={{ position: "absolute", top: "0.75rem", right: "0.75rem", zIndex: 20, fontSize: "1.2rem", opacity: 0.7 }}
+        >
+          🚩
+        </button>
+      )}
+
+      {/* Report sheet */}
+      {reportOpen && currentChallenge && (
+        <div
+          className="piccolo-report-sheet"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 30,
+            background: "rgba(30,30,40,0.97)", padding: "1rem 1.2rem 1.5rem",
+            borderRadius: "1rem 1rem 0 0", maxHeight: "60vh", overflowY: "auto",
+          }}
+        >
+          {reportSent ? (
+            <div style={{ textAlign: "center", padding: "1rem 0" }}>
+              <p style={{ fontSize: "1.1rem" }}>✅ Danke für dein Feedback!</p>
+              <button
+                type="button"
+                className="button button--ghost"
+                onClick={resetReportState}
+                style={{ marginTop: "0.75rem" }}
+              >
+                Schließen
+              </button>
+            </div>
+          ) : (
+            <>
+              <p style={{ fontWeight: 600, marginBottom: "0.5rem" }}>🚩 Challenge melden</p>
+              <div className="choice-chips" style={{ marginBottom: "0.75rem" }}>
+                {(["INAPPROPRIATE", "BORING", "BROKEN_TEMPLATE", "OTHER"] as const).map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    className={`choice-chip${reportCategory === cat ? " choice-chip--selected" : ""}`}
+                    onClick={() => setReportCategory(reportCategory === cat ? null : cat)}
+                  >
+                    {cat === "INAPPROPRIATE" ? "Unangemessen" :
+                     cat === "BORING" ? "Langweilig" :
+                     cat === "BROKEN_TEMPLATE" ? "Kaputt" : "Anderes"}
+                  </button>
+                ))}
+              </div>
+              <textarea
+                className="text-input"
+                placeholder="Kommentar (optional)"
+                value={reportComment}
+                onChange={(e) => setReportComment(e.target.value)}
+                rows={2}
+                maxLength={500}
+                style={{ width: "100%", marginBottom: "0.75rem", resize: "none" }}
+              />
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button
+                  type="button"
+                  className="button button--primary"
+                  disabled={!reportCategory || reportSending}
+                  onClick={() => void submitReport()}
+                  style={{ flex: 1 }}
+                >
+                  {reportSending ? "Sende..." : "Absenden"}
+                </button>
+                <button
+                  type="button"
+                  className="button button--ghost"
+                  onClick={resetReportState}
+                >
+                  Abbrechen
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       <button
         type="button"

@@ -5,7 +5,14 @@ import uuid
 from fastapi import APIRouter
 
 from app.core.config import settings
-from app.games.piccolo.schemas import ChallengeOut, ChallengeTemplateOut, SessionCreateIn, SessionOut
+from app.games.piccolo.schemas import (
+    ChallengeOut,
+    ChallengeFeedbackIn,
+    ChallengeFeedbackOut,
+    ChallengeTemplateOut,
+    SessionCreateIn,
+    SessionOut,
+)
 from app.games.piccolo.service import PiccoloService
 
 router = APIRouter()
@@ -52,4 +59,21 @@ async def create_session(body: SessionCreateIn) -> SessionOut:
 async def next_challenge(session_id: uuid.UUID) -> ChallengeOut:
     """Get the next challenge for a session."""
     return service.next_challenge(session_id=session_id)
+
+
+@router.post("/challenges/feedback")
+async def submit_feedback(body: ChallengeFeedbackIn) -> ChallengeFeedbackOut:
+    """Submit feedback on a challenge template."""
+    return service.submit_feedback(data=body)
+
+
+@router.get("/challenges/feedback")
+async def list_feedback(
+    challenge_text: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[ChallengeFeedbackOut]:
+    """List feedback entries, optionally filtered by challenge template text."""
+    return service.list_feedback(challenge_text=challenge_text, limit=limit, offset=offset)
+
 

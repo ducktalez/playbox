@@ -3,19 +3,19 @@
 ## Current Status
 
 **Phase:** Execution in Progress
-**Last Updated:** 2026-04-02
+**Last Updated:** 2026-04-03
 
 ## Roadmap
 
 | Phase | Description | Target Date | Status |
 |-------|------------|-------------|--------|
-| 0 | Project scaffolding, CI/CD, Docker setup | 2026-04 | in progress |
-| 1 | Imposter — MVP | 2026-05 | in progress |
-| 2 | Piccolo — MVP | 2026-06 | in progress |
-| 3 | Quiz ("Wer wird Elite-Hater?") — MVP | 2026-07 | in progress |
-| 4 | Quiz — ELO system + media attachments | 2026-08 | in progress |
-| 5 | Chess Variants — MVP (low priority) | 2026-04 | in progress |
-| 6 | Polish, PWA optimization, offline hardening | TBD | planned |
+| 0 | Project scaffolding, CI/CD, Docker setup | 2026-04 | ✅ done (CI open) |
+| 1 | Imposter — MVP | 2026-05 | ✅ done |
+| 2 | Piccolo — MVP | 2026-06 | ✅ done |
+| 3 | Quiz ("Wer wird Elite-Hater?") — MVP | 2026-07 | ✅ done |
+| 4 | Quiz — ELO system + media attachments | 2026-08 | ✅ done |
+| 5 | Chess Variants — MVP (low priority) | 2026-04 | ✅ done (8×8 only) |
+| 6 | Polish, PWA optimization, offline hardening | TBD | in progress |
 
 ---
 
@@ -82,6 +82,7 @@
 - [x] Challenge types: dare, question, group, versus, vote
 - [x] Ensure no immediate repeat of challenges
 - [x] Animations / transitions between challenges
+- [x] Challenge feedback/reporting (THUMBS_UP/THUMBS_DOWN/REPORT with categories, cross-game pattern)
 
 ## Phase 3 — Quiz MVP ("Wer wird Elite-Hater?")
 
@@ -204,22 +205,22 @@
 
 ### Sound & Atmosphere
 
-- [ ] Audience clapping at correct answers (timed applause samples)
-- [ ] Dynamic audience murmuring in background (ambient loop)
-- [ ] Drachenlord samples injected every few seconds during gameplay
+- [ ] Audience clapping at correct answers (timed applause samples) — deferred
+- [ ] Dynamic audience murmuring in background (ambient loop) — deferred
+- [ ] Drachenlord samples injected every few seconds during gameplay — deferred
 - [x] Level-appropriate background music (low/mid/high/million question music)
 - [x] Sound effects: lock-in sound, suspense build, reveal sting
 - [x] Real WWM MP3 sound files served from `/media/sounds/wwm/`
 - [x] Tier-appropriate correct/wrong/safety/win stings
 - [x] Joker sound effects (50:50, audience, phone)
 
-### Drachenlord AI Moderator
+### Drachenlord AI Moderator (Deferred)
 
-- [ ] AI-generated commentary reacting to player answers
-- [ ] Emotional responses: excitement on correct, disappointment on wrong
-- [ ] Melancholic / nostalgic reactions when questions touch his life story
-- [ ] Spontaneous outbursts and catchphrases ("Meddl Leude!", "Etzala!")
-- [ ] Commentary adapts to current prize level (more nervous at high stakes)
+- [ ] AI-generated commentary reacting to player answers — deferred
+- [ ] Emotional responses: excitement on correct, disappointment on wrong — deferred
+- [ ] Melancholic / nostalgic reactions when questions touch his life story — deferred
+- [ ] Spontaneous outbursts and catchphrases ("Meddl Leude!", "Etzala!") — deferred
+- [ ] Commentary adapts to current prize level (more nervous at high stakes) — deferred
 
 ### Question Tier / Difficulty Model
 
@@ -276,18 +277,16 @@
 
 ## Next Sprint (1-2 weeks)
 
-### High Priority
+### Phase 6 — PWA Polish & Offline Hardening
 
-- [x] Evaluate whether `tier` field on Question model needs expansion for WWM difficulty curve
-  - **Result:** 3 tiers (1→1000, 2→1200, 3→1400) are sufficient. ELO self-calibrates through gameplay. Re-evaluate if question pool exceeds 500+.
-- [x] Media upload endpoint (clips, images, documents) — Phase 4
-- [x] Media display in question UI (video player, image viewer) — Phase 4
-
-### Medium Priority
-
+- [x] Shared `questionTruthCache.ts` module (cache-first question loading + local answer evaluation)
+- [x] Cache-first quiz gameplay: all three modes (Millionär, Speed, 1v1 Duel) pre-cache server questions at init and evaluate answers locally when offline
+- [x] Offline indicator in all quiz modes ("📴 Offline" badge, jokers disabled, ELO tracking paused)
+- [x] IndexedDB offline bundle fallback: if server drops mid-game, questions are loaded from IndexedDB truth cache
 - [ ] Initialize Git repo, push to GitHub
 - [ ] GitHub Actions: lint + test pipeline
 - [ ] TODO: post-dev — generate proper PNG icons for PWA (replace SVG placeholders)
+- [ ] CSS/UI framework decision (Tailwind CSS vs. MUI vs. custom) — resolve Blocker
 
 ## Backlog (Unscheduled)
 
@@ -350,8 +349,6 @@
 - Player profile: `GET /players/{id}/profile` (accuracy + recent sessions), `GET /players/{id}/sessions` (history), frontend `PlayerProfile.tsx` component with "Mein Profil" button (5 new tests)
 - PWA shell: `vite-plugin-pwa` with Workbox runtime caching (NetworkFirst for API, CacheFirst for media), SPA navigation fallback, SVG placeholder icons, iOS PWA meta tags in `index.html`
 - Architecture.md updated with PWA Configuration section (caching strategies, offline capability per game)
-- Imposter offline support: client-side fallback with cached word list (localStorage), automatic offline session creation and reveal when backend unreachable, "Offline-Modus" indicator
-- Piccolo offline support: client-side fallback with cached challenge templates (localStorage), offline session with category-balanced challenge ordering, "Offline-Modus" indicator
 - Tier field evaluation: 3 tiers (1→1000, 2→1200, 3→1400) confirmed sufficient for current question pool size (~75). ELO self-calibrates; no model expansion needed.
 - Quiz media system: upload (`POST /questions/{id}/media`), delete (`DELETE /questions/{id}/media`), static serving (`/media/` mount), frontend display (image, video, document) in all quiz modes, media upload in QuestionForm, MIME type validation (JPEG/PNG/GIF/WebP/MP4/WebM/PDF), configurable size limit, Vite dev proxy for `/media`, 8 new tests (all green)
 - Question feedback system: `POST /questions/{id}/feedback` + `GET /questions/{id}/feedback`, three feedback types (THUMBS_UP, THUMBS_DOWN, REPORT), category sets per type, optional free-text comment, consistent with cross-game reporting conventions, 16 tests (all green)
@@ -363,7 +360,16 @@
 - Moderation queue: `moderation_status` field (PENDING/APPROVED/REJECTED) on Question model, `POST /questions/submit` (user → PENDING), `POST /questions` (admin → APPROVED), `GET /admin/questions/pending`, `POST /admin/questions/{id}/moderate`, placeholder `X-Admin-Token` auth, seed/import auto-APPROVED, 11 tests
 - ELO history chart: SVG-based line chart in `PlayerProfile.tsx` (EloChart component), fetches `GET /players/{id}/elo-history`, touch-friendly tooltips, correct/wrong color-coded dots, gradient fill, responsive viewBox, no external charting dependency
 - Chess MVP: `python-chess` integration, `StandardEngine` (8×8) + `VariantEngine` ABC (6×8/7×8 stub), in-memory game store, API endpoints (create/get/list/move/resign), 24 backend tests (all green), interactive frontend board (CSS Grid + Unicode pieces, click-to-select/move, captured pieces display, move history, resign, result screen, mobile-first), chess module mounted at `/api/v1/chess/`
-- Backend tests: `test_imposter.py` (11), `test_piccolo.py` (20), `test_quiz.py` (120), `test_elo.py` (8), `test_smoke.py` (6), `test_chess.py` (24) — total 189 (all green)
+- Quiz offline bundle: `GET /api/v1/quiz/offline-bundle` returns all approved questions with answers (including `is_correct`) for client-side IndexedDB caching
+- Quiz offline config: `GET /api/v1/quiz/offline-config` returns cache-sync metadata (version, question count)
+- IndexedDB-based offline cache: `offlineManager.ts` stores quiz questions, imposter words, piccolo challenges in IndexedDB for offline play
+- Shared `questionTruthCache.ts` module: cache-first question loading + local answer evaluation, used by all three quiz game modes (Millionär, Speed, 1v1 Duel)
+- Cache-first quiz gameplay: at game init, server response (with `is_correct`) is pre-cached in truth cache; questions are loaded from cache, never re-fetched; answers are evaluated locally when server is unreachable
+- Quiz offline indicators: all three modes show "📴 Offline" badge, disable jokers, and pause ELO tracking when server unreachable
+- Imposter offline support: client-side fallback with cached word list (localStorage), automatic offline session creation and reveal when backend unreachable, "Offline-Modus" indicator
+- Piccolo offline support: client-side fallback with cached challenge templates (localStorage), offline session with category-balanced challenge ordering, "Offline-Modus" indicator
+- Piccolo challenge feedback: `POST /challenges/feedback` + `GET /challenges/feedback`, three feedback types (THUMBS_UP, THUMBS_DOWN, REPORT), Piccolo-specific report categories (INAPPROPRIATE, BORING, BROKEN_TEMPLATE, OTHER), optional free-text comment, validation rules per feedback type, 12 new tests, frontend report button (🚩) with bottom-sheet on fullscreen challenge view, consistent with cross-game reporting conventions
+- Backend tests: `test_imposter.py` (11), `test_piccolo.py` (32), `test_quiz.py` (122), `test_elo.py` (8), `test_smoke.py` (6), `test_chess.py` (24) — total 203 (all green)
 
 ## Dependencies
 
