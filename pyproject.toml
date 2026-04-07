@@ -7,10 +7,21 @@ readme = "README.md"
 
 [tool.ruff]
 target-version = "py311"
-line-length = 120
+line-length = 140
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "RUF"]
+ignore = [
+  "B008",    # function-call-in-default-argument — intentional for FastAPI Depends/Query/Path
+  "E501",    # line-too-long — German template strings and seed data are naturally long
+  "RUF001",  # ambiguous-unicode-character-string — German text with umlauts is intentional
+  "RUF002",  # ambiguous-unicode-character-docstring — same
+  "RUF003",  # ambiguous-unicode-character-comment — same
+]
+
+[tool.ruff.lint.per-file-ignores]
+"backend/tests/*" = ["E402"]  # sys.path manipulation before imports in conftest.py
+"backend/app/games/*/service.py" = ["E402"]  # large data blocks before class definition
 
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]

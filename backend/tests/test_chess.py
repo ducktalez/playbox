@@ -4,7 +4,6 @@ import uuid
 
 from app.games.chess.engine import StandardEngine
 
-
 # --- Engine unit tests ---
 
 
@@ -36,12 +35,11 @@ def test_standard_engine_push_move() -> None:
 
 def test_standard_engine_illegal_move() -> None:
     """Pushing an illegal move should raise ValueError."""
+    import pytest
+
     engine = StandardEngine()
-    try:
+    with pytest.raises(ValueError):
         engine.push_move("e2e5")  # not a legal pawn move
-        assert False, "Expected ValueError"
-    except ValueError:
-        pass
 
 
 def test_standard_engine_capture() -> None:
@@ -85,10 +83,13 @@ def test_create_game(client) -> None:
 
 def test_create_game_with_names(client) -> None:
     """POST with player names should use them."""
-    resp = client.post("/api/v1/chess/games", json={
-        "player_white": "Alice",
-        "player_black": "Bob",
-    })
+    resp = client.post(
+        "/api/v1/chess/games",
+        json={
+            "player_white": "Alice",
+            "player_black": "Bob",
+        },
+    )
     assert resp.status_code == 200
     assert resp.json()["player_white"] == "Alice"
     assert resp.json()["player_black"] == "Bob"
@@ -249,4 +250,3 @@ def test_check_status(client) -> None:
     resp = client.get(f"/api/v1/chess/games/{gid}")
     data = resp.json()
     assert data["status"] == "CHECK"
-

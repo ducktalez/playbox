@@ -2,7 +2,7 @@
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import Column, Text
 from sqlmodel import Field, Relationship, SQLModel
@@ -25,7 +25,7 @@ class Category(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str = Field(max_length=100, unique=True)
     description: str = Field(default="", max_length=500)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime | None = Field(default=None)
 
     questions: list["Question"] = Relationship(back_populates="category")
@@ -38,7 +38,7 @@ class Tag(SQLModel, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str = Field(max_length=100, unique=True)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     questions: list["Question"] = Relationship(back_populates="tags", link_model=QuestionTag)
 
@@ -65,7 +65,7 @@ class Question(SQLModel, table=True):
     # New user-submitted questions start as PENDING; seeded/imported are APPROVED.
     moderation_status: str = Field(default="PENDING", max_length=20)
     created_by: str | None = Field(default=None, max_length=200)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime | None = Field(default=None)
     deleted_at: datetime | None = Field(default=None)  # Soft delete
 
@@ -83,7 +83,7 @@ class Answer(SQLModel, table=True):
     question_id: uuid.UUID = Field(foreign_key="questions.id")
     text: str = Field(max_length=500)
     is_correct: bool = Field(default=False)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     question: Question = Relationship(back_populates="answers")
 
@@ -98,7 +98,7 @@ class Player(SQLModel, table=True):
     elo_score: float = Field(default=1200.0)
     games_played: int = Field(default=0)
     correct_count: int = Field(default=0)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime | None = Field(default=None)
 
 
@@ -111,7 +111,7 @@ class GameSession(SQLModel, table=True):
     mode: str = Field(max_length=50)  # "millionaire", "duel", or "speed"
     player_id: uuid.UUID = Field(foreign_key="players.id")
     score: int = Field(default=0)
-    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     finished_at: datetime | None = Field(default=None)
 
 
@@ -126,7 +126,7 @@ class QuestionAttempt(SQLModel, table=True):
     player_id: uuid.UUID = Field(foreign_key="players.id")
     answered_correctly: bool = Field(default=False)
     time_taken_ms: int | None = Field(default=None)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class QuestionFeedback(SQLModel, table=True):
@@ -145,7 +145,7 @@ class QuestionFeedback(SQLModel, table=True):
     category: str | None = Field(default=None, max_length=200)
     # Free-text comment (future use)
     comment: str | None = Field(default=None, max_length=500)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class OrderingQuestion(SQLModel, table=True):
@@ -159,7 +159,7 @@ class OrderingQuestion(SQLModel, table=True):
     # Example: '["First", "Second", "Third", "Fourth"]'
     ordered_answers_json: str = Field(sa_column=Column("ordered_answers_json", Text, nullable=False))
     language: str = Field(default="de", max_length=5)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     @property
     def ordered_answers(self) -> list[str]:
@@ -184,6 +184,4 @@ class PlayerEloHistory(SQLModel, table=True):
     elo_before: float = Field(...)
     elo_after: float = Field(...)
     answered_correctly: bool = Field(...)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

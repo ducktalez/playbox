@@ -3,7 +3,6 @@
 import uuid
 
 import pytest
-
 from app.core.errors import AppError
 from app.games.imposter.service import ImposterService
 
@@ -107,4 +106,3 @@ def test_reveal_player_invalid_index() -> None:
         service.reveal_player(session_id=session.id, player_index=99)
     assert exc_info.value.status_code == 422
     assert exc_info.value.code == "INVALID_PLAYER_INDEX"
-

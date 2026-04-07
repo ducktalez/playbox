@@ -66,4 +66,3 @@ class ChallengeFeedbackOut(BaseModel):
     category: str | None = None
     comment: str | None = None
     created_at: datetime
-

@@ -1,7 +1,7 @@
 """PlayBox — FastAPI application entry point."""
 
-from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -12,11 +12,11 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import settings
 from app.core.database import init_pg_db, init_sqlite_db
-from app.core.errors import AppError, STATUS_CODE_MAP
+from app.core.errors import STATUS_CODE_MAP, AppError
+from app.games.chess.router import router as chess_router
 from app.games.imposter.router import router as imposter_router
 from app.games.piccolo.router import router as piccolo_router
 from app.games.quiz.router import router as quiz_router
-from app.games.chess.router import router as chess_router
 from app.games.quiz.seed import seed_questions
 
 
@@ -112,4 +112,3 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-

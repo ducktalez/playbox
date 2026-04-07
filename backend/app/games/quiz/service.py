@@ -1,19 +1,17 @@
 """Quiz — Game service / business logic."""
 
 import random
-import shutil
 import uuid
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import UploadFile
-
-from app.core.config import settings
-from app.core.errors import AppError
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
+from app.core.errors import AppError
 from app.games.quiz.elo import update_elo
 from app.games.quiz.models import (
     Answer,
@@ -29,6 +27,9 @@ from app.games.quiz.models import (
     Tag,
 )
 from app.games.quiz.schemas import (
+    FEEDBACK_TYPES,
+    REPORT_CATEGORIES,
+    THUMBS_DOWN_CATEGORIES,
     AnswerOut,
     AttemptIn,
     AttemptOut,
@@ -39,12 +40,10 @@ from app.games.quiz.schemas import (
     CategoryIn,
     CategoryOut,
     EloHistoryEntryOut,
-    FEEDBACK_TYPES,
     FiftyFiftyIn,
     FiftyFiftyOut,
     LeaderboardEntry,
     MediaUploadOut,
-    MODERATION_STATUSES,
     ModerationActionIn,
     OrderingCheckIn,
     OrderingCheckOut,
@@ -59,11 +58,9 @@ from app.games.quiz.schemas import (
     QuestionListOut,
     QuestionOut,
     QuestionUpdateIn,
-    REPORT_CATEGORIES,
     SessionCreateIn,
     SessionOut,
     TagOut,
-    THUMBS_DOWN_CATEGORIES,
 )
 
 # Allowed MIME types for media uploads
@@ -163,7 +160,7 @@ class QuizService:
             if pun_first:
                 pun_candidates = [q for q in pool if q.is_pun]
                 if pun_candidates:
-                    pun_question = random.choice(pun_candidates)  # noqa: S311
+                    pun_question = random.choice(pun_candidates)
                     pool = [q for q in pool if q.id != pun_question.id]
                     effective_limit = limit - 1
 
@@ -177,9 +174,7 @@ class QuizService:
                 balanced = self._balance_questions_by_category(pool)
                 selected = balanced[offset : offset + effective_limit]
 
-            questions: list[Question] = (
-                [pun_question] + list(selected) if pun_question else list(selected)
-            )
+            questions: list[Question] = [pun_question, *list(selected)] if pun_question else list(selected)
         else:
             questions = list(self.db.execute(query.offset(offset).limit(limit)).scalars().all())
 
@@ -242,10 +237,10 @@ class QuizService:
         band_limits = [per_band + (1 if i < remainder else 0) for i in range(3)]
 
         sampled: list[Question] = []
-        for band, k in zip((easy, medium, hard), band_limits):
+        for band, k in zip((easy, medium, hard), band_limits, strict=False):
             actual_k = min(k, len(band))
             if actual_k > 0:
-                sampled.extend(random.sample(band, actual_k))  # noqa: S311
+                sampled.extend(random.sample(band, actual_k))
 
         # Fill any remaining slots if a band did not have enough questions
         if len(sampled) < limit:
@@ -253,7 +248,7 @@ class QuizService:
             leftover = [q for q in questions if q.id not in taken_ids]
             extra = min(limit - len(sampled), len(leftover))
             if extra > 0:
-                sampled.extend(random.sample(leftover, extra))  # noqa: S311
+                sampled.extend(random.sample(leftover, extra))
 
         # Re-sort by ELO ascending to maintain difficulty curve
         sampled.sort(key=lambda q: (q.elo_score, str(q.id)))
@@ -314,14 +309,14 @@ class QuizService:
         wrong = [a for a in question.answers if not a.is_correct]
 
         # Pick one correct answer randomly (model may store multiple)
-        selected_correct = [random.choice(correct)]  # noqa: S311
+        selected_correct = [random.choice(correct)]
         # Fill remaining slots with wrong answers
         num_wrong = min(num_answers - 1, len(wrong))
-        selected_wrong = random.sample(wrong, num_wrong)  # noqa: S311
+        selected_wrong = random.sample(wrong, num_wrong)
 
         # Combine and shuffle
         selected = selected_correct + selected_wrong
-        random.shuffle(selected)  # noqa: S311
+        random.shuffle(selected)
 
         out = self._question_to_out(question)
         out.note = None  # Hide note during gameplay
@@ -351,7 +346,7 @@ class QuizService:
         if data.media_type is not None:
             question.media_type = data.media_type
 
-        question.updated_at = datetime.now(timezone.utc)
+        question.updated_at = datetime.now(UTC)
         self.db.commit()
         self.db.refresh(question)
         return self._question_to_out(question)
@@ -362,7 +357,7 @@ class QuizService:
         if not question or question.deleted_at is not None:
             raise AppError(404, "Question not found", "QUESTION_NOT_FOUND")
 
-        question.deleted_at = datetime.now(timezone.utc)
+        question.deleted_at = datetime.now(UTC)
         self.db.commit()
         self.db.refresh(question)
         return self._question_to_out(question)
@@ -391,11 +386,11 @@ class QuizService:
 
         # Update scores
         player.elo_score = new_player_elo
-        player.updated_at = datetime.now(timezone.utc)
+        player.updated_at = datetime.now(UTC)
         if answer.is_correct:
             player.correct_count += 1
         question.elo_score = new_question_elo
-        question.updated_at = datetime.now(timezone.utc)
+        question.updated_at = datetime.now(UTC)
 
         # Record attempt
         attempt = QuestionAttempt(
@@ -437,9 +432,7 @@ class QuizService:
         categories = self.db.execute(select(Category)).scalars().all()
         result = []
         for cat in categories:
-            count = self.db.scalar(
-                select(func.count()).where(Question.category_id == cat.id, Question.deleted_at.is_(None))
-            )
+            count = self.db.scalar(select(func.count()).where(Question.category_id == cat.id, Question.deleted_at.is_(None)))
             result.append(CategoryOut(id=cat.id, name=cat.name, description=cat.description, question_count=count or 0))
         return result
 
@@ -486,18 +479,15 @@ class QuizService:
             raise AppError(404, "Player not found", "PLAYER_NOT_FOUND")
 
         # Compute accuracy from total attempts
-        total_attempts = self.db.scalar(
-            select(func.count(QuestionAttempt.id)).where(QuestionAttempt.player_id == player_id)
-        ) or 0
+        total_attempts = self.db.scalar(select(func.count(QuestionAttempt.id)).where(QuestionAttempt.player_id == player_id)) or 0
         accuracy = (player.correct_count / total_attempts) if total_attempts > 0 else 0.0
 
         # Recent sessions (last 10, newest first)
-        sessions = self.db.execute(
-            select(GameSession)
-            .where(GameSession.player_id == player_id)
-            .order_by(GameSession.started_at.desc())
-            .limit(10)
-        ).scalars().all()
+        sessions = (
+            self.db.execute(select(GameSession).where(GameSession.player_id == player_id).order_by(GameSession.started_at.desc()).limit(10))
+            .scalars()
+            .all()
+        )
 
         return PlayerProfileOut(
             id=player.id,
@@ -515,32 +505,35 @@ class QuizService:
         if not player:
             raise AppError(404, "Player not found", "PLAYER_NOT_FOUND")
 
-        sessions = self.db.execute(
-            select(GameSession)
-            .where(GameSession.player_id == player_id)
-            .order_by(GameSession.started_at.desc())
-            .limit(limit)
-        ).scalars().all()
+        sessions = (
+            self.db.execute(
+                select(GameSession).where(GameSession.player_id == player_id).order_by(GameSession.started_at.desc()).limit(limit)
+            )
+            .scalars()
+            .all()
+        )
 
         return [self._session_to_out(s) for s in sessions]
 
     # --- ELO History ---
 
-    def get_elo_history(
-        self, player_id: uuid.UUID, limit: int = 100, offset: int = 0
-    ) -> list[EloHistoryEntryOut]:
+    def get_elo_history(self, player_id: uuid.UUID, limit: int = 100, offset: int = 0) -> list[EloHistoryEntryOut]:
         """Return ELO change history for a player (oldest first for charting)."""
         player = self.db.get(Player, player_id)
         if not player:
             raise AppError(404, "Player not found", "PLAYER_NOT_FOUND")
 
-        entries = self.db.execute(
-            select(PlayerEloHistory)
-            .where(PlayerEloHistory.player_id == player_id)
-            .order_by(PlayerEloHistory.created_at.asc())
-            .offset(offset)
-            .limit(limit)
-        ).scalars().all()
+        entries = (
+            self.db.execute(
+                select(PlayerEloHistory)
+                .where(PlayerEloHistory.player_id == player_id)
+                .order_by(PlayerEloHistory.created_at.asc())
+                .offset(offset)
+                .limit(limit)
+            )
+            .scalars()
+            .all()
+        )
 
         return [
             EloHistoryEntryOut(
@@ -567,7 +560,7 @@ class QuizService:
         self.db.add(session)
 
         player.games_played += 1
-        player.updated_at = datetime.now(timezone.utc)
+        player.updated_at = datetime.now(UTC)
 
         self.db.commit()
         self.db.refresh(session)
@@ -597,7 +590,7 @@ class QuizService:
 
         session.score = correct_attempts or 0
         if session.finished_at is None:
-            session.finished_at = datetime.now(timezone.utc)
+            session.finished_at = datetime.now(UTC)
 
         self.db.commit()
         self.db.refresh(session)
@@ -631,7 +624,7 @@ class QuizService:
         displayed_ids = set(data.displayed_answer_ids)
         wrong_displayed = [a for a in question.answers if a.id in displayed_ids and not a.is_correct]
 
-        to_remove = random.sample(wrong_displayed, min(2, len(wrong_displayed)))  # noqa: S311
+        to_remove = random.sample(wrong_displayed, min(2, len(wrong_displayed)))
         return FiftyFiftyOut(remove=[a.id for a in to_remove])
 
     def audience_poll(self, question_id: uuid.UUID, data: AudiencePollIn) -> AudiencePollOut:
@@ -649,7 +642,7 @@ class QuizService:
         displayed = [a for a in question.answers if a.id in displayed_ids]
 
         correct_ids = {a.id for a in displayed if a.is_correct}
-        correct_pct = random.randint(45, 72)  # noqa: S311
+        correct_pct = random.randint(45, 72)
         wrong_displayed = [a for a in displayed if not a.is_correct]
 
         # Distribute remaining percentage among wrong answers
@@ -660,7 +653,7 @@ class QuizService:
                 # Last wrong answer gets everything that's left
                 wrong_pcts.append(remaining)
             else:
-                pct = random.randint(0, max(0, remaining))  # noqa: S311
+                pct = random.randint(0, max(0, remaining))
                 wrong_pcts.append(pct)
                 remaining -= pct
 
@@ -699,14 +692,14 @@ class QuizService:
             "Keine Ahnung ehrlich gesagt, vielleicht {answer}?",
         ]
 
-        if random.random() < 0.7 and correct:  # noqa: S311
-            hint = random.choice(correct)  # noqa: S311
-            confidence = random.randint(65, 92)  # noqa: S311
-            msg = random.choice(messages_correct).format(answer=hint.text)  # noqa: S311
+        if random.random() < 0.7 and correct:
+            hint = random.choice(correct)
+            confidence = random.randint(65, 92)
+            msg = random.choice(messages_correct).format(answer=hint.text)
         else:
-            hint = random.choice(wrong) if wrong else correct[0]  # noqa: S311
-            confidence = random.randint(25, 55)  # noqa: S311
-            msg = random.choice(messages_wrong).format(answer=hint.text)  # noqa: S311
+            hint = random.choice(wrong) if wrong else correct[0]
+            confidence = random.randint(25, 55)
+            msg = random.choice(messages_wrong).format(answer=hint.text)
 
         return PhoneJokerOut(hint_answer_id=hint.id, confidence=confidence, message=msg)
 
@@ -733,8 +726,12 @@ class QuizService:
 
         # Determine file extension from content type
         ext_map = {
-            "image/jpeg": ".jpg", "image/png": ".png", "image/gif": ".gif",
-            "image/webp": ".webp", "video/mp4": ".mp4", "video/webm": ".webm",
+            "image/jpeg": ".jpg",
+            "image/png": ".png",
+            "image/gif": ".gif",
+            "image/webp": ".webp",
+            "video/mp4": ".mp4",
+            "video/webm": ".webm",
             "application/pdf": ".pdf",
         }
         ext = ext_map.get(content_type, "")
@@ -746,7 +743,7 @@ class QuizService:
 
         # Remove any previously uploaded file for this question
         if question.media_url:
-            old_path = Path(settings.media_dir) / question.media_url.lstrip("/media/")
+            old_path = Path(settings.media_dir) / question.media_url.removeprefix("/media/")
             if old_path.exists():
                 old_path.unlink(missing_ok=True)
 
@@ -757,7 +754,7 @@ class QuizService:
         media_url = f"/media/quiz/{question_id}/{safe_filename}"
         question.media_url = media_url
         question.media_type = media_type
-        question.updated_at = datetime.now(timezone.utc)
+        question.updated_at = datetime.now(UTC)
         self.db.commit()
 
         return MediaUploadOut(media_url=media_url, media_type=media_type)
@@ -784,7 +781,7 @@ class QuizService:
 
         question.media_url = None
         question.media_type = None
-        question.updated_at = datetime.now(timezone.utc)
+        question.updated_at = datetime.now(UTC)
         self.db.commit()
         self.db.refresh(question)
         return self._question_to_out(question)
@@ -846,21 +843,23 @@ class QuizService:
             created_at=feedback.created_at,
         )
 
-    def list_feedback(
-        self, question_id: uuid.UUID, limit: int = 50, offset: int = 0
-    ) -> list[QuestionFeedbackOut]:
+    def list_feedback(self, question_id: uuid.UUID, limit: int = 50, offset: int = 0) -> list[QuestionFeedbackOut]:
         """List feedback entries for a question (newest first)."""
         question = self.db.get(Question, question_id)
         if not question or question.deleted_at is not None:
             raise AppError(404, "Question not found", "QUESTION_NOT_FOUND")
 
-        entries = self.db.execute(
-            select(QuestionFeedback)
-            .where(QuestionFeedback.question_id == question_id)
-            .order_by(QuestionFeedback.created_at.desc())
-            .offset(offset)
-            .limit(limit)
-        ).scalars().all()
+        entries = (
+            self.db.execute(
+                select(QuestionFeedback)
+                .where(QuestionFeedback.question_id == question_id)
+                .order_by(QuestionFeedback.created_at.desc())
+                .offset(offset)
+                .limit(limit)
+            )
+            .scalars()
+            .all()
+        )
 
         return [
             QuestionFeedbackOut(
@@ -900,9 +899,9 @@ class QuizService:
         if not all_oqs:
             raise AppError(404, "No ordering questions available", "NO_ORDERING_QUESTIONS")
 
-        oq: OrderingQuestion = random.choice(all_oqs)  # noqa: S311
+        oq: OrderingQuestion = random.choice(all_oqs)
         shuffled = list(oq.ordered_answers)
-        random.shuffle(shuffled)  # noqa: S311
+        random.shuffle(shuffled)
 
         return OrderingQuestionOut(
             id=oq.id,
@@ -970,10 +969,14 @@ class QuizService:
 
     def list_pending_questions(self, limit: int = 20, offset: int = 0) -> QuestionListOut:
         """List questions awaiting moderation (PENDING status)."""
-        query = select(Question).where(
-            Question.deleted_at.is_(None),
-            Question.moderation_status == "PENDING",
-        ).order_by(Question.created_at.asc())
+        query = (
+            select(Question)
+            .where(
+                Question.deleted_at.is_(None),
+                Question.moderation_status == "PENDING",
+            )
+            .order_by(Question.created_at.asc())
+        )
 
         total = self.db.scalar(select(func.count()).select_from(query.subquery()))
         questions = self.db.execute(query.offset(offset).limit(limit)).scalars().all()
@@ -992,7 +995,7 @@ class QuizService:
             raise AppError(404, "Question not found", "QUESTION_NOT_FOUND")
 
         question.moderation_status = data.status
-        question.updated_at = datetime.now(timezone.utc)
+        question.updated_at = datetime.now(UTC)
         self.db.commit()
         self.db.refresh(question)
         return self._question_to_out(question)
@@ -1026,4 +1029,3 @@ class QuizService:
             created_questions=result.created_questions,
             skipped_questions=result.skipped_questions,
         )
-

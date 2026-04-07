@@ -61,4 +61,3 @@ async def create_session(body: SessionCreateIn) -> SessionOut:
 async def reveal_player(session_id: uuid.UUID, player_index: int) -> dict:
     """Reveal what a specific player sees (word or IMPOSTER)."""
     return service.reveal_player(session_id=session_id, player_index=player_index)
-

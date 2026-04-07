@@ -1,6 +1,5 @@
 """Quiz — ELO calculation engine."""
 
-
 K_FACTOR = 32
 BASE_ELO = 1200.0
 
@@ -31,4 +30,3 @@ def update_elo(
         new_question_elo = question_elo + K_FACTOR * expected
 
     return round(new_player_elo, 1), round(new_question_elo, 1)
-

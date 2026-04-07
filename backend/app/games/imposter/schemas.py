@@ -54,4 +54,3 @@ class PlayerReveal(BaseModel):
 
     player_name: str
     display: str  # Either the word or "IMPOSTER"
-

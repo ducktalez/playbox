@@ -2,7 +2,6 @@
 
 from app.games.piccolo.service import PiccoloService
 
-
 # --- Service-level tests ---
 
 
@@ -97,10 +96,7 @@ def test_create_session_balances_categories_in_rotation() -> None:
         intensity="spicy",
     )
 
-    first_three_categories = [
-        service.next_challenge(session.id).category
-        for _ in range(3)
-    ]
+    first_three_categories = [service.next_challenge(session.id).category for _ in range(3)]
 
     assert set(first_three_categories) == {"dare", "automarken", "trinkregeln"}
 
@@ -222,10 +218,12 @@ def test_feedback_thumbs_up() -> None:
     from app.games.piccolo.schemas import ChallengeFeedbackIn
 
     service = PiccoloService()
-    fb = service.submit_feedback(ChallengeFeedbackIn(
-        challenge_text="{player}, nimm einen Schluck!",
-        feedback_type="THUMBS_UP",
-    ))
+    fb = service.submit_feedback(
+        ChallengeFeedbackIn(
+            challenge_text="{player}, nimm einen Schluck!",
+            feedback_type="THUMBS_UP",
+        )
+    )
     assert fb.feedback_type == "THUMBS_UP"
     assert fb.category is None
     assert fb.challenge_text == "{player}, nimm einen Schluck!"
@@ -236,11 +234,13 @@ def test_feedback_thumbs_down_with_comment() -> None:
     from app.games.piccolo.schemas import ChallengeFeedbackIn
 
     service = PiccoloService()
-    fb = service.submit_feedback(ChallengeFeedbackIn(
-        challenge_text="{player}, mach 5 Kniebeugen!",
-        feedback_type="THUMBS_DOWN",
-        comment="Not fun",
-    ))
+    fb = service.submit_feedback(
+        ChallengeFeedbackIn(
+            challenge_text="{player}, mach 5 Kniebeugen!",
+            feedback_type="THUMBS_DOWN",
+            comment="Not fun",
+        )
+    )
     assert fb.feedback_type == "THUMBS_DOWN"
     assert fb.comment == "Not fun"
 
@@ -250,12 +250,14 @@ def test_feedback_report_with_category() -> None:
     from app.games.piccolo.schemas import ChallengeFeedbackIn
 
     service = PiccoloService()
-    fb = service.submit_feedback(ChallengeFeedbackIn(
-        challenge_text="{player}, erzähl einen Witz!",
-        feedback_type="REPORT",
-        category="INAPPROPRIATE",
-        comment="Offensive content",
-    ))
+    fb = service.submit_feedback(
+        ChallengeFeedbackIn(
+            challenge_text="{player}, erzähl einen Witz!",
+            feedback_type="REPORT",
+            category="INAPPROPRIATE",
+            comment="Offensive content",
+        )
+    )
     assert fb.feedback_type == "REPORT"
     assert fb.category == "INAPPROPRIATE"
 
@@ -267,10 +269,12 @@ def test_feedback_report_without_category_fails() -> None:
 
     service = PiccoloService()
     with pytest.raises(Exception) as exc_info:
-        service.submit_feedback(ChallengeFeedbackIn(
-            challenge_text="some challenge",
-            feedback_type="REPORT",
-        ))
+        service.submit_feedback(
+            ChallengeFeedbackIn(
+                challenge_text="some challenge",
+                feedback_type="REPORT",
+            )
+        )
     assert "CATEGORY_REQUIRED" in str(exc_info.value.code)
 
 
@@ -281,11 +285,13 @@ def test_feedback_thumbs_up_with_category_fails() -> None:
 
     service = PiccoloService()
     with pytest.raises(Exception) as exc_info:
-        service.submit_feedback(ChallengeFeedbackIn(
-            challenge_text="some challenge",
-            feedback_type="THUMBS_UP",
-            category="BORING",
-        ))
+        service.submit_feedback(
+            ChallengeFeedbackIn(
+                challenge_text="some challenge",
+                feedback_type="THUMBS_UP",
+                category="BORING",
+            )
+        )
     assert "CATEGORY_NOT_ALLOWED" in str(exc_info.value.code)
 
 
@@ -296,10 +302,12 @@ def test_feedback_invalid_type_fails() -> None:
 
     service = PiccoloService()
     with pytest.raises(Exception) as exc_info:
-        service.submit_feedback(ChallengeFeedbackIn(
-            challenge_text="some challenge",
-            feedback_type="LOVE",
-        ))
+        service.submit_feedback(
+            ChallengeFeedbackIn(
+                challenge_text="some challenge",
+                feedback_type="LOVE",
+            )
+        )
     assert "INVALID_FEEDBACK_TYPE" in str(exc_info.value.code)
 
 
@@ -310,11 +318,13 @@ def test_feedback_invalid_report_category_fails() -> None:
 
     service = PiccoloService()
     with pytest.raises(Exception) as exc_info:
-        service.submit_feedback(ChallengeFeedbackIn(
-            challenge_text="some challenge",
-            feedback_type="REPORT",
-            category="NONEXISTENT",
-        ))
+        service.submit_feedback(
+            ChallengeFeedbackIn(
+                challenge_text="some challenge",
+                feedback_type="REPORT",
+                category="NONEXISTENT",
+            )
+        )
     assert "INVALID_CATEGORY" in str(exc_info.value.code)
 
 
@@ -324,15 +334,19 @@ def test_feedback_list_newest_first() -> None:
 
     service = PiccoloService()
     text = "test-list-order-challenge"
-    service.submit_feedback(ChallengeFeedbackIn(
-        challenge_text=text,
-        feedback_type="THUMBS_UP",
-    ))
-    service.submit_feedback(ChallengeFeedbackIn(
-        challenge_text=text,
-        feedback_type="THUMBS_DOWN",
-        comment="second",
-    ))
+    service.submit_feedback(
+        ChallengeFeedbackIn(
+            challenge_text=text,
+            feedback_type="THUMBS_UP",
+        )
+    )
+    service.submit_feedback(
+        ChallengeFeedbackIn(
+            challenge_text=text,
+            feedback_type="THUMBS_DOWN",
+            comment="second",
+        )
+    )
     items = service.list_feedback(challenge_text=text)
     assert len(items) >= 2
     assert items[0].created_at >= items[1].created_at
@@ -344,12 +358,15 @@ def test_feedback_list_newest_first() -> None:
 
 def test_api_submit_feedback(client) -> None:
     """POST /api/v1/piccolo/challenges/feedback should create feedback."""
-    resp = client.post("/api/v1/piccolo/challenges/feedback", json={
-        "challenge_text": "{player}, nimm einen Schluck!",
-        "feedback_type": "REPORT",
-        "category": "BORING",
-        "comment": "Not fun at all",
-    })
+    resp = client.post(
+        "/api/v1/piccolo/challenges/feedback",
+        json={
+            "challenge_text": "{player}, nimm einen Schluck!",
+            "feedback_type": "REPORT",
+            "category": "BORING",
+            "comment": "Not fun at all",
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["feedback_type"] == "REPORT"
@@ -361,25 +378,29 @@ def test_api_submit_feedback(client) -> None:
 
 def test_api_submit_feedback_invalid_type(client) -> None:
     """POST /api/v1/piccolo/challenges/feedback with invalid type should fail."""
-    resp = client.post("/api/v1/piccolo/challenges/feedback", json={
-        "challenge_text": "some challenge",
-        "feedback_type": "INVALID",
-    })
+    resp = client.post(
+        "/api/v1/piccolo/challenges/feedback",
+        json={
+            "challenge_text": "some challenge",
+            "feedback_type": "INVALID",
+        },
+    )
     assert resp.status_code == 422
 
 
 def test_api_list_feedback(client) -> None:
     """GET /api/v1/piccolo/challenges/feedback should return feedback entries."""
     # Submit some feedback first
-    client.post("/api/v1/piccolo/challenges/feedback", json={
-        "challenge_text": "api-list-test",
-        "feedback_type": "THUMBS_UP",
-    })
+    client.post(
+        "/api/v1/piccolo/challenges/feedback",
+        json={
+            "challenge_text": "api-list-test",
+            "feedback_type": "THUMBS_UP",
+        },
+    )
     resp = client.get("/api/v1/piccolo/challenges/feedback?challenge_text=api-list-test")
     assert resp.status_code == 200
     data = resp.json()
     assert isinstance(data, list)
     assert len(data) >= 1
     assert data[0]["challenge_text"] == "api-list-test"
-
-

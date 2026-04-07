@@ -95,4 +95,3 @@ def init_sqlite_db() -> None:
     """Create all SQLite tables."""
     SQLModel.metadata.create_all(sqlite_engine)
     _auto_add_missing_columns(sqlite_engine)
-

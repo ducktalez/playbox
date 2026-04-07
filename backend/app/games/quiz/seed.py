@@ -6,10 +6,10 @@ import argparse
 from dataclasses import dataclass
 from pathlib import Path
 
-from pydantic import BaseModel, Field, model_validator
-from sqlalchemy import select, func
-from sqlalchemy.orm import Session
 import yaml
+from pydantic import BaseModel, Field, model_validator
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 from app.core.database import PgSessionLocal, init_pg_db
 from app.games.quiz.models import Answer, Category, OrderingQuestion, Question, QuestionTag, Tag
@@ -81,9 +81,7 @@ class SeedQuestionIn(BaseModel):
             return data
 
         if len(answers) != 2:
-            raise ValueError(
-                "Compact seed answers must contain exactly two items: the correct answer and a list of wrong answers."
-            )
+            raise ValueError("Compact seed answers must contain exactly two items: the correct answer and a list of wrong answers.")
 
         correct_answer, wrong_answers = answers
         if not isinstance(correct_answer, str) or not correct_answer.strip():
@@ -101,7 +99,7 @@ class SeedQuestionIn(BaseModel):
         return data
 
     @model_validator(mode="after")
-    def validate_at_least_one_correct_answer(self) -> "SeedQuestionIn":
+    def validate_at_least_one_correct_answer(self) -> SeedQuestionIn:
         """Ensure the seed question has at least one correct answer."""
         correct_count = sum(1 for answer in self.answers if answer.is_correct)
         if correct_count < 1:
@@ -119,7 +117,7 @@ class QuizSeedFile(BaseModel):
 
     categories: list[SeedCategoryIn] = Field(default_factory=list)
     questions: list[SeedQuestionIn] = Field(default_factory=list)
-    ordering_questions: list["SeedOrderingQuestionIn"] = Field(default_factory=list)
+    ordering_questions: list[SeedOrderingQuestionIn] = Field(default_factory=list)
 
 
 class SeedOrderingQuestionIn(BaseModel):
@@ -154,9 +152,7 @@ def seed_quiz_dataset(db: Session, dataset: QuizSeedFile) -> QuizSeedResult:
     """Insert a validated quiz dataset into the database without duplicating questions."""
     result = QuizSeedResult()
 
-    categories_by_name = {
-        category.name: category for category in db.execute(select(Category)).scalars().all()
-    }
+    categories_by_name = {category.name: category for category in db.execute(select(Category)).scalars().all()}
     tags_by_name = {tag.name: tag for tag in db.execute(select(Tag)).scalars().all()}
 
     for category_data in dataset.categories:
@@ -231,13 +227,12 @@ def seed_quiz_dataset(db: Session, dataset: QuizSeedFile) -> QuizSeedResult:
 
     # --- Ordering Questions ---
     for oq_data in dataset.ordering_questions:
-        existing = db.execute(
-            select(OrderingQuestion).where(OrderingQuestion.text == oq_data.text)
-        ).scalar_one_or_none()
+        existing = db.execute(select(OrderingQuestion).where(OrderingQuestion.text == oq_data.text)).scalar_one_or_none()
         if existing:
             continue
 
         import json
+
         oq = OrderingQuestion(
             text=oq_data.text,
             ordered_answers_json=json.dumps(oq_data.ordered_answers, ensure_ascii=False),
@@ -265,7 +260,7 @@ def seed_questions() -> None:
         if question_count and question_count > 0:
             # Database already has questions, skip seeding
             return
-    
+
     # Database is empty, seed it
     run_seed(DEFAULT_SEED_PATH)
 
@@ -292,5 +287,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-

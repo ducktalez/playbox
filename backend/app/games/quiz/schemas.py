@@ -1,12 +1,12 @@
 """Quiz — Pydantic schemas for API request/response."""
 
-from datetime import datetime
 import uuid
+from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-
 # --- Answers ---
+
 
 class AnswerIn(BaseModel):
     """An answer option when creating a question."""
@@ -24,6 +24,7 @@ class AnswerOut(BaseModel):
 
 
 # --- Questions ---
+
 
 class QuestionCreateIn(BaseModel):
     """Request to create a new question."""
@@ -82,6 +83,7 @@ class QuestionListOut(BaseModel):
 
 # --- Attempts ---
 
+
 class AttemptIn(BaseModel):
     """Request to submit an answer."""
 
@@ -105,6 +107,7 @@ class AttemptOut(BaseModel):
 
 # --- Categories ---
 
+
 class CategoryIn(BaseModel):
     """Request to create a category."""
 
@@ -123,6 +126,7 @@ class CategoryOut(BaseModel):
 
 # --- Tags ---
 
+
 class TagOut(BaseModel):
     """A tag in a response."""
 
@@ -132,6 +136,7 @@ class TagOut(BaseModel):
 
 
 # --- Players ---
+
 
 class PlayerCreateIn(BaseModel):
     """Request to create a player."""
@@ -163,6 +168,7 @@ class PlayerProfileOut(BaseModel):
 
 # --- Sessions ---
 
+
 class SessionCreateIn(BaseModel):
     """Request to start a quiz session."""
 
@@ -181,6 +187,7 @@ class SessionOut(BaseModel):
 
 
 # --- Leaderboard ---
+
 
 class LeaderboardEntry(BaseModel):
     """A single leaderboard entry."""
@@ -237,6 +244,7 @@ class PhoneJokerOut(BaseModel):
 
 # --- Media ---
 
+
 class MediaUploadOut(BaseModel):
     """Response after uploading media to a question."""
 
@@ -245,6 +253,7 @@ class MediaUploadOut(BaseModel):
 
 
 # --- Bulk Import ---
+
 
 class BulkImportOut(BaseModel):
     """Summary returned after a bulk question import."""
@@ -352,5 +361,3 @@ class ModerationActionIn(BaseModel):
 
     status: str = Field(..., description="APPROVED or REJECTED")
     reason: str | None = Field(default=None, max_length=500)
-
-

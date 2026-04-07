@@ -29,4 +29,3 @@ STATUS_CODE_MAP: dict[int, str] = {
     429: "RATE_LIMITED",
     500: "INTERNAL_ERROR",
 }
-

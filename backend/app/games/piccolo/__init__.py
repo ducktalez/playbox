@@ -1,2 +1,1 @@
 """Piccolo — Game package."""
-

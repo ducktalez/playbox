@@ -2,11 +2,10 @@
 
 import random
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.core.errors import AppError
 from app.games.imposter.schemas import SessionOut, WordOut, WordReportOut
-
 
 # In-memory storage for sessions (no persistence needed)
 _sessions: dict[uuid.UUID, dict] = {}
@@ -289,11 +288,7 @@ class ImposterService:
     def get_words(self, category: str | None = None) -> list[dict]:
         """Return words, optionally filtered by category."""
         if category:
-            return [
-                self._normalize_word(w)
-                for w in _WORDS
-                if w["category"].lower() == category.lower()
-            ]
+            return [self._normalize_word(w) for w in _WORDS if w["category"].lower() == category.lower()]
         return [self._normalize_word(word) for word in _WORDS]
 
     def get_categories(self) -> list[str]:
@@ -307,7 +302,7 @@ class ImposterService:
             "id": report_id,
             "word_id": word_id,
             "reason": reason,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
         _reports.append(report)
         return WordReportOut(id=report_id, word_id=word_id, reason=reason)
@@ -323,8 +318,8 @@ class ImposterService:
         if not available_words:
             available_words = _WORDS
 
-        word = random.choice(available_words)  # noqa: S311
-        imposter_index = random.randint(0, len(player_names) - 1)  # noqa: S311
+        word = random.choice(available_words)
+        imposter_index = random.randint(0, len(player_names) - 1)
         session_id = uuid.uuid4()
 
         session_data = {
@@ -353,4 +348,3 @@ class ImposterService:
             "player_name": session["player_names"][player_index],
             "display": "🕵️ IMPOSTER" if is_imposter else session["word"],
         }
-

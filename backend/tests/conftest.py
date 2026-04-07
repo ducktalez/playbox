@@ -12,14 +12,12 @@ if _backend_dir not in sys.path:
     sys.path.insert(0, _backend_dir)
 
 import pytest
+from app.core.database import get_pg_session
+from app.main import create_app
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlmodel import SQLModel
-
-from app.core.database import get_pg_session
-from app.main import create_app
-
 
 # --- Categories and question templates for mock data ---
 _MOCK_CATEGORIES = ["Geschichte", "Geographie", "Alltag", "Technik"]
@@ -120,4 +118,3 @@ def fixture_seeded_quiz_client(quiz_client: TestClient) -> TestClient:
     """
     _seed_mock_questions(quiz_client)
     return quiz_client
-

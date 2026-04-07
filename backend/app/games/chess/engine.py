@@ -149,8 +149,7 @@ class VariantEngine(ChessEngine):
         self._rows = rows
         self._cols = cols
         raise NotImplementedError(
-            f"{rows}×{cols} chess variant engine is not yet implemented. "
-            "Only STANDARD (8×8) is available in the current MVP."
+            f"{rows}×{cols} chess variant engine is not yet implemented. Only STANDARD (8×8) is available in the current MVP."
         )
 
     # ABC methods — unreachable until __init__ is implemented
@@ -177,4 +176,3 @@ def create_engine(variant: str) -> ChessEngine:
     if variant == "MINI_7X8":
         return VariantEngine(rows=7, cols=8)
     raise ValueError(f"Unknown chess variant: {variant}")
-

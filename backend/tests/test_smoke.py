@@ -190,4 +190,3 @@ def test_leaderboard_after_game(seeded_quiz_client) -> None:
     assert resp.status_code == 200
     entries = resp.json()
     assert any(e["player_id"] == player_id for e in entries)
-

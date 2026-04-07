@@ -59,4 +59,3 @@ def test_update_elo_upset_gives_bigger_change() -> None:
 def test_base_elo_constant() -> None:
     """Base ELO should be 1200."""
     assert BASE_ELO == 1200.0
-

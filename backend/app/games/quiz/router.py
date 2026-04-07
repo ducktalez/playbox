@@ -1,4 +1,5 @@
-"""
+"""Quiz — API router.
+
 ╔════════════════════════════════════════════════════════════════════════════════╗
 ║                     QUIZ GAME — SHARED IMPLEMENTATION CORE                     ║
 ╚════════════════════════════════════════════════════════════════════════════════╝
@@ -9,7 +10,7 @@ GAME MODES:
      - 15 escalating difficulty questions
      - Track cumulative ELO score
      - GameOver when wrong or all 15 answered
-  
+
   2. "Quizduell" (1v1 — Future)  — session mode: "duel"
      - 1v1 duel (future: multiplayer via WebSocket)
      - 10 alternating questions per player
@@ -83,13 +84,10 @@ FUTURE ENHANCEMENTS:
   • Tournament/bracket mode
 """
 
-"""Quiz — API router."""
-
+import random
 import uuid
 
-import random
-
-from fastapi import APIRouter, Depends, Header, Query, UploadFile, File
+from fastapi import APIRouter, Depends, File, Header, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -107,8 +105,8 @@ from app.games.quiz.schemas import (
     FiftyFiftyIn,
     FiftyFiftyOut,
     LeaderboardEntry,
-    ModerationActionIn,
     MediaUploadOut,
+    ModerationActionIn,
     OrderingCheckIn,
     OrderingCheckOut,
     OrderingQuestionOut,
@@ -193,17 +191,13 @@ async def get_question(
 
 
 @router.patch("/questions/{question_id}", response_model=QuestionOut)
-async def update_question(
-    question_id: uuid.UUID, body: QuestionUpdateIn, service: QuizService = Depends(get_service)
-) -> QuestionOut:
+async def update_question(question_id: uuid.UUID, body: QuestionUpdateIn, service: QuizService = Depends(get_service)) -> QuestionOut:
     """Update mutable fields of an existing question."""
     return service.update_question(question_id=question_id, data=body)
 
 
 @router.delete("/questions/{question_id}", response_model=QuestionOut)
-async def delete_question(
-    question_id: uuid.UUID, service: QuizService = Depends(get_service)
-) -> QuestionOut:
+async def delete_question(question_id: uuid.UUID, service: QuizService = Depends(get_service)) -> QuestionOut:
     """Soft-delete a question (sets deleted_at)."""
     return service.delete_question(question_id=question_id)
 
@@ -226,9 +220,7 @@ async def bulk_import(
 
 
 @router.post("/questions/{question_id}/attempt", response_model=AttemptOut)
-async def submit_attempt(
-    question_id: uuid.UUID, body: AttemptIn, service: QuizService = Depends(get_service)
-) -> AttemptOut:
+async def submit_attempt(question_id: uuid.UUID, body: AttemptIn, service: QuizService = Depends(get_service)) -> AttemptOut:
     """Submit an answer attempt and get ELO update."""
     return service.submit_attempt(question_id=question_id, data=body)
 
@@ -237,25 +229,19 @@ async def submit_attempt(
 
 
 @router.post("/questions/{question_id}/fifty-fifty", response_model=FiftyFiftyOut)
-async def fifty_fifty(
-    question_id: uuid.UUID, body: FiftyFiftyIn, service: QuizService = Depends(get_service)
-) -> FiftyFiftyOut:
+async def fifty_fifty(question_id: uuid.UUID, body: FiftyFiftyIn, service: QuizService = Depends(get_service)) -> FiftyFiftyOut:
     """Use the 50:50 joker to remove two wrong answers."""
     return service.fifty_fifty(question_id=question_id, data=body)
 
 
 @router.post("/questions/{question_id}/audience-poll", response_model=AudiencePollOut)
-async def audience_poll(
-    question_id: uuid.UUID, body: AudiencePollIn, service: QuizService = Depends(get_service)
-) -> AudiencePollOut:
+async def audience_poll(question_id: uuid.UUID, body: AudiencePollIn, service: QuizService = Depends(get_service)) -> AudiencePollOut:
     """Use the audience poll joker to get vote percentages."""
     return service.audience_poll(question_id=question_id, data=body)
 
 
 @router.post("/questions/{question_id}/phone-joker", response_model=PhoneJokerOut)
-async def phone_joker(
-    question_id: uuid.UUID, body: AudiencePollIn, service: QuizService = Depends(get_service)
-) -> PhoneJokerOut:
+async def phone_joker(question_id: uuid.UUID, body: AudiencePollIn, service: QuizService = Depends(get_service)) -> PhoneJokerOut:
     """Use the phone joker to get Drachenlord's hint."""
     return service.phone_joker(question_id=question_id, data=body)
 
@@ -274,9 +260,7 @@ async def upload_media(
 
 
 @router.delete("/questions/{question_id}/media", response_model=QuestionOut)
-async def delete_media(
-    question_id: uuid.UUID, service: QuizService = Depends(get_service)
-) -> QuestionOut:
+async def delete_media(question_id: uuid.UUID, service: QuizService = Depends(get_service)) -> QuestionOut:
     """Remove media from a question."""
     return service.delete_media(question_id=question_id)
 
@@ -376,19 +360,21 @@ async def offline_bundle(
     for q in result.items:
         answers = [{"id": str(a.id), "text": a.text, "is_correct": a.is_correct} for a in q.answers]
         random.shuffle(answers)
-        questions.append({
-            "id": str(q.id),
-            "text": q.text,
-            "note": q.note,
-            "category": q.category,
-            "tags": q.tags,
-            "elo_score": q.elo_score,
-            "difficulty": q.difficulty,
-            "is_pun": q.is_pun,
-            "media_url": q.media_url,
-            "media_type": q.media_type,
-            "answers": answers,
-        })
+        questions.append(
+            {
+                "id": str(q.id),
+                "text": q.text,
+                "note": q.note,
+                "category": q.category,
+                "tags": q.tags,
+                "elo_score": q.elo_score,
+                "difficulty": q.difficulty,
+                "is_pun": q.is_pun,
+                "media_url": q.media_url,
+                "media_type": q.media_type,
+                "answers": answers,
+            }
+        )
 
     return {
         "questions": questions,
@@ -505,5 +491,3 @@ async def moderate_question(
 ) -> QuestionOut:
     """Approve or reject a question (admin only)."""
     return service.moderate_question(question_id=question_id, data=body)
-
-

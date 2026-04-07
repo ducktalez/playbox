@@ -63,4 +63,3 @@ class MoveOut(BaseModel):
     captured: str | None = None
     is_check: bool = False
     is_checkmate: bool = False
-

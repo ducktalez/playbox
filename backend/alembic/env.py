@@ -3,8 +3,6 @@
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
-from sqlmodel import SQLModel
 
 # Import all models so they register with SQLModel.metadata
 from app.games.quiz.models import (  # noqa: F401
@@ -17,6 +15,8 @@ from app.games.quiz.models import (  # noqa: F401
     QuestionTag,
     Tag,
 )
+from sqlalchemy import engine_from_config, pool
+from sqlmodel import SQLModel
 
 config = context.config
 if config.config_file_name is not None:
@@ -50,4 +50,3 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
-

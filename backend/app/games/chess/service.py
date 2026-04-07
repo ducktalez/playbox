@@ -7,13 +7,12 @@ This follows the same pattern as the Imposter service.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.core.errors import AppError
 from app.games.chess.engine import ChessEngine, create_engine
 from app.games.chess.schemas import (
     COLORS,
-    GAME_STATUSES,
     VARIANTS,
     GameCreateIn,
     GameOut,
@@ -55,7 +54,7 @@ class ChessService:
             "move_history": [],
             "captured_white": [],  # pieces captured BY white
             "captured_black": [],  # pieces captured BY black
-            "created_at": datetime.now(timezone.utc),
+            "created_at": datetime.now(UTC),
         }
         _games[game_id] = game_state
         return self._game_to_out(game_state)
@@ -172,4 +171,3 @@ _service = ChessService()
 def get_chess_service() -> ChessService:
     """Dependency: return the chess service singleton."""
     return _service
-

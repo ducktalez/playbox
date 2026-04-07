@@ -5,11 +5,9 @@ import uuid
 from pathlib import Path
 from unittest.mock import patch
 
-from sqlalchemy import select
-
 from app.games.quiz.models import Category, Question, Tag
 from app.games.quiz.seed import QuizSeedFile, load_seed_file, seed_quiz_dataset
-
+from sqlalchemy import select
 
 # --- Category endpoints ---
 
@@ -74,9 +72,7 @@ def test_get_player_profile(quiz_client) -> None:
     player_id = player_resp.json()["id"]
 
     # Create a session and play a question
-    session_resp = quiz_client.post(
-        "/api/v1/quiz/sessions", json={"mode": "speed", "player_id": player_id}
-    )
+    session_resp = quiz_client.post("/api/v1/quiz/sessions", json={"mode": "speed", "player_id": player_id})
     session_id = session_resp.json()["id"]
 
     # Create a question and submit a correct attempt
@@ -132,9 +128,7 @@ def test_get_player_sessions(quiz_client) -> None:
 
     # Create 3 sessions
     for mode in ["speed", "millionaire", "speed"]:
-        quiz_client.post(
-            "/api/v1/quiz/sessions", json={"mode": mode, "player_id": player_id}
-        )
+        quiz_client.post("/api/v1/quiz/sessions", json={"mode": mode, "player_id": player_id})
 
     resp = quiz_client.get(f"/api/v1/quiz/players/{player_id}/sessions")
     assert resp.status_code == 200
@@ -286,9 +280,7 @@ def test_list_questions_order_by_elo_asc(quiz_client) -> None:
     get_resp = quiz_client.get(f"/api/v1/quiz/questions/{q_ids[0]}?num_answers=4")
     answers = get_resp.json()["answers"]
     # We need the correct answer, so create a session and attempt
-    session = quiz_client.post(
-        "/api/v1/quiz/sessions", json={"mode": "speed", "player_id": player_id}
-    ).json()
+    session = quiz_client.post("/api/v1/quiz/sessions", json={"mode": "speed", "player_id": player_id}).json()
 
     # Just submit with the first answer (may or may not be correct, but changes ELO)
     quiz_client.post(
@@ -353,9 +345,7 @@ def test_list_questions_elo_balanced_preserves_difficulty_progression(quiz_clien
             payload["tags"] = [f"{cat_name.lower()}-tier-{i}"]
             quiz_client.post("/api/v1/quiz/questions", json=payload)
 
-    resp = quiz_client.get(
-        "/api/v1/quiz/questions?order_by_elo=asc&balanced_categories=true&limit=9"
-    )
+    resp = quiz_client.get("/api/v1/quiz/questions?order_by_elo=asc&balanced_categories=true&limit=9")
     assert resp.status_code == 200
     items = resp.json()["items"]
     assert len(items) == 9
@@ -551,7 +541,7 @@ def test_list_questions_filter_by_tag(quiz_client) -> None:
     items = resp.json()["items"]
     assert len(items) >= 1
     assert all("alpha-tag" in item["tags"] for item in items)
-    assert all("Tagged B?" != item["text"] for item in items)
+    assert all(item["text"] != "Tagged B?" for item in items)
 
 
 def test_list_questions_filter_by_unknown_tag(quiz_client) -> None:
@@ -1142,9 +1132,7 @@ def test_seed_quiz_dataset_maps_tier_to_elo(db_session) -> None:
     )
     seed_quiz_dataset(db=db_session, dataset=dataset)
 
-    questions = db_session.execute(
-        select(Question).order_by(Question.elo_score.asc())
-    ).scalars().all()
+    questions = db_session.execute(select(Question).order_by(Question.elo_score.asc())).scalars().all()
 
     assert len(questions) == 3
     # Tiers get distinct starting ELOs for difficulty curve on fresh DBs
@@ -1166,9 +1154,12 @@ def _create_question_for_feedback(quiz_client) -> str:
 def test_submit_feedback_thumbs_up(quiz_client) -> None:
     """POST /questions/{id}/feedback with THUMBS_UP should succeed."""
     qid = _create_question_for_feedback(quiz_client)
-    resp = quiz_client.post(f"/api/v1/quiz/questions/{qid}/feedback", json={
-        "feedback_type": "THUMBS_UP",
-    })
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={
+            "feedback_type": "THUMBS_UP",
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["feedback_type"] == "THUMBS_UP"
@@ -1178,11 +1169,14 @@ def test_submit_feedback_thumbs_up(quiz_client) -> None:
 def test_submit_feedback_thumbs_down(quiz_client) -> None:
     """POST /questions/{id}/feedback with THUMBS_DOWN + category should succeed."""
     qid = _create_question_for_feedback(quiz_client)
-    resp = quiz_client.post(f"/api/v1/quiz/questions/{qid}/feedback", json={
-        "feedback_type": "THUMBS_DOWN",
-        "category": "TOO_HARD",
-        "comment": "Zu schwer!",
-    })
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={
+            "feedback_type": "THUMBS_DOWN",
+            "category": "TOO_HARD",
+            "comment": "Zu schwer!",
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["feedback_type"] == "THUMBS_DOWN"
@@ -1193,11 +1187,14 @@ def test_submit_feedback_thumbs_down(quiz_client) -> None:
 def test_submit_feedback_report(quiz_client) -> None:
     """POST /questions/{id}/feedback with REPORT should require category."""
     qid = _create_question_for_feedback(quiz_client)
-    resp = quiz_client.post(f"/api/v1/quiz/questions/{qid}/feedback", json={
-        "feedback_type": "REPORT",
-        "category": "ANSWER_INCORRECT",
-        "comment": "Die Antwort stimmt nicht.",
-    })
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={
+            "feedback_type": "REPORT",
+            "category": "ANSWER_INCORRECT",
+            "comment": "Die Antwort stimmt nicht.",
+        },
+    )
     assert resp.status_code == 200
     assert resp.json()["feedback_type"] == "REPORT"
 
@@ -1205,9 +1202,12 @@ def test_submit_feedback_report(quiz_client) -> None:
 def test_submit_feedback_report_requires_category(quiz_client) -> None:
     """POST REPORT without category should return 422."""
     qid = _create_question_for_feedback(quiz_client)
-    resp = quiz_client.post(f"/api/v1/quiz/questions/{qid}/feedback", json={
-        "feedback_type": "REPORT",
-    })
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={
+            "feedback_type": "REPORT",
+        },
+    )
     assert resp.status_code == 422
     assert resp.json()["code"] == "CATEGORY_REQUIRED"
 
@@ -1215,9 +1215,12 @@ def test_submit_feedback_report_requires_category(quiz_client) -> None:
 def test_submit_feedback_invalid_type(quiz_client) -> None:
     """POST with invalid feedback_type should return 422."""
     qid = _create_question_for_feedback(quiz_client)
-    resp = quiz_client.post(f"/api/v1/quiz/questions/{qid}/feedback", json={
-        "feedback_type": "INVALID",
-    })
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={
+            "feedback_type": "INVALID",
+        },
+    )
     assert resp.status_code == 422
     assert resp.json()["code"] == "INVALID_FEEDBACK_TYPE"
 
@@ -1225,10 +1228,13 @@ def test_submit_feedback_invalid_type(quiz_client) -> None:
 def test_submit_feedback_thumbs_up_rejects_category(quiz_client) -> None:
     """THUMBS_UP with category should return 422."""
     qid = _create_question_for_feedback(quiz_client)
-    resp = quiz_client.post(f"/api/v1/quiz/questions/{qid}/feedback", json={
-        "feedback_type": "THUMBS_UP",
-        "category": "TOO_EASY",
-    })
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={
+            "feedback_type": "THUMBS_UP",
+            "category": "TOO_EASY",
+        },
+    )
     assert resp.status_code == 422
     assert resp.json()["code"] == "CATEGORY_NOT_ALLOWED"
 
@@ -1236,10 +1242,13 @@ def test_submit_feedback_thumbs_up_rejects_category(quiz_client) -> None:
 def test_submit_feedback_invalid_category(quiz_client) -> None:
     """THUMBS_DOWN with unknown category should return 422."""
     qid = _create_question_for_feedback(quiz_client)
-    resp = quiz_client.post(f"/api/v1/quiz/questions/{qid}/feedback", json={
-        "feedback_type": "THUMBS_DOWN",
-        "category": "BOGUS_CATEGORY",
-    })
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={
+            "feedback_type": "THUMBS_DOWN",
+            "category": "BOGUS_CATEGORY",
+        },
+    )
     assert resp.status_code == 422
     assert resp.json()["code"] == "INVALID_FEEDBACK_CATEGORY"
 
@@ -1247,10 +1256,13 @@ def test_submit_feedback_invalid_category(quiz_client) -> None:
 def test_submit_feedback_multi_category(quiz_client) -> None:
     """THUMBS_DOWN with comma-separated categories should succeed."""
     qid = _create_question_for_feedback(quiz_client)
-    resp = quiz_client.post(f"/api/v1/quiz/questions/{qid}/feedback", json={
-        "feedback_type": "THUMBS_DOWN",
-        "category": "TOO_HARD,PROBLEM_WITH_ANSWERS",
-    })
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={
+            "feedback_type": "THUMBS_DOWN",
+            "category": "TOO_HARD,PROBLEM_WITH_ANSWERS",
+        },
+    )
     assert resp.status_code == 200
     assert "TOO_HARD" in resp.json()["category"]
     assert "PROBLEM_WITH_ANSWERS" in resp.json()["category"]
@@ -1258,9 +1270,12 @@ def test_submit_feedback_multi_category(quiz_client) -> None:
 
 def test_submit_feedback_question_not_found(quiz_client) -> None:
     """POST feedback on non-existent question should return 404."""
-    resp = quiz_client.post(f"/api/v1/quiz/questions/{uuid.uuid4()}/feedback", json={
-        "feedback_type": "THUMBS_UP",
-    })
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{uuid.uuid4()}/feedback",
+        json={
+            "feedback_type": "THUMBS_UP",
+        },
+    )
     assert resp.status_code == 404
     assert resp.json()["code"] == "QUESTION_NOT_FOUND"
 
@@ -1271,9 +1286,13 @@ def test_list_feedback(quiz_client) -> None:
     # Submit 3 feedback entries
     quiz_client.post(f"/api/v1/quiz/questions/{qid}/feedback", json={"feedback_type": "THUMBS_UP"})
     quiz_client.post(f"/api/v1/quiz/questions/{qid}/feedback", json={"feedback_type": "THUMBS_UP"})
-    quiz_client.post(f"/api/v1/quiz/questions/{qid}/feedback", json={
-        "feedback_type": "THUMBS_DOWN", "category": "TOO_EASY",
-    })
+    quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={
+            "feedback_type": "THUMBS_DOWN",
+            "category": "TOO_EASY",
+        },
+    )
 
     resp = quiz_client.get(f"/api/v1/quiz/questions/{qid}/feedback")
     assert resp.status_code == 200
@@ -1299,25 +1318,35 @@ def test_submit_feedback_with_player_and_session(quiz_client) -> None:
     """Feedback with player_id and session_id should store them."""
     qid = _create_question_for_feedback(quiz_client)
     player = quiz_client.post("/api/v1/quiz/players", json={"name": "FeedbackPlayer"}).json()
-    session = quiz_client.post("/api/v1/quiz/sessions", json={
-        "mode": "speed", "player_id": player["id"],
-    }).json()
+    session = quiz_client.post(
+        "/api/v1/quiz/sessions",
+        json={
+            "mode": "speed",
+            "player_id": player["id"],
+        },
+    ).json()
 
-    resp = quiz_client.post(f"/api/v1/quiz/questions/{qid}/feedback", json={
-        "feedback_type": "THUMBS_UP",
-        "player_id": player["id"],
-        "session_id": session["id"],
-    })
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={
+            "feedback_type": "THUMBS_UP",
+            "player_id": player["id"],
+            "session_id": session["id"],
+        },
+    )
     assert resp.status_code == 200
 
 
 def test_submit_feedback_report_multi_category(quiz_client) -> None:
     """REPORT with multiple comma-separated categories should succeed."""
     qid = _create_question_for_feedback(quiz_client)
-    resp = quiz_client.post(f"/api/v1/quiz/questions/{qid}/feedback", json={
-        "feedback_type": "REPORT",
-        "category": "QUESTION_INACCURATE,ANSWER_INCORRECT",
-    })
+    resp = quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={
+            "feedback_type": "REPORT",
+            "category": "QUESTION_INACCURATE,ANSWER_INCORRECT",
+        },
+    )
     assert resp.status_code == 200
 
 
@@ -1325,9 +1354,13 @@ def test_list_feedback_newest_first(quiz_client) -> None:
     """Feedback entries should be returned newest first."""
     qid = _create_question_for_feedback(quiz_client)
     quiz_client.post(f"/api/v1/quiz/questions/{qid}/feedback", json={"feedback_type": "THUMBS_UP"})
-    quiz_client.post(f"/api/v1/quiz/questions/{qid}/feedback", json={
-        "feedback_type": "THUMBS_DOWN", "category": "TOO_EASY",
-    })
+    quiz_client.post(
+        f"/api/v1/quiz/questions/{qid}/feedback",
+        json={
+            "feedback_type": "THUMBS_DOWN",
+            "category": "TOO_EASY",
+        },
+    )
 
     resp = quiz_client.get(f"/api/v1/quiz/questions/{qid}/feedback")
     entries = resp.json()
@@ -1344,9 +1377,11 @@ def test_upload_media_image(quiz_client, tmp_path) -> None:
     """POST /questions/{id}/media with a JPEG should succeed."""
     qid = _create_question_for_feedback(quiz_client)
     fake_image = io.BytesIO(b"\xff\xd8\xff\xe0" + b"\x00" * 100)
-    with patch("app.games.quiz.service.Path.mkdir"), \
-         patch("app.games.quiz.service.Path.write_bytes"), \
-         patch("app.games.quiz.service.Path.exists", return_value=False):
+    with (
+        patch("app.games.quiz.service.Path.mkdir"),
+        patch("app.games.quiz.service.Path.write_bytes"),
+        patch("app.games.quiz.service.Path.exists", return_value=False),
+    ):
         resp = quiz_client.post(
             f"/api/v1/quiz/questions/{qid}/media",
             files={"file": ("test.jpg", fake_image, "image/jpeg")},
@@ -1384,9 +1419,11 @@ def test_delete_media(quiz_client) -> None:
     qid = _create_question_for_feedback(quiz_client)
     # First upload
     fake_image = io.BytesIO(b"\xff\xd8\xff\xe0" + b"\x00" * 100)
-    with patch("app.games.quiz.service.Path.mkdir"), \
-         patch("app.games.quiz.service.Path.write_bytes"), \
-         patch("app.games.quiz.service.Path.exists", return_value=False):
+    with (
+        patch("app.games.quiz.service.Path.mkdir"),
+        patch("app.games.quiz.service.Path.write_bytes"),
+        patch("app.games.quiz.service.Path.exists", return_value=False),
+    ):
         quiz_client.post(
             f"/api/v1/quiz/questions/{qid}/media",
             files={"file": ("test.jpg", fake_image, "image/jpeg")},
@@ -1411,9 +1448,11 @@ def test_upload_media_pdf(quiz_client) -> None:
     """POST /questions/{id}/media with a PDF should succeed."""
     qid = _create_question_for_feedback(quiz_client)
     fake_pdf = io.BytesIO(b"%PDF-1.4" + b"\x00" * 100)
-    with patch("app.games.quiz.service.Path.mkdir"), \
-         patch("app.games.quiz.service.Path.write_bytes"), \
-         patch("app.games.quiz.service.Path.exists", return_value=False):
+    with (
+        patch("app.games.quiz.service.Path.mkdir"),
+        patch("app.games.quiz.service.Path.write_bytes"),
+        patch("app.games.quiz.service.Path.exists", return_value=False),
+    ):
         resp = quiz_client.post(
             f"/api/v1/quiz/questions/{qid}/media",
             files={"file": ("doc.pdf", fake_pdf, "application/pdf")},
@@ -1426,9 +1465,11 @@ def test_upload_media_video(quiz_client) -> None:
     """POST /questions/{id}/media with an MP4 should succeed."""
     qid = _create_question_for_feedback(quiz_client)
     fake_video = io.BytesIO(b"\x00\x00\x00\x1c" + b"\x00" * 100)
-    with patch("app.games.quiz.service.Path.mkdir"), \
-         patch("app.games.quiz.service.Path.write_bytes"), \
-         patch("app.games.quiz.service.Path.exists", return_value=False):
+    with (
+        patch("app.games.quiz.service.Path.mkdir"),
+        patch("app.games.quiz.service.Path.write_bytes"),
+        patch("app.games.quiz.service.Path.exists", return_value=False),
+    ):
         resp = quiz_client.post(
             f"/api/v1/quiz/questions/{qid}/media",
             files={"file": ("clip.mp4", fake_video, "video/mp4")},
@@ -1455,8 +1496,9 @@ def test_ordering_question_not_available(quiz_client) -> None:
 
 def test_ordering_question_and_check(quiz_client, db_session) -> None:
     """Full flow: create an ordering question, fetch it, and check correct/wrong answers."""
-    from app.games.quiz.models import OrderingQuestion
     import json as _json
+
+    from app.games.quiz.models import OrderingQuestion
 
     oq = OrderingQuestion(
         text="Ordne die Jahreszahlen:",
@@ -1474,16 +1516,22 @@ def test_ordering_question_and_check(quiz_client, db_session) -> None:
     assert set(data["shuffled_answers"]) == {"2011", "2014", "2017", "2020"}
 
     # Check correct order
-    resp = quiz_client.post(f"/api/v1/quiz/ordering-question/{data['id']}/check", json={
-        "submitted_order": ["2011", "2014", "2017", "2020"],
-    })
+    resp = quiz_client.post(
+        f"/api/v1/quiz/ordering-question/{data['id']}/check",
+        json={
+            "submitted_order": ["2011", "2014", "2017", "2020"],
+        },
+    )
     assert resp.status_code == 200
     assert resp.json()["correct"] is True
 
     # Check wrong order
-    resp = quiz_client.post(f"/api/v1/quiz/ordering-question/{data['id']}/check", json={
-        "submitted_order": ["2020", "2017", "2014", "2011"],
-    })
+    resp = quiz_client.post(
+        f"/api/v1/quiz/ordering-question/{data['id']}/check",
+        json={
+            "submitted_order": ["2020", "2017", "2014", "2011"],
+        },
+    )
     assert resp.status_code == 200
     assert resp.json()["correct"] is False
     assert resp.json()["correct_order"] == ["2011", "2014", "2017", "2020"]
@@ -1491,9 +1539,12 @@ def test_ordering_question_and_check(quiz_client, db_session) -> None:
 
 def test_ordering_question_check_not_found(quiz_client) -> None:
     """POST check on unknown ordering question should return 404."""
-    resp = quiz_client.post(f"/api/v1/quiz/ordering-question/{uuid.uuid4()}/check", json={
-        "submitted_order": ["A", "B", "C"],
-    })
+    resp = quiz_client.post(
+        f"/api/v1/quiz/ordering-question/{uuid.uuid4()}/check",
+        json={
+            "submitted_order": ["A", "B", "C"],
+        },
+    )
     assert resp.status_code == 404
 
 
@@ -1504,18 +1555,24 @@ def test_list_questions_pun_first(quiz_client) -> None:
     """GET /questions?pun_first=true should return a pun question first when available."""
     cat = quiz_client.post("/api/v1/quiz/categories", json={"name": "PunCat"}).json()
     # Non-pun question
-    quiz_client.post("/api/v1/quiz/questions", json={
-        "text": "Normal question?",
-        "category_id": cat["id"],
-        "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
-    })
+    quiz_client.post(
+        "/api/v1/quiz/questions",
+        json={
+            "text": "Normal question?",
+            "category_id": cat["id"],
+            "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
+        },
+    )
     # Pun question
-    quiz_client.post("/api/v1/quiz/questions", json={
-        "text": "Wortspiel question?",
-        "category_id": cat["id"],
-        "is_pun": True,
-        "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
-    })
+    quiz_client.post(
+        "/api/v1/quiz/questions",
+        json={
+            "text": "Wortspiel question?",
+            "category_id": cat["id"],
+            "is_pun": True,
+            "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
+        },
+    )
 
     resp = quiz_client.get("/api/v1/quiz/questions?pun_first=true&balanced_categories=true&limit=2")
     assert resp.status_code == 200
@@ -1530,18 +1587,24 @@ def test_list_questions_pun_first(quiz_client) -> None:
 def test_list_questions_language_filter(quiz_client) -> None:
     """GET /questions?language=en should return only English questions."""
     cat = quiz_client.post("/api/v1/quiz/categories", json={"name": "LangCat"}).json()
-    quiz_client.post("/api/v1/quiz/questions", json={
-        "text": "German question?",
-        "category_id": cat["id"],
-        "language": "de",
-        "answers": [{"text": "Ja", "is_correct": True}, {"text": "Nein", "is_correct": False}],
-    })
-    quiz_client.post("/api/v1/quiz/questions", json={
-        "text": "English question?",
-        "category_id": cat["id"],
-        "language": "en",
-        "answers": [{"text": "Yes", "is_correct": True}, {"text": "No", "is_correct": False}],
-    })
+    quiz_client.post(
+        "/api/v1/quiz/questions",
+        json={
+            "text": "German question?",
+            "category_id": cat["id"],
+            "language": "de",
+            "answers": [{"text": "Ja", "is_correct": True}, {"text": "Nein", "is_correct": False}],
+        },
+    )
+    quiz_client.post(
+        "/api/v1/quiz/questions",
+        json={
+            "text": "English question?",
+            "category_id": cat["id"],
+            "language": "en",
+            "answers": [{"text": "Yes", "is_correct": True}, {"text": "No", "is_correct": False}],
+        },
+    )
 
     resp = quiz_client.get("/api/v1/quiz/questions?language=en")
     assert resp.status_code == 200
@@ -1555,11 +1618,14 @@ def test_list_questions_language_filter(quiz_client) -> None:
 
 def test_create_question_with_wwm_difficulty(quiz_client) -> None:
     """POST /questions with wwm_difficulty should store it."""
-    resp = quiz_client.post("/api/v1/quiz/questions", json={
-        "text": "WWM difficulty question?",
-        "wwm_difficulty": 5,
-        "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
-    })
+    resp = quiz_client.post(
+        "/api/v1/quiz/questions",
+        json={
+            "text": "WWM difficulty question?",
+            "wwm_difficulty": 5,
+            "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
+        },
+    )
     assert resp.status_code == 200
     assert resp.json()["wwm_difficulty"] == 5
 
@@ -1570,21 +1636,28 @@ def test_create_question_with_wwm_difficulty(quiz_client) -> None:
 def test_difficulty_badge_easy(quiz_client) -> None:
     """A question with ELO < 1100 should get difficulty EASY."""
     cat = quiz_client.post("/api/v1/quiz/categories", json={"name": "DiffCat"}).json()
-    q = quiz_client.post("/api/v1/quiz/questions", json={
-        "text": "Easy question?",
-        "category_id": cat["id"],
-        "answers": [{"text": "Yes", "is_correct": True}, {"text": "No", "is_correct": False}],
-    }).json()
+    q = quiz_client.post(
+        "/api/v1/quiz/questions",
+        json={
+            "text": "Easy question?",
+            "category_id": cat["id"],
+            "answers": [{"text": "Yes", "is_correct": True}, {"text": "No", "is_correct": False}],
+        },
+    ).json()
     # Default ELO is 1200 → MEDIUM; submit many wrong answers to lower it
     player = quiz_client.post("/api/v1/quiz/players", json={"name": "LowElo"}).json()
     sess = quiz_client.post("/api/v1/quiz/sessions", json={"mode": "speed", "player_id": player["id"]}).json()
     correct_id = next(a["id"] for a in q["answers"] if a["is_correct"])
-    wrong_id = next(a["id"] for a in q["answers"] if not a["is_correct"])
     # Answering correct lowers question ELO; do it repeatedly
     for _ in range(15):
-        quiz_client.post(f"/api/v1/quiz/questions/{q['id']}/attempt", json={
-            "answer_id": correct_id, "player_id": player["id"], "session_id": sess["id"],
-        })
+        quiz_client.post(
+            f"/api/v1/quiz/questions/{q['id']}/attempt",
+            json={
+                "answer_id": correct_id,
+                "player_id": player["id"],
+                "session_id": sess["id"],
+            },
+        )
     # Re-fetch question and check difficulty
     fetched = quiz_client.get(f"/api/v1/quiz/questions/{q['id']}").json()
     assert fetched["difficulty"] == "EASY"
@@ -1593,29 +1666,40 @@ def test_difficulty_badge_easy(quiz_client) -> None:
 
 def test_difficulty_badge_medium(quiz_client) -> None:
     """A fresh question (ELO 1200) should get difficulty MEDIUM."""
-    q = quiz_client.post("/api/v1/quiz/questions", json={
-        "text": "Medium question?",
-        "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
-    }).json()
+    q = quiz_client.post(
+        "/api/v1/quiz/questions",
+        json={
+            "text": "Medium question?",
+            "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
+        },
+    ).json()
     assert q["difficulty"] == "MEDIUM"
     assert 1100 <= q["elo_score"] < 1300
 
 
-def test_difficulty_badge_hard( quiz_client) -> None:
+def test_difficulty_badge_hard(quiz_client) -> None:
     """A question with ELO >= 1300 should get difficulty HARD."""
-    q = quiz_client.post("/api/v1/quiz/questions", json={
-        "text": "Hard question?",
-        "answers": [{"text": "Yes", "is_correct": True}, {"text": "No", "is_correct": False}],
-    }).json()
+    q = quiz_client.post(
+        "/api/v1/quiz/questions",
+        json={
+            "text": "Hard question?",
+            "answers": [{"text": "Yes", "is_correct": True}, {"text": "No", "is_correct": False}],
+        },
+    ).json()
     player = quiz_client.post("/api/v1/quiz/players", json={"name": "HighElo"}).json()
     sess = quiz_client.post("/api/v1/quiz/sessions", json={"mode": "speed", "player_id": player["id"]}).json()
     wrong_id = next(a["id"] for a in q["answers"] if not a["is_correct"])
 
     # Answering wrong raises question ELO
     for _ in range(15):
-        quiz_client.post(f"/api/v1/quiz/questions/{q['id']}/attempt", json={
-            "answer_id": wrong_id, "player_id": player["id"], "session_id": sess["id"],
-        })
+        quiz_client.post(
+            f"/api/v1/quiz/questions/{q['id']}/attempt",
+            json={
+                "answer_id": wrong_id,
+                "player_id": player["id"],
+                "session_id": sess["id"],
+            },
+        )
     fetched = quiz_client.get(f"/api/v1/quiz/questions/{q['id']}").json()
     assert fetched["difficulty"] == "HARD"
     assert fetched["elo_score"] >= 1300
@@ -1623,10 +1707,13 @@ def test_difficulty_badge_hard( quiz_client) -> None:
 
 def test_difficulty_badge_on_create(quiz_client) -> None:
     """Newly created question should include a difficulty field."""
-    q = quiz_client.post("/api/v1/quiz/questions", json={
-        "text": "Fresh question with badge?",
-        "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
-    }).json()
+    q = quiz_client.post(
+        "/api/v1/quiz/questions",
+        json={
+            "text": "Fresh question with badge?",
+            "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
+        },
+    ).json()
     assert q["difficulty"] in ("EASY", "MEDIUM", "HARD")
 
 
@@ -1648,9 +1735,14 @@ def test_elo_history_recorded_after_attempt(quiz_client) -> None:
     q = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload()).json()
     correct_id = next(a["id"] for a in q["answers"] if a["is_correct"])
 
-    quiz_client.post(f"/api/v1/quiz/questions/{q['id']}/attempt", json={
-        "answer_id": correct_id, "player_id": player["id"], "session_id": sess["id"],
-    })
+    quiz_client.post(
+        f"/api/v1/quiz/questions/{q['id']}/attempt",
+        json={
+            "answer_id": correct_id,
+            "player_id": player["id"],
+            "session_id": sess["id"],
+        },
+    )
 
     resp = quiz_client.get(f"/api/v1/quiz/players/{player['id']}/elo-history")
     assert resp.status_code == 200
@@ -1669,9 +1761,14 @@ def test_elo_history_multiple_attempts(quiz_client) -> None:
     correct_id = next(a["id"] for a in q["answers"] if a["is_correct"])
 
     for _ in range(3):
-        quiz_client.post(f"/api/v1/quiz/questions/{q['id']}/attempt", json={
-            "answer_id": correct_id, "player_id": player["id"], "session_id": sess["id"],
-        })
+        quiz_client.post(
+            f"/api/v1/quiz/questions/{q['id']}/attempt",
+            json={
+                "answer_id": correct_id,
+                "player_id": player["id"],
+                "session_id": sess["id"],
+            },
+        )
 
     history = quiz_client.get(f"/api/v1/quiz/players/{player['id']}/elo-history").json()
     assert len(history) == 3
@@ -1687,9 +1784,14 @@ def test_elo_history_wrong_answer(quiz_client) -> None:
     q = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload()).json()
     wrong_id = next(a["id"] for a in q["answers"] if not a["is_correct"])
 
-    quiz_client.post(f"/api/v1/quiz/questions/{q['id']}/attempt", json={
-        "answer_id": wrong_id, "player_id": player["id"], "session_id": sess["id"],
-    })
+    quiz_client.post(
+        f"/api/v1/quiz/questions/{q['id']}/attempt",
+        json={
+            "answer_id": wrong_id,
+            "player_id": player["id"],
+            "session_id": sess["id"],
+        },
+    )
 
     history = quiz_client.get(f"/api/v1/quiz/players/{player['id']}/elo-history").json()
     assert len(history) == 1
@@ -1710,9 +1812,14 @@ def test_elo_history_with_session(quiz_client) -> None:
     q = quiz_client.post("/api/v1/quiz/questions", json=_create_question_payload()).json()
     correct_id = next(a["id"] for a in q["answers"] if a["is_correct"])
 
-    quiz_client.post(f"/api/v1/quiz/questions/{q['id']}/attempt", json={
-        "answer_id": correct_id, "player_id": player["id"], "session_id": sess["id"],
-    })
+    quiz_client.post(
+        f"/api/v1/quiz/questions/{q['id']}/attempt",
+        json={
+            "answer_id": correct_id,
+            "player_id": player["id"],
+            "session_id": sess["id"],
+        },
+    )
 
     history = quiz_client.get(f"/api/v1/quiz/players/{player['id']}/elo-history").json()
     assert len(history) == 1
@@ -1840,10 +1947,13 @@ _ADMIN_HEADERS = {"X-Admin-Token": "playbox-admin"}
 
 def test_submitted_question_starts_as_pending(quiz_client) -> None:
     """POST /questions/submit should create a PENDING question."""
-    resp = quiz_client.post("/api/v1/quiz/questions/submit", json={
-        "text": "User submitted question?",
-        "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
-    })
+    resp = quiz_client.post(
+        "/api/v1/quiz/questions/submit",
+        json={
+            "text": "User submitted question?",
+            "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["moderation_status"] == "PENDING"
@@ -1851,20 +1961,26 @@ def test_submitted_question_starts_as_pending(quiz_client) -> None:
 
 def test_admin_created_question_is_approved(quiz_client) -> None:
     """POST /questions (admin) should create an APPROVED question."""
-    resp = quiz_client.post("/api/v1/quiz/questions", json={
-        "text": "Admin created question?",
-        "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
-    })
+    resp = quiz_client.post(
+        "/api/v1/quiz/questions",
+        json={
+            "text": "Admin created question?",
+            "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
+        },
+    )
     assert resp.status_code == 200
     assert resp.json()["moderation_status"] == "APPROVED"
 
 
 def test_pending_question_hidden_from_list(quiz_client) -> None:
     """PENDING questions should not appear in the gameplay question list."""
-    quiz_client.post("/api/v1/quiz/questions/submit", json={
-        "text": "Hidden pending question?",
-        "answers": [{"text": "Yes", "is_correct": True}, {"text": "No", "is_correct": False}],
-    })
+    quiz_client.post(
+        "/api/v1/quiz/questions/submit",
+        json={
+            "text": "Hidden pending question?",
+            "answers": [{"text": "Yes", "is_correct": True}, {"text": "No", "is_correct": False}],
+        },
+    )
     resp = quiz_client.get("/api/v1/quiz/questions")
     assert resp.status_code == 200
     items = resp.json()["items"]
@@ -1873,20 +1989,26 @@ def test_pending_question_hidden_from_list(quiz_client) -> None:
 
 def test_pending_question_hidden_from_get(quiz_client) -> None:
     """GET /questions/{id} should return 404 for PENDING questions."""
-    q = quiz_client.post("/api/v1/quiz/questions/submit", json={
-        "text": "Pending get test?",
-        "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
-    }).json()
+    q = quiz_client.post(
+        "/api/v1/quiz/questions/submit",
+        json={
+            "text": "Pending get test?",
+            "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
+        },
+    ).json()
     resp = quiz_client.get(f"/api/v1/quiz/questions/{q['id']}")
     assert resp.status_code == 404
 
 
 def test_approve_question_makes_it_visible(quiz_client) -> None:
     """Approving a PENDING question should make it appear in gameplay queries."""
-    q = quiz_client.post("/api/v1/quiz/questions/submit", json={
-        "text": "Will be approved?",
-        "answers": [{"text": "Yes", "is_correct": True}, {"text": "No", "is_correct": False}],
-    }).json()
+    q = quiz_client.post(
+        "/api/v1/quiz/questions/submit",
+        json={
+            "text": "Will be approved?",
+            "answers": [{"text": "Yes", "is_correct": True}, {"text": "No", "is_correct": False}],
+        },
+    ).json()
     qid = q["id"]
 
     # Approve via admin endpoint
@@ -1910,10 +2032,13 @@ def test_approve_question_makes_it_visible(quiz_client) -> None:
 
 def test_reject_question_keeps_it_hidden(quiz_client) -> None:
     """Rejecting a PENDING question should keep it hidden from gameplay."""
-    q = quiz_client.post("/api/v1/quiz/questions/submit", json={
-        "text": "Will be rejected?",
-        "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
-    }).json()
+    q = quiz_client.post(
+        "/api/v1/quiz/questions/submit",
+        json={
+            "text": "Will be rejected?",
+            "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
+        },
+    ).json()
     qid = q["id"]
 
     resp = quiz_client.post(
@@ -1932,14 +2057,20 @@ def test_reject_question_keeps_it_hidden(quiz_client) -> None:
 
 def test_list_pending_questions(quiz_client) -> None:
     """GET /admin/questions/pending should list PENDING questions."""
-    quiz_client.post("/api/v1/quiz/questions/submit", json={
-        "text": "Pending Q1?",
-        "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
-    })
-    quiz_client.post("/api/v1/quiz/questions/submit", json={
-        "text": "Pending Q2?",
-        "answers": [{"text": "X", "is_correct": True}, {"text": "Y", "is_correct": False}],
-    })
+    quiz_client.post(
+        "/api/v1/quiz/questions/submit",
+        json={
+            "text": "Pending Q1?",
+            "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
+        },
+    )
+    quiz_client.post(
+        "/api/v1/quiz/questions/submit",
+        json={
+            "text": "Pending Q2?",
+            "answers": [{"text": "X", "is_correct": True}, {"text": "Y", "is_correct": False}],
+        },
+    )
 
     resp = quiz_client.get("/api/v1/quiz/admin/questions/pending", headers=_ADMIN_HEADERS)
     assert resp.status_code == 200
@@ -1960,10 +2091,13 @@ def test_moderate_question_not_found(quiz_client) -> None:
 
 def test_moderate_invalid_status(quiz_client) -> None:
     """Invalid moderation status should return 422."""
-    q = quiz_client.post("/api/v1/quiz/questions/submit", json={
-        "text": "Invalid status test?",
-        "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
-    }).json()
+    q = quiz_client.post(
+        "/api/v1/quiz/questions/submit",
+        json={
+            "text": "Invalid status test?",
+            "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
+        },
+    ).json()
 
     resp = quiz_client.post(
         f"/api/v1/quiz/admin/questions/{q['id']}/moderate",
@@ -1980,10 +2114,13 @@ def test_admin_endpoint_requires_header(quiz_client) -> None:
     assert resp.status_code == 403
     assert resp.json()["code"] == "ADMIN_REQUIRED"
 
-    q = quiz_client.post("/api/v1/quiz/questions/submit", json={
-        "text": "No admin token?",
-        "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
-    }).json()
+    q = quiz_client.post(
+        "/api/v1/quiz/questions/submit",
+        json={
+            "text": "No admin token?",
+            "answers": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
+        },
+    ).json()
     resp = quiz_client.post(
         f"/api/v1/quiz/admin/questions/{q['id']}/moderate",
         json={"status": "APPROVED"},
@@ -2060,4 +2197,3 @@ def test_offline_config_endpoint(client) -> None:
     assert "imposter_words" in data
     assert "piccolo_challenges" in data
     assert isinstance(data["quiz_questions"], int)
-

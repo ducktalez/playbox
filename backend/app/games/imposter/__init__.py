@@ -1,2 +1,1 @@
 """Imposter — Game package."""
-

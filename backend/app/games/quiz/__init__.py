@@ -1,2 +1,1 @@
 """Quiz — Game package."""
-

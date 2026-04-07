@@ -6,9 +6,9 @@ from fastapi import APIRouter
 
 from app.core.config import settings
 from app.games.piccolo.schemas import (
-    ChallengeOut,
     ChallengeFeedbackIn,
     ChallengeFeedbackOut,
+    ChallengeOut,
     ChallengeTemplateOut,
     SessionCreateIn,
     SessionOut,
@@ -75,5 +75,3 @@ async def list_feedback(
 ) -> list[ChallengeFeedbackOut]:
     """List feedback entries, optionally filtered by challenge template text."""
     return service.list_feedback(challenge_text=challenge_text, limit=limit, offset=offset)
-
-
