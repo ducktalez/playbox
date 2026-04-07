@@ -3,13 +3,13 @@
 ## Current Status
 
 **Phase:** Execution in Progress
-**Last Updated:** 2026-04-03
+**Last Updated:** 2026-04-07
 
 ## Roadmap
 
 | Phase | Description | Target Date | Status |
 |-------|------------|-------------|--------|
-| 0 | Project scaffolding, CI/CD, Docker setup | 2026-04 | ✅ done (CI open) |
+| 0 | Project scaffolding, CI/CD, Docker setup | 2026-04 | ✅ done |
 | 1 | Imposter — MVP | 2026-05 | ✅ done |
 | 2 | Piccolo — MVP | 2026-06 | ✅ done |
 | 3 | Quiz ("Wer wird Elite-Hater?") — MVP | 2026-07 | ✅ done |
@@ -21,15 +21,15 @@
 
 ## Phase 0 — Scaffolding
 
-- Done: app factory, API mounting, `/health`, frontend Vite app, Docker, shared navigation, repo-root `.env` bootstrap, PyCharm run configurations, and **PWA shell** (manifest, Service Worker with Workbox runtime caching, SVG placeholder icons) are in place.
-- Open: CI workflow, proper PNG icons for production.
+- Done: app factory, API mounting, `/health`, frontend Vite app, Docker, shared navigation, repo-root `.env` bootstrap, PyCharm run configurations, **PWA shell** (manifest, Service Worker with Workbox runtime caching, SVG placeholder icons), Git repo on GitHub, and **CI pipeline** (GitHub Actions: ruff lint + format, pytest, tsc, eslint, vite build) are in place.
+- Open: proper PNG icons for production.
 
-- [ ] Initialize Git repo, push to GitHub
+- [x] Initialize Git repo, push to GitHub
 - [x] Set up FastAPI backend with app factory pattern
 - [x] Set up React/TypeScript frontend with Vite
 - [x] Docker Compose: backend + PostgreSQL + frontend dev server
 - [x] Production Dockerfile (backend serves built frontend)
-- [ ] GitHub Actions: lint + test pipeline
+- [x] GitHub Actions: lint + test pipeline
 - [x] PWA basics: manifest.json, Service Worker shell, Workbox runtime caching
 - [x] Shared layout / navigation between games
 - [x] Health endpoint `GET /health`
@@ -283,8 +283,10 @@
 - [x] Cache-first quiz gameplay: all three modes (Millionär, Speed, 1v1 Duel) pre-cache server questions at init and evaluate answers locally when offline
 - [x] Offline indicator in all quiz modes ("📴 Offline" badge, jokers disabled, ELO tracking paused)
 - [x] IndexedDB offline bundle fallback: if server drops mid-game, questions are loaded from IndexedDB truth cache
-- [ ] Initialize Git repo, push to GitHub
-- [ ] GitHub Actions: lint + test pipeline
+- [x] Initialize Git repo, push to GitHub
+- [x] GitHub Actions: lint + test pipeline (ruff check + format, pytest 203 tests, tsc, eslint, vite build)
+- [x] ESLint config (eslint.config.js, flat config for ESLint v9 + typescript-eslint)
+- [x] Ruff lint: all backend code passes (203 errors fixed — auto-fix + manual + config tuning)
 - [ ] TODO: post-dev — generate proper PNG icons for PWA (replace SVG placeholders)
 - [ ] CSS/UI framework decision (Tailwind CSS vs. MUI vs. custom) — resolve Blocker
 
@@ -369,6 +371,10 @@
 - Imposter offline support: client-side fallback with cached word list (localStorage), automatic offline session creation and reveal when backend unreachable, "Offline-Modus" indicator
 - Piccolo offline support: client-side fallback with cached challenge templates (localStorage), offline session with category-balanced challenge ordering, "Offline-Modus" indicator
 - Piccolo challenge feedback: `POST /challenges/feedback` + `GET /challenges/feedback`, three feedback types (THUMBS_UP, THUMBS_DOWN, REPORT), Piccolo-specific report categories (INAPPROPRIATE, BORING, BROKEN_TEMPLATE, OTHER), optional free-text comment, validation rules per feedback type, 12 new tests, frontend report button (🚩) with bottom-sheet on fullscreen challenge view, consistent with cross-game reporting conventions
+- GitHub Actions CI pipeline: `.github/workflows/ci.yml` — backend job (ruff check + ruff format --check + pytest 203 tests) and frontend job (tsc --noEmit + eslint + vite build), runs on push to main and PRs, concurrency group with cancel-in-progress
+- Ruff lint cleanup: all 203 initial errors resolved — 69 auto-fixed (unused imports, unsorted imports, datetime.utcnow, unused noqa), 7 manual fixes (duplicate docstrings, .lstrip → .removeprefix, assert False → pytest.raises, zip strict=, unused variable, collection concat), ruff config tuned for project (B008 FastAPI patterns, E501 German strings, RUF001-003 Unicode, E402 test/service files)
+- Ruff format: all 36 backend Python files formatted consistently
+- ESLint config: `eslint.config.js` (flat config for ESLint v9 + typescript-eslint recommended rules)
 - Backend tests: `test_imposter.py` (11), `test_piccolo.py` (32), `test_quiz.py` (122), `test_elo.py` (8), `test_smoke.py` (6), `test_chess.py` (24) — total 203 (all green)
 
 ## Dependencies
