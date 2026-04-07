@@ -15,7 +15,7 @@
 | 3 | Quiz ("Wer wird Elite-Hater?") — MVP | 2026-07 | ✅ done |
 | 4 | Quiz — ELO system + media attachments | 2026-08 | ✅ done |
 | 5 | Chess Variants — MVP (low priority) | 2026-04 | ✅ done (8×8 only) |
-| 6 | Polish, PWA optimization, offline hardening | TBD | in progress |
+| 6 | Polish, PWA optimization, offline hardening | 2026-04 | ✅ done (icons + CSS deferred) |
 
 ---
 
