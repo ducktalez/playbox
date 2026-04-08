@@ -28,11 +28,11 @@ const games = [
 		offlineKey: "quiz",
 	},
 	{
-		name: "Chess Variants",
+		name: "Schach",
 		path: "/chess",
 		emoji: "♟️",
-		description: "Schach mit weniger Reihen und mehr Chaos.",
-		status: "coming soon",
+		description: "Lokales 1v1 Standard-Schach.",
+		status: "ready",
 		offlineKey: null,
 	},
 ];

@@ -52,6 +52,7 @@ data/
 
 # Temporary files
 backend/_test.txt
+_tmp_*.py
 
 # Media uploads and generated assets (too large / not committed)
 media/
