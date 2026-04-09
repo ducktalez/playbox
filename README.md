@@ -2,32 +2,28 @@
 
 > A collection of small browser-based party & quiz games — PWA-installable, shared infrastructure.
 
-## Ablage/TODOs
+## Ideas / Future TODOs
 
-- WWM Hintergrund beim Spiel soll generiert werden. prinzipiell soll es drei Optionen geben
-  1. Rechts ein Bild/Video vom Drachenlord, wie er einfach dasitzt (rechts). Links ein generischer TV-Monitor, der clips abspielen kann
-  2. Quasi 1.), nur dass ein generisches "Wer wird Millionär?"-pult als Overlay bereitstellt. Ebenso generisches Publikum.
-  3. Ein grob modelliertes 3d-Studio mit generischen Avataren als Publikum. (Vorerst nicht implementieren) 
-      - Moderator ist Dorian/Drachenlord 
-      - Moderator kann mit KI Stimme reden. Haterkommentare kommen aus dem Publikum. 
-      - Fragen-sql-schema kann bezüglich clips erweitert werden, die dann eingeblendet werden.
-- "Story mode" für Winklerfragen (Jeden Tag zehn Versuche. Schaltet ein Legacy-Winkel-Video frei) 
-  - Am Anfang: 6 Antworten
-- Option: Mehr als eine richtige Antwort
-- Plan: Mehrere Sprachen (Deutsch, Englisch). Vorrangig einheitlich, starten mit english. 
-- Piccolo: Schätz-fragen 
-- Keine Ports in python-files -> .env
-- WWM: Im Original fahren die Antwortmöglichkeiten tatsächlich nacheinander ein. Hier sollte notiert werden, dass es zwei Versionen dieses Spiels erfordert:
-  - Quiz App Version: Alle Antworten sind sofort verfügbar 
-  - Quiz-show Version: Antworten fahren nacheinander ein, Spieler buzzern dazwischen (für Liveshows oder lokale Partys)
-- WWM: Die allererste Anordnungs-Frage zu Beginn ist momentan nicht implementiert
-- Quizduell-Fragen und WWM-Fragen haben teilweise einen funktionalen Unterschied. Die erste Frage bei WWM ist zB. meist ein Wortwitz oder eine Fangfrage, die nicht unbedingt in die Quizduell-Datenbank passt. Hier sollte geklärt werden, wie das in der Datenbank vermerkt werden kann. 
-- WWM Sound: Die Intro-Musik (intro.mp3) wird aktuell NICHT verwendet, da wir direkt zur Kandidaten-Auswahlfrage springen und dort die question-low BG-Musik startet. Ob ein Intro-Screen oder die Intro-Musik eingebaut werden soll, muss noch geklärt werden.
+> Brainstorm items — not committed for implementation. Promote to [Implementation-Plan](docs/Implementation-Plan.md) when ready.
 
-## Fragensammlung
+### WWM Visual Enhancements (Deferred)
+- [ ] WWM studio background variants: (1) Drachenlord image + clip monitor, (2) WWM desk overlay + audience, (3) 3D studio with AI moderator voice — see Phase 3.5
+- [ ] Quiz-show version: answers slide in sequentially, buzzer mode for local parties
+- [ ] WWM intro screen with `intro.mp3` (currently unused — game jumps straight to Kandidatenfrage)
 
+### Quiz Content Model (Deferred)
+- [ ] Story mode for Drachenlord questions (daily 10 attempts, unlock legacy video)
+- [ ] Multiple correct answers per question (currently: exactly 1 correct)
+- [ ] WWM-specific questions (Wortwitz / trick questions) vs. general Quizduell pool — tagging or `mode_hint` field
+- [ ] 6-answer option for special question types
 
+### Other Games (Deferred)
+- [ ] Piccolo: estimation questions (Schätzfragen)
 
+### Resolved
+- ~~Keine Ports in Python-Files → .env~~ — ports are in `.env` / config
+- ~~WWM: Anordnungs-Frage zu Beginn nicht implementiert~~ — Kandidatenfrage (ordering question) implemented
+- ~~Mehrere Sprachen~~ — deferred to backlog (Localization DE/EN)
 ## Games
 
 | Game | Description | Status | Priority |

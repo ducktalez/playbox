@@ -242,13 +242,6 @@ a:hover {
   max-width: 720px;
 }
 
-.placeholder-panel {
-  margin-top: 1.25rem;
-  padding: 1.25rem 1.5rem;
-  border-radius: var(--radius);
-  background: linear-gradient(180deg, rgba(36, 36, 64, 0.7), rgba(26, 26, 46, 0.95));
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
 
 .placeholder-kicker {
   color: var(--text-muted);

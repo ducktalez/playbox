@@ -306,14 +306,14 @@
 - [x] Add mobile bottom-nav with CSS (fixed tab bar, responsive breakpoints)
 - [x] Deduplicate `parseApiResponse` — Imposter + Piccolo now import from shared `core/api.ts`
 - [x] Fix Imposter `/offline-bundle` crash (`model_dump()` on dict)
-- [ ] Frontend code audit — identify and remove dead code / unused imports across game modules
-- [ ] Verify all games load cleanly in mobile viewport (Chrome DevTools device mode)
+- [x] Frontend code audit — removed dead `GamePlaceholder.tsx` component + orphaned `.placeholder-panel` CSS
+- [x] Verify all games load cleanly in mobile viewport (Chrome DevTools device mode)
 
 ### Medium Priority
 
 - [ ] Piccolo seed data expansion (more templates per category/intensity)
-- [ ] Unused CSS selector cleanup (audit `index.css` for orphaned rules)
-- [ ] Review README Ablage/TODOs — promote actionable items to Implementation-Plan, archive resolved ones
+- [ ] Unused CSS selector cleanup (full `index.css` audit — beyond placeholder-panel)
+- [x] Review README Ablage/TODOs — restructured into categorized "Ideas / Future TODOs" with resolved items marked
 
 ## Backlog (Unscheduled)
 
@@ -408,6 +408,8 @@
 - README updated: all 4 game statuses → ✅ ready, quiz 3-mode description, chess description
 - Architecture.md updated: Imposter endpoint table completed (categories, reveal, offline-bundle), all open questions resolved
 - CSS/UI framework blocker resolved: custom CSS (~2800 lines) sufficient for MVP
+- Frontend code audit: removed dead `GamePlaceholder.tsx` + orphaned `.placeholder-panel` CSS, ESLint no-unused-vars clean
+- README Ablage/TODOs restructured: brainstorm items categorized (WWM Visual, Quiz Content, Other Games), resolved items marked, empty "Fragensammlung" section removed
 
 ## Dependencies
 
