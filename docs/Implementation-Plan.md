@@ -293,8 +293,8 @@
 
 ## Phase 7 — Documentation & Quality Pass
 
-- Done: README game statuses updated (all 4 games → ✅ ready), Architecture.md updated (missing endpoints, open questions resolved), CSS blocker resolved, bottom-nav + 404 route wired, shared API helper deduplicated.
-- Open: frontend code audit, unused CSS cleanup, Piccolo seed expansion.
+- Done: README game statuses updated (all 4 games → ✅ ready), Architecture.md updated (missing endpoints, open questions resolved), CSS blocker resolved, bottom-nav + 404 route wired, shared API helper deduplicated, frontend code audit clean, Piccolo seed expanded to 80 templates.
+- Open: unused CSS selector cleanup.
 
 ### High Priority
 
@@ -311,7 +311,7 @@
 
 ### Medium Priority
 
-- [ ] Piccolo seed data expansion (more templates per category/intensity)
+- [x] Piccolo seed data expansion — 53 → 80 templates, all categories have ≥2 per intensity
 - [ ] Unused CSS selector cleanup (full `index.css` audit — beyond placeholder-panel)
 - [x] Review README Ablage/TODOs — restructured into categorized "Ideas / Future TODOs" with resolved items marked
 

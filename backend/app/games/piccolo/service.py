@@ -23,17 +23,23 @@ _feedback: list[dict] = []
 
 # Challenge templates — {player} is replaced with a random player name
 _CHALLENGES: list[dict] = [
+    # =====================================================================
+    # DARE
+    # =====================================================================
     # Dare — mild
     {"text": "{player}, nimm einen Schluck!", "category": "dare", "intensity": "mild", "target_count": 1},
     {"text": "{player}, mach 5 Kniebeugen!", "category": "dare", "intensity": "mild", "target_count": 1},
     {"text": "{player}, sag etwas Nettes über {player2}!", "category": "dare", "intensity": "mild", "target_count": 2},
-    {"text": "Alle trinken!", "category": "group", "intensity": "mild", "target_count": 0},
     {"text": "{player}, erzähl einen Witz!", "category": "dare", "intensity": "mild", "target_count": 1},
+    {"text": "{player}, mach dein bestes Tiergeräusch!", "category": "dare", "intensity": "mild", "target_count": 1},
+    {"text": "{player}, buchstabiere deinen Namen rückwärts!", "category": "dare", "intensity": "mild", "target_count": 1},
     # Dare — medium
     {"text": "{player}, imitiere {player2} — die Gruppe bewertet!", "category": "dare", "intensity": "medium", "target_count": 2},
     {"text": "{player}, zeig dein letztes Foto in der Galerie!", "category": "dare", "intensity": "medium", "target_count": 1},
     {"text": "{player}, tausche ein Kleidungsstück mit {player2}!", "category": "dare", "intensity": "medium", "target_count": 2},
     {"text": "{player}, sing 10 Sekunden lang!", "category": "dare", "intensity": "medium", "target_count": 1},
+    {"text": "{player}, rede 30 Sekunden ohne Pause über ein Thema, das {player2} bestimmt!", "category": "dare", "intensity": "medium", "target_count": 2},
+    {"text": "{player}, mach eine Liegestütze für jedes Jahr, das du alt bist — oder trink!", "category": "dare", "intensity": "medium", "target_count": 1},
     # Dare — spicy
     {
         "text": "{player}, ruf die letzte Person in deiner Anrufliste an und sag 'Ich liebe dich'!",
@@ -47,9 +53,27 @@ _CHALLENGES: list[dict] = [
         "intensity": "spicy",
         "target_count": 2,
     },
+    {
+        "text": "{player}, poste das nächste Story-Foto, das die Gruppe von dir macht!",
+        "category": "dare",
+        "intensity": "spicy",
+        "target_count": 1,
+    },
+    {
+        "text": "{player}, lass {player2} für die nächsten 3 Runden deine Antworten bestimmen!",
+        "category": "dare",
+        "intensity": "spicy",
+        "target_count": 2,
+    },
+    # =====================================================================
+    # QUESTION
+    # =====================================================================
     # Question — mild
     {"text": "{player}, was ist dein Guilty Pleasure?", "category": "question", "intensity": "mild", "target_count": 1},
     {"text": "{player}, was war dein peinlichster Moment?", "category": "question", "intensity": "mild", "target_count": 1},
+    {"text": "{player}, was war dein schlimmster Fehlkauf?", "category": "question", "intensity": "mild", "target_count": 1},
+    {"text": "{player}, welche Superkraft hättest du am liebsten?", "category": "question", "intensity": "mild", "target_count": 1},
+    {"text": "{player}, was ist dein liebster Kindheitsfilm?", "category": "question", "intensity": "mild", "target_count": 1},
     # Question — medium
     {
         "text": "{player}, wer in der Runde wäre der schlechteste Mitbewohner?",
@@ -58,12 +82,181 @@ _CHALLENGES: list[dict] = [
         "target_count": 1,
     },
     {
+        "text": "{player}, mit wem aus der Runde würdest du spontan einen Roadtrip machen?",
+        "category": "question",
+        "intensity": "medium",
+        "target_count": 1,
+    },
+    {
+        "text": "{player}, was war die dümmste Sache, für die du je Geld ausgegeben hast?",
+        "category": "question",
+        "intensity": "medium",
+        "target_count": 1,
+    },
+    {
+        "text": "{player}, welches Geheimnis hast du erst kürzlich erfahren?",
+        "category": "question",
+        "intensity": "medium",
+        "target_count": 1,
+    },
+    # Question — spicy
+    {"text": "{player}, welche rote Flagge ignorierst du viel zu oft?", "category": "question", "intensity": "spicy", "target_count": 1},
+    {
+        "text": "{player}, was würdest du tun, wenn du für einen Tag unsichtbar wärst?",
+        "category": "question",
+        "intensity": "spicy",
+        "target_count": 1,
+    },
+    {
+        "text": "{player}, was ist das Peinlichste in deinem Suchverlauf?",
+        "category": "question",
+        "intensity": "spicy",
+        "target_count": 1,
+    },
+    # =====================================================================
+    # GROUP
+    # =====================================================================
+    # Group — mild
+    {"text": "Alle trinken!", "category": "group", "intensity": "mild", "target_count": 0},
+    {
+        "text": "Gruppenregel: Alle, die heute schon zu spät waren, trinken einen Schluck.",
+        "category": "group",
+        "intensity": "mild",
+        "target_count": 0,
+    },
+    {
+        "text": "Alle, die heute schon Kaffee getrunken haben, nehmen einen Schluck!",
+        "category": "group",
+        "intensity": "mild",
+        "target_count": 0,
+    },
+    {
+        "text": "Alle klatschen dreimal — wer zuletzt klatscht, trinkt!",
+        "category": "group",
+        "intensity": "mild",
+        "target_count": 0,
+    },
+    # Group — medium
+    {
+        "text": "Gruppenaufgabe: Alle zeigen gleichzeitig ihr peinlichstes Selfie-Gesicht.",
+        "category": "group",
+        "intensity": "medium",
+        "target_count": 0,
+    },
+    {
+        "text": "Alle legen ihr Handy in die Mitte. Wer als Erstes draufschaut, trinkt doppelt!",
+        "category": "group",
+        "intensity": "medium",
+        "target_count": 0,
+    },
+    {
+        "text": "Alle zählen gleichzeitig laut bis 10 — wer aus dem Takt kommt, trinkt!",
+        "category": "group",
+        "intensity": "medium",
+        "target_count": 0,
+    },
+    # Group — spicy
+    {
+        "text": "Gruppenduell: Die Runde entscheidet, wer die gefährlichste Party-Idee hätte. Diese Person trinkt doppelt.",
+        "category": "group",
+        "intensity": "spicy",
+        "target_count": 0,
+    },
+    {
+        "text": "Alle zeigen gleichzeitig auf die Person, die am ehesten im Knast landen würde. Wer die meisten Stimmen hat, trinkt doppelt!",
+        "category": "group",
+        "intensity": "spicy",
+        "target_count": 0,
+    },
+    {
+        "text": "Alle erzählen reihum ihre größte Lüge der letzten Woche. Die Gruppe wählt den schlimmsten Lügner — der trinkt dreifach!",
+        "category": "group",
+        "intensity": "spicy",
+        "target_count": 0,
+    },
+    # =====================================================================
+    # VOTE
+    # =====================================================================
+    # Vote — mild
+    {
+        "text": "Abstimmung: Wer würde in einer Zombie-Apokalypse als Erstes ausflippen?",
+        "category": "vote",
+        "intensity": "mild",
+        "target_count": 0,
+    },
+    {
+        "text": "Abstimmung: Wer ist der beste Koch in der Runde?",
+        "category": "vote",
+        "intensity": "mild",
+        "target_count": 0,
+    },
+    {
+        "text": "Abstimmung: Wer würde am ehesten eine Million im Lotto gewinnen und alles an einem Wochenende ausgeben?",
+        "category": "vote",
+        "intensity": "mild",
+        "target_count": 0,
+    },
+    # Vote — medium
+    {
         "text": "Abstimmung: Wer ist am ehesten dazu fähig, bei einer Castingshow mitzumachen?",
         "category": "vote",
         "intensity": "medium",
         "target_count": 0,
     },
-    # Versus
+    {
+        "text": "Abstimmung: Wer aus der Runde wäre am ehesten heimlich berühmt auf TikTok?",
+        "category": "vote",
+        "intensity": "medium",
+        "target_count": 0,
+    },
+    {
+        "text": "Abstimmung: Wer könnte am ehesten einen Fremden in einer Bar ansprechen?",
+        "category": "vote",
+        "intensity": "medium",
+        "target_count": 0,
+    },
+    # Vote — spicy
+    {
+        "text": "Abstimmung: Wer würde am ehesten mit dem Ex einer Freundin oder eines Freundes schreiben?",
+        "category": "vote",
+        "intensity": "spicy",
+        "target_count": 0,
+    },
+    {
+        "text": "Abstimmung: Wer hat das wildeste Doppelleben? Ergebnis trinkt dreifach!",
+        "category": "vote",
+        "intensity": "spicy",
+        "target_count": 0,
+    },
+    {
+        "text": "Abstimmung: Wer würde am ehesten nackt durch die Stadt rennen? Ergebnis trinkt!",
+        "category": "vote",
+        "intensity": "spicy",
+        "target_count": 0,
+    },
+    # =====================================================================
+    # VERSUS
+    # =====================================================================
+    # Versus — mild
+    {
+        "text": "Schnick-Schnack-Schnuck: {player} vs. {player2} — Verlierer trinkt!",
+        "category": "versus",
+        "intensity": "mild",
+        "target_count": 2,
+    },
+    {
+        "text": "Wortduell: {player} und {player2} nennen abwechselnd Tiere. Wer stockt, trinkt!",
+        "category": "versus",
+        "intensity": "mild",
+        "target_count": 2,
+    },
+    {
+        "text": "Daumendrücken: {player} vs. {player2} — wer den Daumen des anderen zuerst drückt, gewinnt!",
+        "category": "versus",
+        "intensity": "mild",
+        "target_count": 2,
+    },
+    # Versus — medium
     {
         "text": "Staring Contest: {player} vs. {player2} — wer zuerst blinzelt, trinkt!",
         "category": "versus",
@@ -71,15 +264,54 @@ _CHALLENGES: list[dict] = [
         "target_count": 2,
     },
     {
-        "text": "Schnick-Schnack-Schnuck: {player} vs. {player2} — Verlierer trinkt!",
+        "text": "Mini-Duell: {player} und {player2} erklären gleichzeitig denselben Film in drei Wörtern.",
         "category": "versus",
-        "intensity": "mild",
+        "intensity": "medium",
         "target_count": 2,
     },
-    # Automarken
+    {
+        "text": "Rapbattle: {player} vs. {player2} — jeder hat 15 Sekunden für einen Freestyle. Die Gruppe entscheidet!",
+        "category": "versus",
+        "intensity": "medium",
+        "target_count": 2,
+    },
+    # Versus — spicy
+    {
+        "text": "Reflex-Duell: {player} gegen {player2} — wer zuletzt auf den Tisch tippt, trinkt.",
+        "category": "versus",
+        "intensity": "spicy",
+        "target_count": 2,
+    },
+    {
+        "text": "Peinlich-Duell: {player} vs. {player2} — wer die peinlichere Geschichte erzählt, gewinnt. Verlierer trinkt doppelt!",
+        "category": "versus",
+        "intensity": "spicy",
+        "target_count": 2,
+    },
+    {
+        "text": "Kompliment-Battle: {player} vs. {player2} — wer das bessere Kompliment an die Runde macht. Verlierer trinkt!",
+        "category": "versus",
+        "intensity": "spicy",
+        "target_count": 2,
+    },
+    # =====================================================================
+    # AUTOMARKEN
+    # =====================================================================
     {"text": "Automarken: Nennt reihum Automarken. {player} beginnt.", "category": "automarken", "intensity": "mild", "target_count": 1},
     {
+        "text": "Automarken: {player} darf eine Kategorie festlegen — Luxus, Kleinwagen oder Oldtimer.",
+        "category": "automarken",
+        "intensity": "mild",
+        "target_count": 1,
+    },
+    {
         "text": "Automarken: {player} nennt eine Marke, {player2} muss sofort eine andere ergänzen.",
+        "category": "automarken",
+        "intensity": "medium",
+        "target_count": 2,
+    },
+    {
+        "text": "Automarken: {player} nennt eine Marke, {player2} muss sofort das passende Logo beschreiben.",
         "category": "automarken",
         "intensity": "medium",
         "target_count": 2,
@@ -90,9 +322,23 @@ _CHALLENGES: list[dict] = [
         "intensity": "spicy",
         "target_count": 0,
     },
-    # Koffer packen
+    {
+        "text": "Automarken: Die Runde nennt nur noch deutsche Marken. Wer scheitert, trinkt doppelt.",
+        "category": "automarken",
+        "intensity": "spicy",
+        "target_count": 0,
+    },
+    # =====================================================================
+    # KOFFER PACKEN
+    # =====================================================================
     {
         "text": "Koffer packen: {player} startet mit dem ersten Gegenstand.",
+        "category": "koffer packen",
+        "intensity": "mild",
+        "target_count": 1,
+    },
+    {
+        "text": "Koffer packen: {player} beginnt mit einem unnötigen Luxusgegenstand.",
         "category": "koffer packen",
         "intensity": "mild",
         "target_count": 1,
@@ -104,14 +350,34 @@ _CHALLENGES: list[dict] = [
         "target_count": 2,
     },
     {
+        "text": "Koffer packen: Die Runde packt für einen Horrorurlaub. {player} beginnt.",
+        "category": "koffer packen",
+        "intensity": "medium",
+        "target_count": 1,
+    },
+    {
         "text": "Koffer packen Extrem: Die Runde baut die Liste weiter aus. Wer stockt, trinkt.",
         "category": "koffer packen",
         "intensity": "spicy",
         "target_count": 0,
     },
-    # Ich habe schon mal
+    {
+        "text": "Koffer packen: Nur peinliche Gegenstände sind erlaubt. Wer sich wiederholt, trinkt doppelt.",
+        "category": "koffer packen",
+        "intensity": "spicy",
+        "target_count": 0,
+    },
+    # =====================================================================
+    # ICH HABE SCHON MAL
+    # =====================================================================
     {
         "text": "Ich habe schon mal: Alle, auf die die Aussage von {player} zutrifft, zeigen kurz auf.",
+        "category": "ich habe schon mal",
+        "intensity": "mild",
+        "target_count": 1,
+    },
+    {
+        "text": "Ich habe schon mal: {player} nennt eine harmlose Jugendsünde.",
         "category": "ich habe schon mal",
         "intensity": "mild",
         "target_count": 1,
@@ -123,14 +389,34 @@ _CHALLENGES: list[dict] = [
         "target_count": 1,
     },
     {
+        "text": "Ich habe schon mal: Wer die Aussage von {player} kennt, nimmt einen Schluck.",
+        "category": "ich habe schon mal",
+        "intensity": "medium",
+        "target_count": 1,
+    },
+    {
         "text": "Ich habe schon mal: Die Runde geht all in — wer die Aussage auch erlebt hat, trinkt doppelt.",
         "category": "ich habe schon mal",
         "intensity": "spicy",
         "target_count": 0,
     },
-    # Trinkregeln
+    {
+        "text": "Ich habe schon mal: Nur richtig wilde Geschichten zählen — alle Betroffenen trinken doppelt.",
+        "category": "ich habe schon mal",
+        "intensity": "spicy",
+        "target_count": 0,
+    },
+    # =====================================================================
+    # TRINKREGELN
+    # =====================================================================
     {
         "text": "Trinkregel: Ab jetzt darf niemand mehr Vornamen benutzen. Wer es doch tut, trinkt.",
+        "category": "trinkregeln",
+        "intensity": "mild",
+        "target_count": 0,
+    },
+    {
+        "text": "Trinkregel: Wer auf sein Handy schaut, nimmt sofort einen Schluck.",
         "category": "trinkregeln",
         "intensity": "mild",
         "target_count": 0,
@@ -142,137 +428,16 @@ _CHALLENGES: list[dict] = [
         "target_count": 1,
     },
     {
-        "text": "Trinkregel: Für die nächsten drei Runden darf nur flüsternd gesprochen werden. Wer es vergisst, trinkt doppelt.",
-        "category": "trinkregeln",
-        "intensity": "spicy",
-        "target_count": 0,
-    },
-    # More question / vote / group coverage
-    {"text": "{player}, was war dein schlimmster Fehlkauf?", "category": "question", "intensity": "mild", "target_count": 1},
-    {
-        "text": "{player}, mit wem aus der Runde würdest du spontan einen Roadtrip machen?",
-        "category": "question",
-        "intensity": "medium",
-        "target_count": 1,
-    },
-    {"text": "{player}, welche rote Flagge ignorierst du viel zu oft?", "category": "question", "intensity": "spicy", "target_count": 1},
-    {
-        "text": "Gruppenregel: Alle, die heute schon zu spät waren, trinken einen Schluck.",
-        "category": "group",
-        "intensity": "mild",
-        "target_count": 0,
-    },
-    {
-        "text": "Gruppenaufgabe: Alle zeigen gleichzeitig ihr peinlichstes Selfie-Gesicht.",
-        "category": "group",
-        "intensity": "medium",
-        "target_count": 0,
-    },
-    {
-        "text": "Gruppenduell: Die Runde entscheidet, wer die gefährlichste Party-Idee hätte. Diese Person trinkt doppelt.",
-        "category": "group",
-        "intensity": "spicy",
-        "target_count": 0,
-    },
-    {
-        "text": "Abstimmung: Wer würde in einer Zombie-Apokalypse als Erstes ausflippen?",
-        "category": "vote",
-        "intensity": "mild",
-        "target_count": 0,
-    },
-    {
-        "text": "Abstimmung: Wer aus der Runde wäre am ehesten heimlich berühmt auf TikTok?",
-        "category": "vote",
-        "intensity": "medium",
-        "target_count": 0,
-    },
-    {
-        "text": "Abstimmung: Wer würde am ehesten mit dem Ex einer Freundin oder eines Freundes schreiben?",
-        "category": "vote",
-        "intensity": "spicy",
-        "target_count": 0,
-    },
-    {
-        "text": "Mini-Duell: {player} und {player2} erklären gleichzeitig denselben Film in drei Wörtern.",
-        "category": "versus",
-        "intensity": "medium",
-        "target_count": 2,
-    },
-    {
-        "text": "Reflex-Duell: {player} gegen {player2} — wer zuletzt auf den Tisch tippt, trinkt.",
-        "category": "versus",
-        "intensity": "spicy",
-        "target_count": 2,
-    },
-    # More Automarken
-    {
-        "text": "Automarken: {player} darf eine Kategorie festlegen — Luxus, Kleinwagen oder Oldtimer.",
-        "category": "automarken",
-        "intensity": "mild",
-        "target_count": 1,
-    },
-    {
-        "text": "Automarken: {player} nennt eine Marke, {player2} muss sofort das passende Logo beschreiben.",
-        "category": "automarken",
-        "intensity": "medium",
-        "target_count": 2,
-    },
-    {
-        "text": "Automarken: Die Runde nennt nur noch deutsche Marken. Wer scheitert, trinkt doppelt.",
-        "category": "automarken",
-        "intensity": "spicy",
-        "target_count": 0,
-    },
-    # More Koffer packen
-    {
-        "text": "Koffer packen: {player} beginnt mit einem unnötigen Luxusgegenstand.",
-        "category": "koffer packen",
-        "intensity": "mild",
-        "target_count": 1,
-    },
-    {
-        "text": "Koffer packen: Die Runde packt für einen Horrorurlaub. {player} beginnt.",
-        "category": "koffer packen",
-        "intensity": "medium",
-        "target_count": 1,
-    },
-    {
-        "text": "Koffer packen: Nur peinliche Gegenstände sind erlaubt. Wer sich wiederholt, trinkt doppelt.",
-        "category": "koffer packen",
-        "intensity": "spicy",
-        "target_count": 0,
-    },
-    # More Ich habe schon mal
-    {
-        "text": "Ich habe schon mal: {player} nennt eine harmlose Jugendsünde.",
-        "category": "ich habe schon mal",
-        "intensity": "mild",
-        "target_count": 1,
-    },
-    {
-        "text": "Ich habe schon mal: Wer die Aussage von {player} kennt, nimmt einen Schluck.",
-        "category": "ich habe schon mal",
-        "intensity": "medium",
-        "target_count": 1,
-    },
-    {
-        "text": "Ich habe schon mal: Nur richtig wilde Geschichten zählen — alle Betroffenen trinken doppelt.",
-        "category": "ich habe schon mal",
-        "intensity": "spicy",
-        "target_count": 0,
-    },
-    # More Trinkregeln
-    {
-        "text": "Trinkregel: Wer auf sein Handy schaut, nimmt sofort einen Schluck.",
-        "category": "trinkregeln",
-        "intensity": "mild",
-        "target_count": 0,
-    },
-    {
         "text": "Trinkregel: Immer wenn {player} spricht, muss die Runde am Ende des Satzes applaudieren.",
         "category": "trinkregeln",
         "intensity": "medium",
         "target_count": 1,
+    },
+    {
+        "text": "Trinkregel: Für die nächsten drei Runden darf nur flüsternd gesprochen werden. Wer es vergisst, trinkt doppelt.",
+        "category": "trinkregeln",
+        "intensity": "spicy",
+        "target_count": 0,
     },
     {
         "text": "Trinkregel: Für die nächsten drei Karten darf niemand mehr das Wort 'ich' sagen. Wer es vergisst, trinkt doppelt.",
