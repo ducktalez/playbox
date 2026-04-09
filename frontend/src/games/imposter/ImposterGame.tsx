@@ -3,8 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { PlayerNameFields } from "../../core/PlayerNameFields";
 import { countEnteredPlayerNames, normalizePlayerNames } from "../../core/playerRegistration";
 import { parseApiResponse } from "../../core/api";
-import { cacheWordList, createOfflineSession, createOfflineSessionAsync, revealOffline } from "./offlineSession";
-import { getOfflineImposterCategories } from "../../core/offlineManager";
+import { createOfflineSession, createOfflineSessionAsync, revealOffline } from "./offlineSession";
+import { getOfflineImposterCategories, syncImposter } from "../../core/offlineManager";
 
 const API_BASE = "/api/v1/imposter";
 const MIN_PLAYERS = 3;
@@ -142,7 +142,6 @@ export default function ImposterGame() {
   const [endReason, setEndReason] = useState<EndReason>("");
   const [imposterFate, setImposterFate] = useState<ImposterFate>("");
   const [roundCount, setRoundCount] = useState(0);
-  const [isOffline, setIsOffline] = useState(false);
 
   const enteredPlayerCount = useMemo(
     () => countEnteredPlayerNames(playerNames),
@@ -154,46 +153,34 @@ export default function ImposterGame() {
   useEffect(() => {
     let ignore = false;
 
-    async function loadCategories() {
+    // ── Cache-first: load categories from IndexedDB/localStorage immediately ──
+    async function loadCachedCategories() {
       try {
-        const response = await fetch(`${API_BASE}/categories`);
-        const payload = await parseApiResponse<string[]>(response);
-        if (!ignore) {
-          setCategories(payload);
+        const offlineCats = await getOfflineImposterCategories();
+        if (!ignore && offlineCats.length > 0) {
+          setCategories(offlineCats);
           setCategoriesError("");
         }
-      } catch (error) {
-        // Try IndexedDB offline cache for categories
-        try {
-          const offlineCats = await getOfflineImposterCategories();
-          if (!ignore && offlineCats.length > 0) {
-            setCategories(offlineCats);
-            setCategoriesError("");
-            return;
-          }
-        } catch { /* ignore */ }
-        if (!ignore) {
-          setCategoriesError(
-            error instanceof Error ? error.message : "Could not load categories.",
-          );
-        }
-      }
+      } catch { /* ignore */ }
     }
 
-    async function loadAndCacheWords() {
+    // ── Background sync: refresh data from server when online ──
+    async function syncFromServer() {
       try {
-        const response = await fetch(`${API_BASE}/words`);
-        if (response.ok) {
-          const words = await response.json();
-          cacheWordList(words);
+        await syncImposter();
+        // After sync, reload categories from the now-updated IndexedDB
+        const freshCats = await getOfflineImposterCategories();
+        if (!ignore && freshCats.length > 0) {
+          setCategories(freshCats);
+          setCategoriesError("");
         }
       } catch {
-        // Offline or failed — cached words from previous session are still available
+        // Server unreachable — cached data stays valid
       }
     }
 
-    void loadCategories();
-    void loadAndCacheWords();
+    void loadCachedCategories();
+    void syncFromServer();
 
     return () => {
       ignore = true;
@@ -316,61 +303,37 @@ export default function ImposterGame() {
     setEndReason("");
     setImposterFate("");
 
-    try {
-      const response = await fetch(`${API_BASE}/session`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          player_names: players,
-          category: selectedCategory || null,
-          timer_seconds: timerSeconds,
-        }),
-      });
+    // ── Offline-first: always create session locally from cached words ──
+    let offlineSession = createOfflineSession(
+      players,
+      selectedCategory || null,
+      timerSeconds,
+    );
 
-      const payload = await parseApiResponse<SessionResponse>(response);
-      setPlayerNames(players);
-      setSession(payload);
-      setCurrentPlayerIndex(0);
-      setCurrentReveal(null);
-      setTimeLeft(payload.timer_seconds);
-      setRoundCount((c) => c + 1);
-      setIsOffline(false);
-      setStep("reveal");
-    } catch {
-      // Backend unreachable — try offline fallback (localStorage first, then IndexedDB)
-      let offlineSession = createOfflineSession(
+    if (!offlineSession) {
+      // localStorage empty — try IndexedDB
+      offlineSession = await createOfflineSessionAsync(
         players,
         selectedCategory || null,
         timerSeconds,
       );
-
-      if (!offlineSession) {
-        offlineSession = await createOfflineSessionAsync(
-          players,
-          selectedCategory || null,
-          timerSeconds,
-        );
-      }
-
-      if (offlineSession) {
-        setPlayerNames(players);
-        setSession(offlineSession as SessionResponse);
-        setCurrentPlayerIndex(0);
-        setCurrentReveal(null);
-        setTimeLeft(offlineSession.timer_seconds);
-        setRoundCount((c) => c + 1);
-        setIsOffline(true);
-        setStep("reveal");
-      } else {
-        setErrorMessage(
-          "Offline und keine gecachten Wörter vorhanden. Bitte einmal online spielen, um Wörter zu cachen.",
-        );
-      }
-    } finally {
-      setIsStarting(false);
     }
+
+    if (offlineSession) {
+      setPlayerNames(players);
+      setSession(offlineSession as SessionResponse);
+      setCurrentPlayerIndex(0);
+      setCurrentReveal(null);
+      setTimeLeft(offlineSession.timer_seconds);
+      setRoundCount((c) => c + 1);
+      setStep("reveal");
+    } else {
+      setErrorMessage(
+        "Keine gecachten Wörter vorhanden. Bitte einmal mit Internetverbindung laden, um Wörter zu cachen.",
+      );
+    }
+
+    setIsStarting(false);
   }
 
   async function revealCurrentPlayer() {
@@ -381,30 +344,11 @@ export default function ImposterGame() {
     setIsRevealing(true);
     setErrorMessage("");
 
-    // Offline mode — compute reveal locally
-    if (isOffline) {
-      setCurrentReveal(
-        revealOffline(session as Parameters<typeof revealOffline>[0], currentPlayerIndex),
-      );
-      setIsRevealing(false);
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        `${API_BASE}/session/${session.id}/reveal/${currentPlayerIndex}`,
-      );
-      const payload = await parseApiResponse<RevealResponse>(response);
-      setCurrentReveal(payload);
-    } catch {
-      // Network failed mid-game — fall back to local reveal
-      setCurrentReveal(
-        revealOffline(session as Parameters<typeof revealOffline>[0], currentPlayerIndex),
-      );
-      setIsOffline(true);
-    } finally {
-      setIsRevealing(false);
-    }
+    // ── Offline-first: always compute reveal locally ──
+    setCurrentReveal(
+      revealOffline(session as Parameters<typeof revealOffline>[0], currentPlayerIndex),
+    );
+    setIsRevealing(false);
   }
 
   function continueAfterReveal() {
@@ -527,9 +471,6 @@ export default function ImposterGame() {
 
           {categoriesError && (
             <p className="helper-text">Categories are optional: {categoriesError}</p>
-          )}
-          {isOffline && (
-            <p className="helper-text">📴 Offline-Modus — Spiel läuft lokal mit gecachten Wörtern.</p>
           )}
           {errorMessage && <p className="alert-text">{errorMessage}</p>}
 
