@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { PlayerNameFields } from "../../core/PlayerNameFields";
 import { countEnteredPlayerNames, normalizePlayerNames } from "../../core/playerRegistration";
+import { parseApiResponse } from "../../core/api";
 import { cacheWordList, createOfflineSession, createOfflineSessionAsync, revealOffline } from "./offlineSession";
 import { getOfflineImposterCategories } from "../../core/offlineManager";
 
@@ -58,24 +59,6 @@ type WordResponse = {
   description: string | null;
 };
 
-type ApiError = {
-  detail?: string;
-  error?: string;
-};
-
-async function parseApiResponse<T>(response: Response): Promise<T> {
-  const payload = (await response.json().catch(() => ({}))) as T & ApiError;
-
-  if (!response.ok) {
-    throw new Error(payload.detail ?? payload.error ?? "Request failed.");
-  }
-
-  if (payload && typeof payload === "object" && "error" in payload && payload.error) {
-    throw new Error(payload.error);
-  }
-
-  return payload as T;
-}
 
 function formatDuration(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60)

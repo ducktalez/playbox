@@ -111,6 +111,70 @@ a:hover {
   color: var(--text-primary);
 }
 
+/* Bottom navigation — mobile only ------------------------------ */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  background: var(--bg-surface);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.35rem 0 env(safe-area-inset-bottom, 0.25rem);
+  height: 56px;
+}
+
+.bottom-nav__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 0.65rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 8px;
+  transition: color var(--transition), background var(--transition);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bottom-nav__item:hover {
+  color: var(--text-muted);
+}
+
+.bottom-nav__item--active {
+  color: var(--accent);
+}
+
+.bottom-nav__icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.bottom-nav__label {
+  font-weight: 500;
+  line-height: 1;
+}
+
+/* Responsive: hide bottom-nav on desktop, hide top-nav links on mobile */
+@media (min-width: 641px) {
+  .bottom-nav {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .top-nav__link {
+    display: none;
+  }
+  .page-main {
+    padding-bottom: 70px; /* space for bottom-nav */
+  }
+}
+
 .page-container {
   width: min(1100px, 100%);
   margin: 0 auto;

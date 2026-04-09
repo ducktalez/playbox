@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { PlayerNameFields } from "../../core/PlayerNameFields";
 import { normalizePlayerNames } from "../../core/playerRegistration";
+import { parseApiResponse } from "../../core/api";
 import {
   cacheChallenges,
   createOfflineSession,
@@ -58,20 +59,6 @@ type ChallengeResponse = {
   targets: string[];
 };
 
-type ApiError = {
-  detail?: string;
-  error?: string;
-};
-
-async function parseApiResponse<T>(response: Response): Promise<T> {
-  const payload = (await response.json().catch(() => ({}))) as T & ApiError;
-
-  if (!response.ok) {
-    throw new Error(payload.detail ?? payload.error ?? "Request failed.");
-  }
-
-  return payload as T;
-}
 
 export default function PiccoloGame() {
   const [playerNames, setPlayerNames] = useState<string[]>(["", ""]);

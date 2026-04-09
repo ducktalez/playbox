@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./index.css";
 import { Layout } from "./core/Layout";
 import { Home } from "./core/Home";
+import { NotFound } from "./core/NotFound";
 import { syncAllOfflineData } from "./core/offlineManager";
 
 // Sync offline bundles on app start (non-blocking, best-effort)
@@ -57,6 +58,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               </React.Suspense>
             }
           />
+          <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
     </BrowserRouter>
