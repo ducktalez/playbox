@@ -26,7 +26,7 @@ async def offline_bundle() -> dict:
     if limit > 0:
         words = words[:limit]
     categories = service.get_categories()
-    return {"words": [w.model_dump() for w in words], "categories": categories}
+    return {"words": words, "categories": categories}
 
 
 @router.get("/words")

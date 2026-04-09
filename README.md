@@ -32,10 +32,10 @@
 
 | Game | Description | Status | Priority |
 |------|-------------|--------|----------|
-| [Imposter](#imposter) | Local multiplayer word-guessing party game | planned | high |
-| [Piccolo](#piccolo) | Party challenge/dare game with player targeting | planned | high |
-| [Wer wird Elite-Hater?](#wer-wird-elite-hater-quiz) | Quiz game with ELO system and community questions | planned | high |
-| [Chess Variants](#chess-variants) | Custom chess with fewer rows (LiChess-inspired) | planned | low |
+| [Imposter](#imposter) | Local multiplayer word-guessing party game | ✅ ready | high |
+| [Piccolo](#piccolo) | Party challenge/dare game with player targeting | ✅ ready | high |
+| [Wer wird Elite-Hater?](#wer-wird-elite-hater-quiz) | Quiz game with ELO system and community questions | ✅ ready | high |
+| [Schach](#schach) | Standard 8×8 chess, local 1v1 | ✅ ready | low |
 
 ## Tech Stack
 
@@ -191,16 +191,17 @@ Reimplementation of the popular Piccolo party game. Players enter names, and the
 
 ### Wer wird Elite-Hater? (Quiz)
 
-A quiz game with two modes:
+A quiz game with three modes:
 
-1. **Wer wird Millionär** — single-player, escalating difficulty, lifelines
-2. **Quizduell** — 1v1 / multiplayer, category-based, score comparison
+1. **Wer wird Elite-Haider (Millionär)** — single-player, 15 questions with escalating difficulty (ELO-based), prize ladder (€50 → €1 Million), three jokers (50:50, Audience, Phone), WWM-style dark blue UI with sound effects
+2. **Quizduell 1v1** — two players on one device, pass-and-play, 10 questions each, score comparison
+3. **Quizduell Speed** — solo, 20-second timer per question, 10 rapid-fire questions
 
-Features a community-driven question database with ELO scoring (like chess tactic puzzles), media attachments (clips, images, documents), tags, and categories. Initial content theme: **Drachenlord lore**.
+Features a community-driven question database with ELO scoring (like chess tactic puzzles), media attachments (clips, images, documents), tags, categories, moderation queue, and player profiles. Initial content theme: **Drachenlord lore**.
 
-### Chess Variants
+### Schach
 
-Custom chess variants inspired by LiChess — primarily chess with fewer rows (6×8 or 7×8). Lowest priority.
+Standard 8×8 chess — local 1v1 on one device. Backend-powered move validation via `python-chess`. Interactive CSS Grid board with Unicode pieces, mobile-first. Engine abstraction ready for future mini-board variants (6×8, 7×8).
 
 ## Documentation
 

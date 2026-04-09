@@ -28,7 +28,7 @@ PlayBox is a multi-game platform serving browser-based party and quiz games as a
 
 - **No external API dependencies** — all game logic is self-contained
 - **Offline-first** for Imposter & Piccolo (Service Worker caches everything)
-- **Online required** for Quiz (question DB, ELO updates, media)
+- **Online required** for Quiz (question DB, ELO updates, media) — offline play supported via IndexedDB cache fallback
 - **Online required** for Chess (game state managed by backend via `python-chess`)
 
 ## Components
@@ -215,8 +215,11 @@ As the community plays, question ELOs self-calibrate through the ELO update form
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/words` | Get word list (optional: `?category=`) |
+| GET | `/categories` | Get all available word categories |
 | POST | `/words/{id}/report` | Report a word as inappropriate |
 | POST | `/session` | Start a new game session |
+| GET | `/session/{id}/reveal/{index}` | Reveal what a specific player sees (word or IMPOSTER) |
+| GET | `/offline-bundle` | All words + categories as JSON bundle for offline caching |
 
 #### Piccolo — `/api/v1/piccolo/`
 
@@ -320,10 +323,10 @@ PlayBox is delivered as a Progressive Web App via `vite-plugin-pwa` (Workbox und
 
 ## Open Questions
 
-- CSS/UI framework: Tailwind CSS vs. MUI vs. custom?
+- ~~CSS/UI framework: Tailwind CSS vs. MUI vs. custom?~~ → **Resolved: custom CSS.** The project has ~2800 lines of working dark-mode CSS. Switching to a framework would require a full rewrite for marginal benefit at this stage. Reassess post-dev if the CSS becomes unmaintainable.
 - Chess: ~~build from scratch vs. fork/extend existing open-source project?~~ → **Resolved: `python-chess`** for 8×8 standard chess. Custom `VariantEngine` abstraction ready for 6×8/7×8 mini-boards when needed.
 - ~~Quiz media storage: local filesystem vs. S3-compatible object storage?~~ → **Resolved: local filesystem** (`./media/quiz/{question_id}/`), served via `/media/` static mount. Migrate to S3 post-dev if needed.
-- Piccolo: how large should the initial challenge database be?
+- ~~Piccolo: how large should the initial challenge database be?~~ → **Resolved:** current seed covers 5 types × 3 intensities with ~60+ templates. Enough for MVP party play.
 - ~~Should there be a moderation queue for user-submitted quiz questions?~~ → **Resolved: yes** — `moderation_status` field (PENDING/APPROVED/REJECTED), admin endpoints implemented in Phase 4.
 
 ## Deviations from Meta-Repo Standards

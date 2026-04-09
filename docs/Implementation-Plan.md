@@ -2,8 +2,8 @@
 
 ## Current Status
 
-**Phase:** Execution in Progress
-**Last Updated:** 2026-04-07
+**Phase:** Phase 7 — Documentation & Quality Pass
+**Last Updated:** 2026-04-09
 
 ## Roadmap
 
@@ -15,7 +15,8 @@
 | 3 | Quiz ("Wer wird Elite-Hater?") — MVP | 2026-07 | ✅ done |
 | 4 | Quiz — ELO system + media attachments | 2026-08 | ✅ done |
 | 5 | Chess Variants — MVP (low priority) | 2026-04 | ✅ done (8×8 only) |
-| 6 | Polish, PWA optimization, offline hardening | 2026-04 | ✅ done (icons + CSS deferred) |
+| 6 | Polish, PWA optimization, offline hardening | 2026-04 | ✅ done (icons deferred) |
+| 7 | Documentation & quality pass | 2026-04 | 🔄 in progress |
 
 ---
 
@@ -167,8 +168,8 @@
 | Leaderboard | Yes (ELO) | Yes (wins) | Yes (ELO) |
 | Leaderboard | Yes | Yes (wins/loss) |
 
-- Done: PostgreSQL models, Alembic scaffolding, the session finish flow, all three game modes (Millionär, 1v1 local duel, Speed), question form, jokers, standardized error payloads, question update/delete endpoints, ordering questions (Kandidatenfrage), volume control, and most core backend endpoints are present. Audience poll percentage bug and phone joker second-chance bug are fixed. Millionär has a working "Nochmal spielen" replay button.
-- Open: player profiles, tag-based quiz creation, and real-time 1v1 via WebSocket.
+- Done: PostgreSQL models, Alembic scaffolding, the session finish flow, all three game modes (Millionär, 1v1 local duel, Speed), question form, jokers, standardized error payloads, question update/delete endpoints, ordering questions (Kandidatenfrage), volume control, player profiles, tag-based quiz creation, and all core backend endpoints are present. Audience poll percentage bug and phone joker second-chance bug are fixed. Millionär has a working "Nochmal spielen" replay button.
+- Open: real-time 1v1 via WebSocket, authentication system.
 
 ### High Priority
 
@@ -288,7 +289,31 @@
 - [x] ESLint config (eslint.config.js, flat config for ESLint v9 + typescript-eslint)
 - [x] Ruff lint: all backend code passes (203 errors fixed — auto-fix + manual + config tuning)
 - [ ] TODO: post-dev — generate proper PNG icons for PWA (replace SVG placeholders)
-- [ ] CSS/UI framework decision (Tailwind CSS vs. MUI vs. custom) — resolve Blocker
+- [x] CSS/UI framework decision — **Resolved: custom CSS** (~2800 lines, dark-mode, works well). Reassess post-dev if unmaintainable.
+
+## Phase 7 — Documentation & Quality Pass
+
+- Done: README game statuses updated (all 4 games → ✅ ready), Architecture.md updated (missing endpoints, open questions resolved), CSS blocker resolved, bottom-nav + 404 route wired, shared API helper deduplicated.
+- Open: frontend code audit, unused CSS cleanup, Piccolo seed expansion.
+
+### High Priority
+
+- [x] Update README.md — game statuses (planned → ✅ ready), descriptions (3 quiz modes, chess)
+- [x] Resolve CSS/UI framework blocker — **custom CSS** (~2800 lines, dark-mode, sufficient for MVP)
+- [x] Update Architecture.md — add missing Imposter endpoints (categories, offline-bundle, reveal), resolve open questions
+- [x] Update Implementation-Plan.md — add Phase 7, clean up blocker table, update roadmap
+- [x] Wire NotFound (404) catch-all route
+- [x] Add mobile bottom-nav with CSS (fixed tab bar, responsive breakpoints)
+- [x] Deduplicate `parseApiResponse` — Imposter + Piccolo now import from shared `core/api.ts`
+- [x] Fix Imposter `/offline-bundle` crash (`model_dump()` on dict)
+- [ ] Frontend code audit — identify and remove dead code / unused imports across game modules
+- [ ] Verify all games load cleanly in mobile viewport (Chrome DevTools device mode)
+
+### Medium Priority
+
+- [ ] Piccolo seed data expansion (more templates per category/intensity)
+- [ ] Unused CSS selector cleanup (audit `index.css` for orphaned rules)
+- [ ] Review README Ablage/TODOs — promote actionable items to Implementation-Plan, archive resolved ones
 
 ## Backlog (Unscheduled)
 
@@ -304,7 +329,7 @@
 
 | Blocker | Impact | Owner | Status |
 |---------|--------|-------|--------|
-| CSS/UI framework decision | Affects all frontend work | — | open |
+| ~~CSS/UI framework decision~~ | ~~Affects all frontend work~~ | — | **resolved** (custom CSS, ~2800 lines, reassess post-dev) |
 | ~~Quiz media storage decision~~ | ~~Affects Phase 4~~ | — | **resolved** (local filesystem, `/media/` mount) |
 
 ## Completed
@@ -376,6 +401,13 @@
 - Ruff format: all 36 backend Python files formatted consistently
 - ESLint config: `eslint.config.js` (flat config for ESLint v9 + typescript-eslint recommended rules)
 - Backend tests: `test_imposter.py` (11), `test_piccolo.py` (32), `test_quiz.py` (122), `test_elo.py` (8), `test_smoke.py` (6), `test_chess.py` (24) — total 203 (all green)
+- Mobile bottom-nav: fixed tab bar with emoji icons (Home + 4 games), responsive (mobile-only, desktop uses top-nav)
+- NotFound (404) page: catch-all route wired in `main.tsx`, links back to home
+- Shared `parseApiResponse` in `core/api.ts`: Imposter + Piccolo deduplicated, single source of truth
+- Imposter `/offline-bundle` bug fixed: `model_dump()` on dict → direct serialization
+- README updated: all 4 game statuses → ✅ ready, quiz 3-mode description, chess description
+- Architecture.md updated: Imposter endpoint table completed (categories, reveal, offline-bundle), all open questions resolved
+- CSS/UI framework blocker resolved: custom CSS (~2800 lines) sufficient for MVP
 
 ## Dependencies
 
