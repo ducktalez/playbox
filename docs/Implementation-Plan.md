@@ -284,6 +284,8 @@
 - [x] Cache-first quiz gameplay: all three modes (Millionär, Speed, 1v1 Duel) pre-cache server questions at init and evaluate answers locally when offline
 - [x] Offline indicator in all quiz modes ("📴 Offline" badge, jokers disabled, ELO tracking paused)
 - [x] IndexedDB offline bundle fallback: if server drops mid-game, questions are loaded from IndexedDB truth cache
+- [x] Imposter offline-first: session creation + reveal always local from cached words, categories loaded cache-first with background sync, no server dependency for gameplay
+- [x] Piccolo offline-first: session creation + challenge loading always local from cached challenges, categories loaded cache-first with background sync, reports remain online-only (best-effort)
 - [x] Initialize Git repo, push to GitHub
 - [x] GitHub Actions: lint + test pipeline (ruff check + format, pytest 203 tests, tsc, eslint, vite build)
 - [x] ESLint config (eslint.config.js, flat config for ESLint v9 + typescript-eslint)
@@ -411,6 +413,8 @@
 - Frontend code audit: removed dead `GamePlaceholder.tsx` + orphaned `.placeholder-panel` CSS, ESLint no-unused-vars clean
 - README Ablage/TODOs restructured: brainstorm items categorized (WWM Visual, Quiz Content, Other Games), resolved items marked, empty "Fragensammlung" section removed
 - CSS cleanup: full `index.css` audit (2807→2787 lines) — removed 2 unused selectors (`.q-feedback__row`, `.q-feedback__row-label`), fixed mobile `.page-main` padding cascade bug (bottom-nav content overlap), consolidated duplicate `@media (max-width: 640px)` blocks in global section
+- Imposter offline-first: session creation + reveal always computed locally from cached word list (no server dependency for gameplay), categories loaded cache-first from IndexedDB with background sync, `isOffline` state removed — game is always offline-capable, reports remain online-only (best-effort)
+- Piccolo offline-first: session creation + challenge loading always computed locally from cached challenges, categories loaded cache-first from IndexedDB with background sync, removed server-first fetch/fallback pattern, reports remain online-only (best-effort)
 
 ## Dependencies
 
