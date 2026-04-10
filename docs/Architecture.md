@@ -310,7 +310,7 @@ PlayBox is delivered as a Progressive Web App via `vite-plugin-pwa` (Workbox und
 | `/media/*` | CacheFirst | `media-cache` | 30 days, 100 entries | Sound files, images — rarely change |
 
 **Offline capability per game:**
-- **Imposter / Piccolo**: word lists and challenge pools are cached via the `api-cache` strategy after the first fetch. Client-side fallback with cached data in localStorage. Fully playable offline once cached. Both support content reporting (word reports / challenge feedback).
+- **Imposter / Piccolo**: fully offline-first — categories loaded cache-first from IndexedDB with non-blocking background server sync, sessions always created locally from cached word list / challenge pool, reveals / challenges always computed locally. Content reporting (word reports / challenge feedback) is online-only (best-effort, silently skipped when offline).
 - **Quiz**: playable offline after initial cache sync — questions with answer truth are pre-cached in IndexedDB via `/api/v1/quiz/offline-bundle`. All three modes (Millionär, Speed, 1v1) use a shared `questionTruthCache` module for cache-first question loading and local answer evaluation. ELO tracking requires online. Question feedback (THUMBS_UP/THUMBS_DOWN/REPORT) available when online.
 - **Chess**: online required — game state managed server-side by `python-chess`.
 

@@ -2,8 +2,8 @@
 
 ## Current Status
 
-**Phase:** Phase 7 — Documentation & Quality Pass
-**Last Updated:** 2026-04-09
+**Phase:** All phases complete — maintenance mode
+**Last Updated:** 2026-04-10
 
 ## Roadmap
 
@@ -16,7 +16,7 @@
 | 4 | Quiz — ELO system + media attachments | 2026-08 | ✅ done |
 | 5 | Chess Variants — MVP (low priority) | 2026-04 | ✅ done (8×8 only) |
 | 6 | Polish, PWA optimization, offline hardening | 2026-04 | ✅ done (icons deferred) |
-| 7 | Documentation & quality pass | 2026-04 | 🔄 in progress |
+| 7 | Documentation & quality pass | 2026-04 | ✅ done |
 
 ---
 
