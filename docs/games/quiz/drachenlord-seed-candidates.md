@@ -29,7 +29,7 @@ The first batch stays conservative and uses the safer, broadly understandable fa
 - **Tags:** identity, alias, basics, safe-core
 - **Difficulty:** easy
 - **Dossier anchors:** BG-001, PA-001, QZ-001
-- **Seed status:** DRAFT
+- **Seed status:** PROMOTED
 
 ### DQS-002
 - **Based on:** DQF-002
@@ -40,7 +40,7 @@ The first batch stays conservative and uses the safer, broadly understandable fa
 - **Tags:** timeline, youtube, origins, 2011, safe-core
 - **Difficulty:** medium
 - **Dossier anchors:** T-001, QZ-001
-- **Seed status:** RECHECK
+- **Seed status:** PROMOTED
 
 ### DQS-003
 - **Based on:** DQF-003
@@ -51,7 +51,7 @@ The first batch stays conservative and uses the safer, broadly understandable fa
 - **Tags:** timeline, escalation, address, offline-shift, safe-core
 - **Difficulty:** medium
 - **Dossier anchors:** T-002, PH-003
-- **Seed status:** RECHECK
+- **Seed status:** PROMOTED
 
 ### DQS-004
 - **Based on:** DQF-004
@@ -62,7 +62,7 @@ The first batch stays conservative and uses the safer, broadly understandable fa
 - **Tags:** media, documentary, y-kollektiv, 2016, safe-core
 - **Difficulty:** medium
 - **Dossier anchors:** T-005, EK-002, SRC-P2-010
-- **Seed status:** DRAFT
+- **Seed status:** PROMOTED
 
 ### DQS-005
 - **Based on:** DQF-005
@@ -73,7 +73,7 @@ The first batch stays conservative and uses the safer, broadly understandable fa
 - **Tags:** timeline, schanzenfest, offline, escalation, 2018, safe-core
 - **Difficulty:** medium
 - **Dossier anchors:** T-006, EK-003, BG-005
-- **Seed status:** DRAFT
+- **Seed status:** PROMOTED
 
 ### DQS-006
 - **Based on:** DQF-006
@@ -84,7 +84,7 @@ The first batch stays conservative and uses the safer, broadly understandable fa
 - **Tags:** legal, blm, regulation, livestream, 2019, safe-core
 - **Difficulty:** medium
 - **Dossier anchors:** T-008, EK-004, SRC-P1-001
-- **Seed status:** DRAFT
+- **Seed status:** PROMOTED
 
 ### DQS-007
 - **Based on:** DQF-009
@@ -95,7 +95,7 @@ The first batch stays conservative and uses the safer, broadly understandable fa
 - **Tags:** place, drachenschanze, demolition, altschauerberg, 2022, safe-core
 - **Difficulty:** medium
 - **Dossier anchors:** T-011, EK-008, CF-006
-- **Seed status:** DRAFT
+- **Seed status:** PROMOTED
 
 ### DQS-008
 - **Based on:** DQF-010
@@ -106,7 +106,7 @@ The first batch stays conservative and uses the safer, broadly understandable fa
 - **Tags:** platform, youtube, deletion, archives, 2022, safe-core
 - **Difficulty:** medium
 - **Dossier anchors:** T-012, EK-009, INF-003
-- **Seed status:** DRAFT
+- **Seed status:** PROMOTED
 
 ### DQS-009
 - **Based on:** DQF-011
@@ -117,7 +117,7 @@ The first batch stays conservative and uses the safer, broadly understandable fa
 - **Tags:** media, podcast, cui-bono, reconstruction, 2022, safe-core
 - **Difficulty:** medium
 - **Dossier anchors:** T-014, EK-010, SRC-P2-012
-- **Seed status:** DRAFT
+- **Seed status:** PROMOTED
 
 ### DQS-010
 - **Based on:** DQF-012
@@ -128,7 +128,7 @@ The first batch stays conservative and uses the safer, broadly understandable fa
 - **Tags:** terms, swatting, escalation, legal, safe-core
 - **Difficulty:** medium
 - **Dossier anchors:** T-004, EK-001, AK-001
-- **Seed status:** DRAFT
+- **Seed status:** PROMOTED
 
 ### DQS-011
 - **Based on:** DQF-013
@@ -139,7 +139,7 @@ The first batch stays conservative and uses the safer, broadly understandable fa
 - **Tags:** place, altschauerberg, basics, setting, safe-core
 - **Difficulty:** easy
 - **Dossier anchors:** BG-004, EK-003, EK-008
-- **Seed status:** DRAFT
+- **Seed status:** PROMOTED
 
 ### DQS-012
 - **Based on:** DQF-014
@@ -150,7 +150,7 @@ The first batch stays conservative and uses the safer, broadly understandable fa
 - **Tags:** terms, drachenschanze, place, scene-language, safe-core
 - **Difficulty:** easy to medium
 - **Dossier anchors:** BG-004, EK-008
-- **Seed status:** DRAFT
+- **Seed status:** PROMOTED
 
 ## Held back for a later pass
 

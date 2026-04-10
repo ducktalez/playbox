@@ -360,10 +360,48 @@ a:hover {
 }
 
 .player-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.75rem;
+  position: relative;
+  display: flex;
   align-items: center;
+}
+
+.player-row__input {
+  padding-right: 2.4rem; /* space for × button */
+}
+
+.player-row__remove {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.3rem 0.4rem;
+  border-radius: 50%;
+  opacity: 0.5;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.player-row__remove:hover,
+.player-row__remove:focus-visible {
+  opacity: 1;
+  color: var(--danger, #f44);
+}
+
+/* Ghost row — greyed-out "add player" placeholder */
+.player-row--ghost {
+  cursor: pointer;
+}
+
+.player-row__placeholder {
+  display: block;
+  opacity: 0.35;
+  pointer-events: none;
+  user-select: none;
 }
 
 .inline-meta {
@@ -661,9 +699,6 @@ a:hover {
     padding-bottom: 70px; /* space for bottom-nav */
   }
 
-  .player-row {
-    grid-template-columns: 1fr;
-  }
 
   .info-bubble {
     right: auto;

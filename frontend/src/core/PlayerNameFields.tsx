@@ -17,42 +17,48 @@ export function PlayerNameFields({
   onAddPlayerField,
   onRemovePlayerField,
 }: PlayerNameFieldsProps) {
+  const canAdd = playerNames.length < maxPlayers;
+
   return (
-    <>
-      <div className="stack-md">
-        {playerNames.map((playerName, index) => (
-          <div key={index} className="player-row">
-            <input
-              className="text-input"
-              type="text"
-              value={playerName}
-              placeholder={`Player ${index + 1}`}
-              onChange={(event) => onUpdatePlayerName(index, event.target.value)}
-            />
+    <div className="stack-md">
+      {playerNames.map((playerName, index) => (
+        <div key={index} className="player-row">
+          <input
+            className="text-input player-row__input"
+            type="text"
+            value={playerName}
+            placeholder={`Player ${index + 1}`}
+            onChange={(event) => onUpdatePlayerName(index, event.target.value)}
+          />
+          {playerNames.length > minPlayers && (
             <button
               type="button"
-              className="button button--secondary"
+              className="player-row__remove"
               onClick={() => onRemovePlayerField(index)}
-              disabled={playerNames.length <= minPlayers}
+              aria-label={`Remove player ${index + 1}`}
             >
-              Remove
+              ×
             </button>
-          </div>
-        ))}
-      </div>
+          )}
+        </div>
+      ))}
 
-      <div className="button-row">
-        <button
-          type="button"
-          className="button button--secondary"
+      {canAdd && (
+        <div
+          className="player-row player-row--ghost"
           onClick={onAddPlayerField}
-          disabled={playerNames.length >= maxPlayers}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onAddPlayerField(); }}
         >
-          Add player
-        </button>
-        <span className="helper-text">{helperText}</span>
-      </div>
-    </>
+          <span className="text-input player-row__placeholder">
+            Player {playerNames.length + 1}
+          </span>
+        </div>
+      )}
+
+      <span className="helper-text">{helperText}</span>
+    </div>
   );
 }
 
