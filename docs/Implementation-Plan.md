@@ -347,7 +347,7 @@
 - Quiz file-based starter seed importer (`python -m app.games.quiz.seed`)
 - Shared test fixtures in `conftest.py`
 - Shared PyCharm run configurations (`.run/`) and local IDE copies via `setup.py`
-- Drachenlord seed question set (75+ questions across 8 categories, tier-based ELO)
+- Drachenlord seed question set (110 questions across 8 categories, tier-based ELO, 5 ordering questions)
 - ELO-based question ordering for Millionär mode (ascending difficulty)
 - Backend tests: `test_imposter.py` (11), `test_piccolo.py` (20), `test_quiz.py` (119), `test_elo.py` (8), `test_smoke.py` (6) — total 165 (all green)
 - WWM sound system: 25 MP3 files, tier-appropriate bg music, lock-in sting, 1.8s reveal delay, joker/safety/win sounds
@@ -415,6 +415,7 @@
 - CSS cleanup: full `index.css` audit (2807→2787 lines) — removed 2 unused selectors (`.q-feedback__row`, `.q-feedback__row-label`), fixed mobile `.page-main` padding cascade bug (bottom-nav content overlap), consolidated duplicate `@media (max-width: 640px)` blocks in global section
 - Imposter offline-first: session creation + reveal always computed locally from cached word list (no server dependency for gameplay), categories loaded cache-first from IndexedDB with background sync, `isOffline` state removed — game is always offline-capable, reports remain online-only (best-effort)
 - Piccolo offline-first: session creation + challenge loading always computed locally from cached challenges, categories loaded cache-first from IndexedDB with background sync, removed server-first fetch/fallback pattern, reports remain online-only (best-effort)
+- Quiz seed expansion: 81 → 110 questions (+29), 3 → 5 ordering questions (+2). Focus on Timeline & Milestones (8→20), Legal (10→15), Media (10→15). Tier balance improved: 35 T1, 43 T2, 32 T3. All 12 DRAFT candidates in drachenlord-seed-candidates.md marked as PROMOTED.
 
 ## Dependencies
 

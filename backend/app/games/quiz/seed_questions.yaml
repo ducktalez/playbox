@@ -701,6 +701,260 @@ questions:
     created_by: PlayBox quiz seed
     answers: ["Durch nachfolgende Streams und Social-Media-Posts", ["Mit einem offiziellen Pressestatement", "Mit einem eigenen Podcast", "Er hat nicht reagiert"]]
 
+  # ===== EXPANSION BATCH — Timeline & Milestones (Tier 1) =====
+
+  - text: Welches Jahrzehnt markiert den Beginn der öffentlichen Drachenlord-Geschichte?
+    category: Timeline & Milestones
+    tier: 1
+    tags: [timeline, decade, basics, safe-core]
+    note: "Die YouTube-Karriere begann 2011, also in den 2010er-Jahren."
+    created_by: PlayBox quiz seed
+    answers: ["2010er-Jahre", ["2000er-Jahre", "1990er-Jahre", "2020er-Jahre"]]
+
+  - text: Was geschah zeitlich zuerst — der Kanalstart oder die Adressveröffentlichung?
+    category: Timeline & Milestones
+    tier: 1
+    tags: [timeline, ordering, basics, safe-core]
+    note: "Der YouTube-Kanal startete 2011, die Adresse wurde 2014 öffentlich."
+    created_by: PlayBox quiz seed
+    answers: ["Der Kanalstart", ["Die Adressveröffentlichung", "Beides gleichzeitig", "Keines von beiden ist dokumentiert"]]
+
+  - text: In welchem Monat startete der Drachenlord-YouTube-Kanal laut den meisten Quellen?
+    category: Timeline & Milestones
+    tier: 1
+    tags: [timeline, youtube, origins, 2011, safe-core]
+    note: "Der YouTube-Kanal startete im August 2011."
+    created_by: PlayBox quiz seed
+    answers: ["August", ["Januar", "März", "November"]]
+
+  # ===== EXPANSION — Timeline & Milestones (Tier 2) =====
+
+  - text: In welchem Monat des Jahres 2022 wurde die Drachenschanze abgerissen?
+    category: Timeline & Milestones
+    tier: 2
+    tags: [timeline, drachenschanze, demolition, 2022, safe-core]
+    note: "Der Abriss der Drachenschanze erfolgte im März 2022."
+    created_by: PlayBox quiz seed
+    answers: ["März", ["Januar", "August", "November"]]
+
+  - text: Was passierte zuerst im Jahr 2022 — der Abriss der Drachenschanze oder die Löschung der YouTube-Kanäle?
+    category: Timeline & Milestones
+    tier: 2
+    tags: [timeline, ordering, 2022, safe-core]
+    note: "Drachenschanze abgerissen im März 2022, YouTube-Kanäle gelöscht im August 2022."
+    created_by: PlayBox quiz seed
+    answers: ["Der Abriss der Drachenschanze", ["Die Löschung der YouTube-Kanäle", "Beides am selben Tag", "Die YouTube-Löschung war bereits 2021"]]
+
+  - text: Wie viele Jahre vergingen zwischen der Adressveröffentlichung und dem Schanzenfest?
+    category: Timeline & Milestones
+    tier: 2
+    tags: [timeline, duration, calculation, safe-core]
+    note: "Von 2014 (Adressveröffentlichung) bis 2018 (Schanzenfest) vergingen 4 Jahre der Eskalation."
+    created_by: PlayBox quiz seed
+    answers: ["4 Jahre", ["2 Jahre", "6 Jahre", "8 Jahre"]]
+
+  - text: Was geschah 2019 neben dem BLM-Verbot auch noch in Drachenlords Umfeld?
+    category: Timeline & Milestones
+    tier: 2
+    tags: [timeline, 2019, escalation, safe-core]
+    note: "2019 wurden neben dem BLM-Verbot auch Betretungsverbote für die Umgebung der Drachenschanze verhängt."
+    created_by: PlayBox quiz seed
+    answers: ["Betretungsverbote für die Umgebung", ["Der YouTube-Kanal wurde gelöscht", "Das Haus wurde abgerissen", "Der Cui-Bono-Podcast erschien"]]
+
+  # ===== EXPANSION — Timeline & Milestones (Tier 3) =====
+
+  - text: "In welcher Reihenfolge geschahen diese Ereignisse? 1)\u202fAdressveröffentlichung  2)\u202fY-Kollektiv-Doku  3)\u202fSchanzenfest  4)\u202fCui-Bono-Podcast"
+    category: Timeline & Milestones
+    tier: 3
+    tags: [timeline, ordering, comprehensive, hard, safe-core]
+    note: "Adressveröffentlichung (2014) → Y-Kollektiv (2016) → Schanzenfest (2018) → Cui Bono (2022)."
+    created_by: PlayBox quiz seed
+    answers: ["Adresse → Y-Kollektiv → Schanzenfest → Cui Bono", ["Y-Kollektiv → Adresse → Cui Bono → Schanzenfest", "Schanzenfest → Adresse → Y-Kollektiv → Cui Bono", "Adresse → Schanzenfest → Y-Kollektiv → Cui Bono"]]
+
+  - text: Welches Ereignis markiert das endgültige Ende der physischen Drachenschanze als Gebäude?
+    category: Timeline & Milestones
+    tier: 3
+    tags: [timeline, drachenschanze, demolition, end, hard, safe-core]
+    note: "Der Abriss im März 2022 beendete die physische Existenz des Gebäudes, das jahrelang im Zentrum des Phänomens stand."
+    created_by: PlayBox quiz seed
+    answers: ["Der Abriss im März 2022", ["Ein Brand im Jahr 2019", "Die Zwangsversteigerung 2020", "Die YouTube-Löschung im August 2022"]]
+
+  - text: Welches Jahr gilt als Höhepunkt der physischen Eskalation am Standort Altschauerberg?
+    category: Timeline & Milestones
+    tier: 3
+    tags: [timeline, escalation, peak, 2018, hard, safe-core]
+    note: "2018 mit dem Schanzenfest markiert den Höhepunkt der physischen Massenanreisen nach Altschauerberg."
+    created_by: PlayBox quiz seed
+    answers: ["2018", ["2014", "2021", "2022"]]
+
+  # ===== EXPANSION — Media & Documentation (Tier 1–2) =====
+
+  - text: Welches Medienformat ist das Y-Kollektiv?
+    category: Media & Documentation
+    tier: 1
+    tags: [media, y-kollektiv, format, safe-core]
+    note: "Das Y-Kollektiv ist ein journalistisches Web-Video-Format von funk (ARD/ZDF)."
+    created_by: PlayBox quiz seed
+    answers: ["Web-Video-Format von funk (ARD/ZDF)", ["Privatfernsehen-Sendung", "Podcast-Netzwerk", "Printmagazin"]]
+
+  - text: Welches öffentlich-rechtliche Netzwerk steht hinter funk, dem Träger des Y-Kollektivs?
+    category: Media & Documentation
+    tier: 2
+    tags: [media, funk, ard, zdf, safe-core]
+    note: "funk ist ein Content-Netzwerk von ARD und ZDF für jüngere Zielgruppen."
+    created_by: PlayBox quiz seed
+    answers: ["ARD und ZDF", ["RTL und ProSieben", "Nur der NDR", "Netflix Deutschland"]]
+
+  - text: Wie viele Teile hat die Cui-Bono-Podcastreihe über Drachenlord ungefähr?
+    category: Media & Documentation
+    tier: 2
+    tags: [media, cui-bono, podcast, format, safe-core]
+    note: "Die Cui-Bono-Staffel über Drachenlord umfasst mehrere Episoden (ca. 6–7 Folgen) in einer zusammenhängenden Erzählung."
+    created_by: PlayBox quiz seed
+    answers: ["Mehrere Episoden (ca. 6–7 Folgen)", ["Nur eine einzelne Folge", "Über 30 Folgen", "Genau 2 Folgen"]]
+
+  # ===== EXPANSION — Media & Documentation (Tier 3) =====
+
+  - text: Was unterscheidet den Cui-Bono-Podcast methodisch von früherer Drachenlord-Berichterstattung?
+    category: Media & Documentation
+    tier: 3
+    tags: [media, cui-bono, methodology, analysis, hard, safe-core]
+    note: "Cui Bono nutzte eine mehrteilige narrative Rekonstruktion mit Experteninterviews statt klassischer Nachrichtenberichterstattung."
+    created_by: PlayBox quiz seed
+    answers: ["Mehrteilige narrative Rekonstruktion mit Experteninterviews", ["Nur ein kurzer Nachrichtenbeitrag", "Rein comedyhaftes Satireformat", "Anonyme Quellen ohne journalistische Einordnung"]]
+
+  # ===== EXPANSION — Legal & Regulation (Tier 1–2) =====
+
+  - text: Was bedeutet der juristische Begriff „Bewährung"?
+    category: Legal & Regulation
+    tier: 1
+    tags: [legal, basics, probation, safe-core]
+    note: "Bei einer Bewährungsstrafe wird die Freiheitsstrafe ausgesetzt — der Verurteilte kommt nicht ins Gefängnis, solange er sich bewährt."
+    created_by: PlayBox quiz seed
+    answers: ["Freiheitsstrafe wird ausgesetzt, solange man sich bewährt", ["Sofortiger Gefängnisantritt", "Vollständiger Freispruch", "Lebenslange Überwachung"]]
+
+  - text: Welche Art von Straftat wurde Drachenlord im erstinstanzlichen Urteil 2021 hauptsächlich vorgeworfen?
+    category: Legal & Regulation
+    tier: 2
+    tags: [legal, court, charges, 2021, safe-core]
+    note: "Drachenlord wurde wegen Körperverletzung in mehreren Fällen verurteilt — im Kontext von Auseinandersetzungen mit Besuchern."
+    created_by: PlayBox quiz seed
+    answers: ["Körperverletzung", ["Steuerhinterziehung", "Urheberrechtsverletzung", "Sachbeschädigung"]]
+
+  - text: Was versteht man unter einem Betretungsverbot?
+    category: Legal & Regulation
+    tier: 2
+    tags: [legal, betretungsverbot, regulation, safe-core]
+    note: "Ein Betretungsverbot untersagt bestimmten Personen das Betreten eines definierten Gebiets — im Fall Altschauerberg sollte es die Massenbesuche eindämmen."
+    created_by: PlayBox quiz seed
+    answers: ["Verbot, ein bestimmtes Gebiet zu betreten", ["Verbot, das Internet zu nutzen", "Verbot, Videos zu veröffentlichen", "Verbot, die Stadt zu verlassen"]]
+
+  # ===== EXPANSION — Legal & Regulation (Tier 3) =====
+
+  - text: Welchen Effekt hatte das erstinstanzliche Urteil von zwei Jahren auf die öffentliche Debatte?
+    category: Legal & Regulation
+    tier: 3
+    tags: [legal, debate, sentence, 2021, hard, safe-core]
+    note: "Das Urteil löste eine Debatte darüber aus, ob das Opfer angemessen geschützt und der Kontext der jahrelangen Dauerbelästigung berücksichtigt wurde."
+    created_by: PlayBox quiz seed
+    answers: ["Debatte über Opferschutz und Berücksichtigung der Dauerbelästigung", ["Allgemeine Zustimmung ohne Kontroverse", "Keinerlei öffentliches Interesse", "Sofortige Gesetzesänderung"]]
+
+  - text: Wie hoch war das erstinstanzliche Strafmaß gegen Drachenlord im Jahr 2021?
+    category: Legal & Regulation
+    tier: 3
+    tags: [legal, court, sentence, 2021, hard, safe-core]
+    note: "Drachenlord wurde in erster Instanz zu zwei Jahren Freiheitsstrafe verurteilt — das Berufungsverfahren reduzierte dies später auf Bewährung."
+    created_by: PlayBox quiz seed
+    answers: ["Zwei Jahre Freiheitsstrafe", ["Sechs Monate auf Bewährung", "Geldstrafe ohne Freiheitsentzug", "Dreieinhalb Jahre Freiheitsstrafe"]]
+
+  # ===== EXPANSION — Place & Infrastructure (Tier 2–3) =====
+
+  - text: In welchem Landkreis liegt Altschauerberg?
+    category: Place & Infrastructure
+    tier: 2
+    tags: [place, geography, landkreis, safe-core]
+    note: "Altschauerberg liegt im Landkreis Neustadt an der Aisch-Bad Windsheim in Mittelfranken."
+    created_by: PlayBox quiz seed
+    answers: ["Neustadt an der Aisch-Bad Windsheim", ["Nürnberger Land", "Erlangen-Höchstadt", "Ansbach"]]
+
+  - text: Warum war die geringe Größe von Altschauerberg ein Verstärkungsfaktor für die Eskalation?
+    category: Place & Infrastructure
+    tier: 3
+    tags: [place, community, escalation, analysis, hard, safe-core]
+    note: "Mit nur ~40 Einwohnern war das Dorf jeder Störung schutzlos ausgeliefert — schon wenige Besucher überforderten die Infrastruktur."
+    created_by: PlayBox quiz seed
+    answers: ["Schon wenige Besucher überforderten die Infrastruktur des Dorfes", ["Das Dorf hatte eigene Sicherheitskräfte", "Altschauerberg war eine Großstadt", "Die Einwohner profitierten vom Tourismus"]]
+
+  # ===== EXPANSION — Scene Terms & Dynamics (Tier 2–3) =====
+
+  - text: Was versteht man unter dem „Streisand-Effekt"?
+    category: Scene Terms & Dynamics
+    tier: 2
+    tags: [terms, streisand, media, dynamics, safe-core]
+    note: "Der Streisand-Effekt beschreibt, dass der Versuch, Informationen zu unterdrücken, deren Verbreitung erst recht verstärkt."
+    created_by: PlayBox quiz seed
+    answers: ["Unterdrückungsversuche verstärken die Verbreitung", ["Positive Publicity führt zu negativen Reaktionen", "Berühmte Personen verlieren automatisch Follower", "Online-Inhalte verschwinden nach 24 Stunden"]]
+
+  - text: Welcher psychologische Begriff beschreibt das Phänomen, dass Menschen in Gruppen extremere Positionen einnehmen?
+    category: Scene Terms & Dynamics
+    tier: 3
+    tags: [dynamics, psychology, group-polarization, hard, safe-core]
+    note: "Gruppenpolarisierung beschreibt, wie Meinungen in Gruppen radikaler werden als bei Einzelpersonen."
+    created_by: PlayBox quiz seed
+    answers: ["Gruppenpolarisierung", ["Konformitätsdruck", "Kognitive Dissonanz", "Verantwortungsdiffusion"]]
+
+  - text: Welcher soziologische Begriff beschreibt, warum unbeteiligte Zuschauer bei Übergriffen nicht eingreifen?
+    category: Scene Terms & Dynamics
+    tier: 3
+    tags: [dynamics, psychology, bystander, hard, safe-core]
+    note: "Der Bystander-Effekt erklärt, warum Individuen in Gruppen seltener helfen — die wahrgenommene Verantwortung verteilt sich."
+    created_by: PlayBox quiz seed
+    answers: ["Bystander-Effekt", ["Stockholm-Syndrom", "Halo-Effekt", "Dunning-Kruger-Effekt"]]
+
+  # ===== EXPANSION — Identity & Basics (Tier 1) =====
+
+  - text: In welcher Sprache sind die meisten Drachenlord-Inhalte?
+    category: Identity & Basics
+    tier: 1
+    tags: [identity, language, basics, safe-core]
+    note: "Drachenlord veröffentlichte seine Inhalte auf Deutsch, oft in ausgeprägtem fränkischem Dialekt."
+    created_by: PlayBox quiz seed
+    answers: ["Deutsch (fränkischer Dialekt)", ["Englisch", "Bayerisch-Hochdeutsch", "Schweizerdeutsch"]]
+
+  # ===== EXPANSION — PlayBox & Web Basics (Tier 1–2) =====
+
+  - text: Was ist IndexedDB?
+    category: Web Basics
+    tier: 1
+    tags: [starter, web, indexeddb, offline]
+    note: "IndexedDB ist eine Browser-Datenbank, die PlayBox für Offline-Speicherung von Spieldaten nutzt."
+    created_by: PlayBox quiz seed
+    answers: ["Eine Browser-Datenbank für Offline-Speicherung", ["Ein SQL-Server", "Eine Cloud-Datenbank", "Ein Dateisystem auf dem Server"]]
+
+  - text: Was passiert im PlayBox-Imposter-Spiel?
+    category: PlayBox Basics
+    tier: 1
+    tags: [starter, imposter, game-mechanics]
+    note: "Im Imposter-Spiel sehen alle Spieler dasselbe Wort — bis auf den Imposter, der sich tarnen muss."
+    created_by: PlayBox quiz seed
+    answers: ["Alle sehen ein Wort, der Imposter muss sich tarnen", ["Alle raten ein Geheimwort", "Zwei Teams spielen gegeneinander", "Man beantwortet Quizfragen auf Zeit"]]
+
+  - text: Wie viele Joker hat der Millionär-Modus im PlayBox-Quiz?
+    category: PlayBox Basics
+    tier: 1
+    tags: [starter, quiz, joker, wwm]
+    note: "Im Millionär-Modus gibt es drei Joker: 50:50, Publikumsjoker und Telefonjoker (Drachenlord)."
+    created_by: PlayBox quiz seed
+    answers: ["3", ["1", "2", "4"]]
+
+  - text: "Was bedeutet \"Cache-First\" bei einer PWA?"
+    category: Web Basics
+    tier: 2
+    tags: [starter, web, caching, pwa]
+    note: "Cache-First bedeutet, dass die App zuerst lokal gespeicherte Daten lädt und den Server nur im Hintergrund aktualisiert."
+    created_by: PlayBox quiz seed
+    answers: ["Zuerst gespeicherte Daten laden, Server im Hintergrund aktualisieren", ["Immer zuerst den Server fragen", "Nur online funktionieren", "Daten nie zwischenspeichern"]]
+
 
 # ===== Ordering Questions (WWM Kandidaten-Auswahlfrage) =====
 # Answers are listed in the CORRECT order. The API shuffles them for the player.
@@ -728,5 +982,21 @@ ordering_questions:
       - "Etzala"
       - "Tschüssikowski"
       - "Ich bin der Drache"
+    language: de
+
+  - text: "Ordne die folgenden Medienproduktionen über Drachenlord chronologisch (früheste zuerst)!"
+    ordered_answers:
+      - "Y-Kollektiv Dokumentation"
+      - "Spiegel TV Beitrag"
+      - "STRG_F Reportage"
+      - "Cui Bono Podcast"
+    language: de
+
+  - text: "Bringe die folgenden Eskalationsstufen in die richtige zeitliche Reihenfolge!"
+    ordered_answers:
+      - "Adresse wird öffentlich"
+      - "Regelmäßige Polizeieinsätze"
+      - "Schanzenfest"
+      - "Abriss der Drachenschanze"
     language: de
 

@@ -14,6 +14,7 @@ This file converts safe-core research into draft quiz questions.
 - `DRAFT` — usable idea, not yet source-cleared
 - `RECHECK` — promising, but needs better precision or distractor review
 - `READY-FOR-SEED` — checked and ready to be transformed into the JSON seed format
+- `PROMOTED` — already present in runtime `seed_questions.yaml`
 
 ## Starter batch
 
