@@ -293,8 +293,8 @@
 
 ## Phase 7 — Documentation & Quality Pass
 
-- Done: README game statuses updated (all 4 games → ✅ ready), Architecture.md updated (missing endpoints, open questions resolved), CSS blocker resolved, bottom-nav + 404 route wired, shared API helper deduplicated, frontend code audit clean, Piccolo seed expanded to 80 templates.
-- Open: unused CSS selector cleanup.
+- Done: README game statuses updated (all 4 games → ✅ ready), Architecture.md updated (missing endpoints, open questions resolved), CSS blocker resolved, bottom-nav + 404 route wired, shared API helper deduplicated, frontend code audit clean, Piccolo seed expanded to 80 templates, unused CSS cleanup complete (2 dead selectors removed, mobile padding cascade bug fixed, duplicate `@media` blocks consolidated).
+- Open: —
 
 ### High Priority
 
@@ -312,7 +312,7 @@
 ### Medium Priority
 
 - [x] Piccolo seed data expansion — 53 → 80 templates, all categories have ≥2 per intensity
-- [ ] Unused CSS selector cleanup (full `index.css` audit — beyond placeholder-panel)
+- [x] Unused CSS selector cleanup (full `index.css` audit — removed 2 dead selectors, fixed mobile padding cascade bug, consolidated duplicate `@media` blocks)
 - [x] Review README Ablage/TODOs — restructured into categorized "Ideas / Future TODOs" with resolved items marked
 
 ## Backlog (Unscheduled)
@@ -410,6 +410,7 @@
 - CSS/UI framework blocker resolved: custom CSS (~2800 lines) sufficient for MVP
 - Frontend code audit: removed dead `GamePlaceholder.tsx` + orphaned `.placeholder-panel` CSS, ESLint no-unused-vars clean
 - README Ablage/TODOs restructured: brainstorm items categorized (WWM Visual, Quiz Content, Other Games), resolved items marked, empty "Fragensammlung" section removed
+- CSS cleanup: full `index.css` audit (2807→2787 lines) — removed 2 unused selectors (`.q-feedback__row`, `.q-feedback__row-label`), fixed mobile `.page-main` padding cascade bug (bottom-nav content overlap), consolidated duplicate `@media (max-width: 640px)` blocks in global section
 
 ## Dependencies
 

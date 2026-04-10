@@ -166,15 +166,6 @@ a:hover {
   }
 }
 
-@media (max-width: 640px) {
-  .top-nav__link {
-    display: none;
-  }
-  .page-main {
-    padding-bottom: 70px; /* space for bottom-nav */
-  }
-}
-
 .page-container {
   width: min(1100px, 100%);
   margin: 0 auto;
@@ -661,8 +652,13 @@ a:hover {
 }
 
 @media (max-width: 640px) {
+  .top-nav__link {
+    display: none;
+  }
+
   .page-main {
     padding: 1rem;
+    padding-bottom: 70px; /* space for bottom-nav */
   }
 
   .player-row {
@@ -1110,22 +1106,6 @@ a:hover {
   padding-left: 0.2rem;
 }
 
-/* Row: label + segmented pill inline (used for report single-row) */
-.q-feedback__row {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.q-feedback__row-label {
-  font-size: 0.62rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  color: var(--text-muted);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
 
 /* Segmented pill — auto-width (not full stretch) */
 .q-pill {
