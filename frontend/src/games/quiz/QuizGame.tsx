@@ -32,6 +32,11 @@ import {
   truthToDisplayQuestion,
   evaluateFromCache,
 } from "./questionTruthCache";
+import { useTranslation, mergeTranslations } from "../../core/i18n";
+import { coreTranslations } from "../../core/translations";
+import { quizTranslations } from "./translations";
+
+const quizI18n = mergeTranslations(coreTranslations, quizTranslations);
 
 const API_BASE =
   typeof window !== "undefined"
@@ -78,6 +83,8 @@ type AttemptOut = {
 const ANSWER_LABELS = ["A", "B", "C", "D"] as const;
 
 export default function QuizGame() {
+  const { t } = useTranslation(quizI18n);
+
   const [step, setStep] = useState<Step>("setup");
   const [millionaireActive, setMillionaireActive] = useState(false);
   const [duelActive, setDuelActive] = useState(false);
@@ -229,7 +236,7 @@ export default function QuizGame() {
       const ids = qData.items.map((q: { id: string }) => q.id);
 
       if (ids.length === 0) {
-        alert("Keine Fragen in der Datenbank. Bitte zuerst Seed-Daten laden.");
+        alert(t("result.noQuestions"));
         return;
       }
 
@@ -273,9 +280,7 @@ export default function QuizGame() {
         }
       }
       console.error("Error in startGame:", e);
-      alert(
-        `Fehler beim Spielstart:\n${e instanceof Error ? e.message : String(e)}\n\nIst das Backend auf Port 8015 erreichbar?`,
-      );
+      alert(t("result.startError", { msg: e instanceof Error ? e.message : String(e) }));
     }
   };
 
@@ -528,47 +533,47 @@ export default function QuizGame() {
       <div className="quiz-container">
         <div className="quiz-setup">
           <div>
-            <h1 className="quiz-setup__title">Wer wird Elite-Hater?</h1>
-            <p className="quiz-setup__subtitle">Wähle deinen Spielmodus</p>
+            <h1 className="quiz-setup__title">{t("setup.title")}</h1>
+            <p className="quiz-setup__subtitle">{t("setup.subtitle")}</p>
           </div>
           <button
             className="quiz-mode-btn quiz-mode-btn--primary"
             onClick={() => startGame("millionaire")}
           >
-            🏆 Wer wird <s>Millionär</s> Elite-Haider
+            {t("setup.millionaire")}
           </button>
           <button
             className="quiz-mode-btn"
             onClick={() => startGame("duel")}
           >
-            ⚔️ Quizduell (1v1)
+            {t("setup.duel")}
           </button>
           <button
             className="quiz-mode-btn"
             onClick={() => startGame("duel-speed")}
           >
-            ⚡ Single Player
+            {t("setup.speed")}
           </button>
 
           {availableTags.length > 0 && (
             <div className="quiz-tag-filter">
-              <p className="quiz-tag-filter__label">🏷️ Tag-Filter (optional)</p>
+              <p className="quiz-tag-filter__label">{t("setup.tagFilter")}</p>
               <div className="choice-chips" style={{ justifyContent: "center" }}>
                 {selectedTag && (
                   <button
                     className="choice-chip choice-chip--selected"
                     onClick={() => setSelectedTag("")}
                   >
-                    ✕ Alle
+                    {t("setup.tagAll")}
                   </button>
                 )}
-                {availableTags.map((t) => (
+                {availableTags.map((tag) => (
                   <button
-                    key={t.id}
-                    className={`choice-chip${selectedTag === t.name ? " choice-chip--selected" : ""}`}
-                    onClick={() => setSelectedTag(selectedTag === t.name ? "" : t.name)}
+                    key={tag.id}
+                    className={`choice-chip${selectedTag === tag.name ? " choice-chip--selected" : ""}`}
+                    onClick={() => setSelectedTag(selectedTag === tag.name ? "" : tag.name)}
                   >
-                    {t.name} ({t.question_count})
+                    {tag.name} ({tag.question_count})
                   </button>
                 ))}
               </div>
@@ -580,21 +585,21 @@ export default function QuizGame() {
             className="quiz-mode-btn"
             onClick={() => setLeaderboardActive(true)}
           >
-            🏆 Leaderboard
+            {t("setup.leaderboard")}
           </button>
           {player && (
             <button
               className="quiz-mode-btn"
               onClick={() => setProfileActive(true)}
             >
-              👤 Mein Profil
+              {t("setup.profile")}
             </button>
           )}
           <button
             className="quiz-mode-btn"
             onClick={() => setQuestionFormActive(true)}
           >
-            ✏️ Neue Frage erstellen
+            {t("setup.newQuestion")}
           </button>
         </div>
       </div>
@@ -608,16 +613,16 @@ export default function QuizGame() {
     return (
       <div className="quiz-container">
         <div className="quiz-result">
-          <h1 className="quiz-result__title">Spiel beendet!</h1>
+          <h1 className="quiz-result__title">{t("result.title")}</h1>
           <div className="quiz-result__score">
             {correctCount} / {questionIds.length}
           </div>
           <p className="quiz-result__details">
-            Richtige Antworten
+            {t("result.correctAnswers")}
           </p>
           {isOffline ? (
             <p className="quiz-result__details" style={{ color: "#4ade80", fontSize: "0.85rem" }}>
-              📴 Offline-Modus — kein ELO-Tracking
+              {t("offlineNoElo")}
             </p>
           ) : (
             <p className="quiz-result__details">
@@ -630,14 +635,14 @@ export default function QuizGame() {
             style={{ marginTop: "1rem" }}
             onClick={reset}
           >
-            Nochmal spielen
+            {t("playAgain")}
           </button>
           {!isOffline && (
             <button
               className="quiz-mode-btn"
               onClick={() => { setStep("setup"); setLeaderboardActive(true); }}
             >
-              🏆 Leaderboard
+              {t("setup.leaderboard")}
             </button>
           )}
         </div>
@@ -655,35 +660,23 @@ export default function QuizGame() {
     <div className="quiz-container">
       {/* Progress bar */}
       <div className="quiz-progress">
-        <div
-          className="quiz-progress__fill"
-          style={{ width: `${progress}%` }}
-        />
+        <div className="quiz-progress__fill" style={{ width: `${progress}%` }} />
       </div>
 
-      {/* Header: back + meta + timer */}
       <div className="quiz-header">
-        <button
-          className="quiz-back-btn"
-          onClick={reset}
-          title="Zurück"
-        >
+        <button className="quiz-back-btn" onClick={reset} title={t("back")}>
           ←
         </button>
         <div className="quiz-meta">
-          <span>
-            {currentIdx + 1}/{questionIds.length}
-          </span>
+          <span>{currentIdx + 1}/{questionIds.length}</span>
           {isOffline ? (
-            <span style={{ color: "#4ade80", fontSize: "0.75rem" }}>📴 Offline</span>
+            <span style={{ color: "#4ade80", fontSize: "0.75rem" }}>{t("playing.offline")}</span>
           ) : (
             <span>ELO {Math.round(player?.elo_score || 1200)}</span>
           )}
         </div>
         {isSpeedMode && (
-          <span
-            className={`quiz-timer ${timeRemaining <= 5 ? "quiz-timer--warn" : "quiz-timer--normal"}`}
-          >
+          <span className={`quiz-timer ${timeRemaining <= 5 ? "quiz-timer--warn" : "quiz-timer--normal"}`}>
             ⏱ {timeRemaining}s
           </span>
         )}
@@ -691,19 +684,18 @@ export default function QuizGame() {
 
       {currentQuestion && (
         <div className="quiz-question-wrapper" key={slideKey}>
-          {/* Question card */}
           <div className="quiz-question-card">
             {currentQuestion.media_url && (
               <div className="quiz-media">
                 {currentQuestion.media_type === "image" && (
-                  <img src={currentQuestion.media_url} alt="Frage-Bild" className="quiz-media__img" />
+                  <img src={currentQuestion.media_url} alt={t("playing.imgAlt")} className="quiz-media__img" />
                 )}
                 {currentQuestion.media_type === "video" && (
                   <video src={currentQuestion.media_url} controls className="quiz-media__video" />
                 )}
                 {currentQuestion.media_type === "document" && (
                   <a href={currentQuestion.media_url} target="_blank" rel="noopener noreferrer" className="quiz-media__link">
-                    📄 Dokument anzeigen
+                    {t("playing.docLink")}
                   </a>
                 )}
               </div>
@@ -748,7 +740,7 @@ export default function QuizGame() {
               <p
                 className={`quiz-feedback__result ${attempt.correct ? "quiz-feedback__result--correct" : "quiz-feedback__result--wrong"}`}
               >
-                {timedOut ? "⏰ Zeit abgelaufen!" : attempt.correct ? "✓ Richtig!" : "✗ Falsch!"}
+                {timedOut ? t("playing.timedOut") : attempt.correct ? t("playing.correct") : t("playing.wrong")}
               </p>
               <p className="quiz-feedback__elo">
                 ELO: {Math.round(attempt.player_elo_before)} →{" "}
@@ -757,25 +749,18 @@ export default function QuizGame() {
 
               {attempt.note && (
                 <div className="quiz-explanation">
-                  <div className="quiz-explanation__title">💡 Hinweis</div>
+                  <div className="quiz-explanation__title">{t("playing.hint")}</div>
                   {attempt.note}
-                  <QuestionFeedback
-                    onPendingChange={setPendingFeedback}
-                    inline
-                  />
+                  <QuestionFeedback onPendingChange={setPendingFeedback} inline />
                 </div>
               )}
 
               {!attempt.note && (
-                <QuestionFeedback
-                  onPendingChange={setPendingFeedback}
-                />
+                <QuestionFeedback onPendingChange={setPendingFeedback} />
               )}
 
               <button className="quiz-next-btn" onClick={nextQuestion}>
-                {currentIdx + 1 >= questionIds.length
-                  ? "Ergebnis anzeigen"
-                  : "Nächste Frage →"}
+                {currentIdx + 1 >= questionIds.length ? t("playing.showResult") : t("playing.nextQuestion")}
               </button>
             </div>
           )}

@@ -5,6 +5,11 @@ import { countEnteredPlayerNames, normalizePlayerNames } from "../../core/player
 import { parseApiResponse } from "../../core/api";
 import { createOfflineSession, createOfflineSessionAsync, revealOffline } from "./offlineSession";
 import { getOfflineImposterCategories, syncImposter } from "../../core/offlineManager";
+import { useTranslation, mergeTranslations } from "../../core/i18n";
+import { coreTranslations } from "../../core/translations";
+import { imposterTranslations } from "./translations";
+
+const translations = mergeTranslations(coreTranslations, imposterTranslations);
 
 const API_BASE = "/api/v1/imposter";
 const MIN_PLAYERS = 3;
@@ -12,22 +17,22 @@ const MAX_PLAYERS = 20;
 const TIMER_OPTIONS = [120, 300, 420, 600, 900];
 
 const END_REASON_OPTIONS = [
-  { value: "TIME_OVER", label: "Time's over" },
-  { value: "SECRET_UNCOVERED", label: "Secret was uncovered" },
-  { value: "FOUND_IMPOSTER", label: "Found the imposter!" },
+  { value: "TIME_OVER", labelKey: "endReason.timeOver" },
+  { value: "SECRET_UNCOVERED", labelKey: "endReason.secretUncovered" },
+  { value: "FOUND_IMPOSTER", labelKey: "endReason.foundImposter" },
 ] as const;
 
 const IMPOSTER_FATE_OPTIONS = [
-  { value: "ALIVE", label: "Alive" },
-  { value: "DEAD", label: "Dead" },
+  { value: "ALIVE", labelKey: "fate.alive" },
+  { value: "DEAD", labelKey: "fate.dead" },
 ] as const;
 
 const REPORT_REASON_OPTIONS = [
-  { value: "NO_REASON", label: "No reason" },
-  { value: "WORD_UNKNOWN_OR_COMPLEX", label: "Word unknown or complex" },
-  { value: "INAPPROPRIATE", label: "Inappropriate" },
-  { value: "MISSPELLING", label: "Misspelling" },
-  { value: "OTHER", label: "Other" },
+  { value: "NO_REASON", labelKey: "report.noReason" },
+  { value: "WORD_UNKNOWN_OR_COMPLEX", labelKey: "report.wordUnknown" },
+  { value: "INAPPROPRIATE", labelKey: "report.inappropriate" },
+  { value: "MISSPELLING", labelKey: "report.misspelling" },
+  { value: "OTHER", labelKey: "report.other" },
 ] as const;
 
 type Step = "setup" | "reveal" | "discussion" | "result";
@@ -61,21 +66,13 @@ type WordResponse = {
 
 
 function formatDuration(totalSeconds: number): string {
-  const minutes = Math.floor(totalSeconds / 60)
-    .toString()
-    .padStart(2, "0");
+  const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
   const seconds = (totalSeconds % 60).toString().padStart(2, "0");
   return `${minutes}:${seconds}`;
 }
 
-/** Play a short alarm beep and vibrate the device when the timer ends. */
 function triggerTimerAlarm() {
-  // Vibrate (3 short bursts)
-  if (navigator.vibrate) {
-    navigator.vibrate([200, 100, 200, 100, 400]);
-  }
-
-  // Web Audio API alarm beep
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
   try {
     const ctx = new AudioContext();
     const osc = ctx.createOscillator();
@@ -86,7 +83,6 @@ function triggerTimerAlarm() {
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start();
-    // Beep pattern: on-off-on
     gain.gain.setValueAtTime(0.3, ctx.currentTime);
     gain.gain.setValueAtTime(0, ctx.currentTime + 0.2);
     gain.gain.setValueAtTime(0.3, ctx.currentTime + 0.35);
@@ -94,31 +90,18 @@ function triggerTimerAlarm() {
     gain.gain.setValueAtTime(0.3, ctx.currentTime + 0.7);
     osc.stop(ctx.currentTime + 1);
     setTimeout(() => ctx.close(), 1200);
-  } catch {
-    // Audio not available — vibration alone is fine
-  }
+  } catch { /* Audio not available */ }
 }
 
 function buildReportReason(reason: ReportReason, notes: string): string {
-  const option = REPORT_REASON_OPTIONS.find((entry) => entry.value === reason);
   const trimmedNotes = notes.trim();
-
-  if (!option) {
-    return trimmedNotes || "No reason";
-  }
-
-  if (reason === "NO_REASON") {
-    return trimmedNotes ? `No reason — ${trimmedNotes}` : "No reason";
-  }
-
-  if (reason === "OTHER") {
-    return trimmedNotes ? `Other — ${trimmedNotes}` : "Other";
-  }
-
-  return trimmedNotes ? `${option.label} — ${trimmedNotes}` : option.label;
+  if (reason === "NO_REASON") return trimmedNotes ? `NO_REASON — ${trimmedNotes}` : "NO_REASON";
+  if (reason === "OTHER") return trimmedNotes ? `OTHER — ${trimmedNotes}` : "OTHER";
+  return trimmedNotes ? `${reason} — ${trimmedNotes}` : reason;
 }
 
 export default function ImposterGame() {
+  const { t } = useTranslation(translations);
   const bubbleRef = useRef<HTMLDivElement | null>(null);
 
   const [step, setStep] = useState<Step>("setup");
@@ -143,345 +126,145 @@ export default function ImposterGame() {
   const [imposterFate, setImposterFate] = useState<ImposterFate>("");
   const [roundCount, setRoundCount] = useState(0);
 
-  const enteredPlayerCount = useMemo(
-    () => countEnteredPlayerNames(playerNames),
-    [playerNames],
-  );
-
+  const enteredPlayerCount = useMemo(() => countEnteredPlayerNames(playerNames), [playerNames]);
   const resolvedCategory = session?.word_details.category ?? (selectedCategory || "Random");
 
   useEffect(() => {
     let ignore = false;
-
-    // ── Cache-first: load categories from IndexedDB/localStorage immediately ──
     async function loadCachedCategories() {
       try {
         const offlineCats = await getOfflineImposterCategories();
-        if (!ignore && offlineCats.length > 0) {
-          setCategories(offlineCats);
-          setCategoriesError("");
-        }
+        if (!ignore && offlineCats.length > 0) { setCategories(offlineCats); setCategoriesError(""); }
       } catch { /* ignore */ }
     }
-
-    // ── Background sync: refresh data from server when online ──
     async function syncFromServer() {
       try {
         await syncImposter();
-        // After sync, reload categories from the now-updated IndexedDB
         const freshCats = await getOfflineImposterCategories();
-        if (!ignore && freshCats.length > 0) {
-          setCategories(freshCats);
-          setCategoriesError("");
-        }
-      } catch {
-        // Server unreachable — cached data stays valid
-      }
+        if (!ignore && freshCats.length > 0) { setCategories(freshCats); setCategoriesError(""); }
+      } catch { /* Server unreachable */ }
     }
-
     void loadCachedCategories();
     void syncFromServer();
-
-    return () => {
-      ignore = true;
-    };
+    return () => { ignore = true; };
   }, []);
 
   useEffect(() => {
-    if (step !== "discussion") {
-      return undefined;
-    }
-
-    if (timeLeft <= 0) {
-      triggerTimerAlarm();
-      setEndReason((current) => current || "TIME_OVER");
-      setStep("result");
-      return undefined;
-    }
-
-    const timerId = window.setInterval(() => {
-      setTimeLeft((current) => Math.max(current - 1, 0));
-    }, 1000);
-
-    return () => {
-      window.clearInterval(timerId);
-    };
+    if (step !== "discussion") return undefined;
+    if (timeLeft <= 0) { triggerTimerAlarm(); setEndReason((c) => c || "TIME_OVER"); setStep("result"); return undefined; }
+    const timerId = window.setInterval(() => setTimeLeft((c) => Math.max(c - 1, 0)), 1000);
+    return () => { window.clearInterval(timerId); };
   }, [step, timeLeft]);
 
   useEffect(() => {
-    if (!isWordInfoOpen) {
-      return undefined;
-    }
-
-    function handlePointerDown(event: MouseEvent) {
-      if (!bubbleRef.current?.contains(event.target as Node)) {
-        setIsWordInfoOpen(false);
-      }
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsWordInfoOpen(false);
-      }
-    }
-
+    if (!isWordInfoOpen) return undefined;
+    function handlePointerDown(e: MouseEvent) { if (!bubbleRef.current?.contains(e.target as Node)) setIsWordInfoOpen(false); }
+    function handleKeyDown(e: KeyboardEvent) { if (e.key === "Escape") setIsWordInfoOpen(false); }
     document.addEventListener("mousedown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
+    return () => { document.removeEventListener("mousedown", handlePointerDown); document.removeEventListener("keydown", handleKeyDown); };
   }, [isWordInfoOpen]);
 
-  function updatePlayerName(index: number, value: string) {
-    setPlayerNames((current) =>
-      current.map((playerName, currentIndex) =>
-        currentIndex === index ? value : playerName,
-      ),
-    );
-  }
-
-  function addPlayerField() {
-    if (playerNames.length >= MAX_PLAYERS) {
-      return;
-    }
-
-    setPlayerNames((current) => [...current, ""]);
-  }
-
-  function removePlayerField(index: number) {
-    if (playerNames.length <= MIN_PLAYERS) {
-      return;
-    }
-
-    setPlayerNames((current) => current.filter((_, currentIndex) => currentIndex !== index));
-  }
+  function updatePlayerName(index: number, value: string) { setPlayerNames((c) => c.map((pn, i) => (i === index ? value : pn))); }
+  function addPlayerField() { if (playerNames.length < MAX_PLAYERS) setPlayerNames((c) => [...c, ""]); }
+  function removePlayerField(index: number) { if (playerNames.length > MIN_PLAYERS) setPlayerNames((c) => c.filter((_, i) => i !== index)); }
 
   function resetRound() {
-    setStep("setup");
-    setSession(null);
-    setCurrentPlayerIndex(0);
-    setCurrentReveal(null);
-    setTimeLeft(0);
-    setErrorMessage("");
-    setIsWordInfoOpen(false);
-    setReportReason("NO_REASON");
-    setReportNotes("");
-    setReportMessage("");
-    setEndReason("");
-    setImposterFate("");
+    setStep("setup"); setSession(null); setCurrentPlayerIndex(0); setCurrentReveal(null);
+    setTimeLeft(0); setErrorMessage(""); setIsWordInfoOpen(false);
+    setReportReason("NO_REASON"); setReportNotes(""); setReportMessage("");
+    setEndReason(""); setImposterFate("");
   }
 
   function toggleEndReason(nextReason: EndReason) {
-    setEndReason((current) => {
-      const updatedReason = current === nextReason ? "" : nextReason;
-
-      if (updatedReason !== "FOUND_IMPOSTER") {
-        setImposterFate("");
-      }
-
-      return updatedReason;
-    });
+    setEndReason((c) => { const r = c === nextReason ? "" : nextReason; if (r !== "FOUND_IMPOSTER") setImposterFate(""); return r; });
   }
 
   async function startGame(nextPlayers?: string[]) {
     const sourcePlayers = nextPlayers ?? playerNames;
-    const players = nextPlayers ?? normalizePlayerNames(playerNames);
+    const players = nextPlayers ?? normalizePlayerNames(playerNames, t("player.fallbackPrefix"));
+    if (sourcePlayers.length < MIN_PLAYERS) { setErrorMessage(t("setup.errorMinPlayers")); return; }
+    setIsStarting(true); setErrorMessage(""); setIsWordInfoOpen(false);
+    setReportReason("NO_REASON"); setReportNotes(""); setReportMessage(""); setEndReason(""); setImposterFate("");
 
-    if (sourcePlayers.length < MIN_PLAYERS) {
-      setErrorMessage("Please enter at least three player names.");
-      return;
-    }
-
-    setIsStarting(true);
-    setErrorMessage("");
-    setIsWordInfoOpen(false);
-    setReportReason("NO_REASON");
-    setReportNotes("");
-    setReportMessage("");
-    setEndReason("");
-    setImposterFate("");
-
-    // ── Offline-first: always create session locally from cached words ──
-    let offlineSession = createOfflineSession(
-      players,
-      selectedCategory || null,
-      timerSeconds,
-    );
-
-    if (!offlineSession) {
-      // localStorage empty — try IndexedDB
-      offlineSession = await createOfflineSessionAsync(
-        players,
-        selectedCategory || null,
-        timerSeconds,
-      );
-    }
+    let offlineSession = createOfflineSession(players, selectedCategory || null, timerSeconds);
+    if (!offlineSession) offlineSession = await createOfflineSessionAsync(players, selectedCategory || null, timerSeconds);
 
     if (offlineSession) {
-      setPlayerNames(players);
-      setSession(offlineSession as SessionResponse);
-      setCurrentPlayerIndex(0);
-      setCurrentReveal(null);
-      setTimeLeft(offlineSession.timer_seconds);
-      setRoundCount((c) => c + 1);
-      setStep("reveal");
+      setPlayerNames(players); setSession(offlineSession as SessionResponse);
+      setCurrentPlayerIndex(0); setCurrentReveal(null); setTimeLeft(offlineSession.timer_seconds);
+      setRoundCount((c) => c + 1); setStep("reveal");
     } else {
-      setErrorMessage(
-        "Keine gecachten Wörter vorhanden. Bitte einmal mit Internetverbindung laden, um Wörter zu cachen.",
-      );
+      setErrorMessage(t("setup.errorNoCache"));
     }
-
     setIsStarting(false);
   }
 
   async function revealCurrentPlayer() {
-    if (!session) {
-      return;
-    }
-
-    setIsRevealing(true);
-    setErrorMessage("");
-
-    // ── Offline-first: always compute reveal locally ──
-    setCurrentReveal(
-      revealOffline(session as Parameters<typeof revealOffline>[0], currentPlayerIndex),
-    );
+    if (!session) return;
+    setIsRevealing(true); setErrorMessage("");
+    setCurrentReveal(revealOffline(session as Parameters<typeof revealOffline>[0], currentPlayerIndex));
     setIsRevealing(false);
   }
 
   function continueAfterReveal() {
-    if (!session) {
-      return;
-    }
-
-    if (currentPlayerIndex >= session.player_names.length - 1) {
-      setCurrentReveal(null);
-      setTimeLeft(session.timer_seconds);
-      setStep("discussion");
-      return;
-    }
-
-    setCurrentPlayerIndex((current) => current + 1);
-    setCurrentReveal(null);
+    if (!session) return;
+    if (currentPlayerIndex >= session.player_names.length - 1) { setCurrentReveal(null); setTimeLeft(session.timer_seconds); setStep("discussion"); return; }
+    setCurrentPlayerIndex((c) => c + 1); setCurrentReveal(null);
   }
 
   async function reportCurrentWord() {
-    if (!session) {
-      setReportMessage("Word details are not available yet.");
-      return;
-    }
-
-    setIsReporting(true);
-    setReportMessage("");
-
+    if (!session) { setReportMessage(t("result.wordNotAvailable")); return; }
+    setIsReporting(true); setReportMessage("");
     try {
       const response = await fetch(`${API_BASE}/words/${session.word_details.id}/report`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          reason: buildReportReason(reportReason, reportNotes),
-        }),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: buildReportReason(reportReason, reportNotes) }),
       });
-
       await parseApiResponse(response);
-      setReportNotes("");
-      setReportReason("NO_REASON");
-      setReportMessage("Thanks — the word has been reported.");
+      setReportNotes(""); setReportReason("NO_REASON"); setReportMessage(t("result.reportSuccess"));
     } catch (error) {
-      setReportMessage(
-        error instanceof Error ? error.message : "Could not submit the report.",
-      );
-    } finally {
-      setIsReporting(false);
-    }
+      setReportMessage(error instanceof Error ? error.message : t("result.reportError"));
+    } finally { setIsReporting(false); }
   }
 
   const backToSetupButton = (
     <div className="top-action-row">
-      <button
-        type="button"
-        className="button button--ghost back-button"
-        onClick={resetRound}
-      >
-        ← Back to setup
-      </button>
+      <button type="button" className="button button--ghost back-button" onClick={resetRound}>{t("backToSetup")}</button>
     </div>
   );
 
+  // ──── SETUP ────
   if (step === "setup") {
     return (
       <section className="placeholder-page stack-lg">
-        <p className="placeholder-kicker">Phase 1</p>
-        <h1>🕵️ Imposter</h1>
-        <p>
-          Create a local pass-and-play round, reveal one secret view per player, and start the
-          discussion timer.
-        </p>
-
+        <p className="placeholder-kicker">{t("setup.kicker")}</p>
+        <h1>{t("setup.title")}</h1>
+        <p>{t("setup.description")}</p>
         <div className="surface-panel stack-lg">
-          <PlayerNameFields
-            playerNames={playerNames}
-            minPlayers={MIN_PLAYERS}
-            maxPlayers={MAX_PLAYERS}
-            helperText={`${enteredPlayerCount} names entered manually — empty slots become Player 1, Player 2, ...`}
-            onUpdatePlayerName={updatePlayerName}
-            onAddPlayerField={addPlayerField}
-            onRemovePlayerField={removePlayerField}
-          />
-
-          <div
-            className="form-grid"
-            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
-          >
+          <PlayerNameFields playerNames={playerNames} minPlayers={MIN_PLAYERS} maxPlayers={MAX_PLAYERS}
+            helperText={t("setup.helperText", { count: enteredPlayerCount })}
+            onUpdatePlayerName={updatePlayerName} onAddPlayerField={addPlayerField} onRemovePlayerField={removePlayerField} />
+          <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
             <label className="field-label">
-              Category
-              <select
-                className="select-input"
-                value={selectedCategory}
-                onChange={(event) => setSelectedCategory(event.target.value)}
-              >
-                <option value="">Random category</option>
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
+              {t("setup.category")}
+              <select className="select-input" value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
+                <option value="">{t("setup.randomCategory")}</option>
+                {categories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
               </select>
             </label>
-
             <label className="field-label">
-              Discussion timer
-              <select
-                className="select-input"
-                value={timerSeconds}
-                onChange={(event) => setTimerSeconds(Number(event.target.value))}
-              >
-                {TIMER_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {formatDuration(option)}
-                  </option>
-                ))}
+              {t("setup.timer")}
+              <select className="select-input" value={timerSeconds} onChange={(e) => setTimerSeconds(Number(e.target.value))}>
+                {TIMER_OPTIONS.map((opt) => <option key={opt} value={opt}>{formatDuration(opt)}</option>)}
               </select>
             </label>
           </div>
-
-          {categoriesError && (
-            <p className="helper-text">Categories are optional: {categoriesError}</p>
-          )}
+          {categoriesError && <p className="helper-text">{t("setup.categoriesOptional", { error: categoriesError })}</p>}
           {errorMessage && <p className="alert-text">{errorMessage}</p>}
-
           <div className="button-row">
-            <button
-              type="button"
-              className="button button--primary"
-              onClick={() => void startGame()}
-              disabled={isStarting}
-            >
-              {isStarting ? "Creating round..." : "Create round"}
+            <button type="button" className="button button--primary" onClick={() => void startGame()} disabled={isStarting}>
+              {isStarting ? t("setup.creating") : t("setup.create")}
             </button>
           </div>
         </div>
@@ -489,244 +272,132 @@ export default function ImposterGame() {
     );
   }
 
-  if (!session) {
-    return null;
-  }
+  if (!session) return null;
 
+  // ──── REVEAL ────
   if (step === "reveal") {
     const currentPlayerName = session.player_names[currentPlayerIndex];
     const isLastPlayer = currentPlayerIndex === session.player_names.length - 1;
-
     return (
       <section className="placeholder-page stack-lg">
         {backToSetupButton}
-        <p className="placeholder-kicker">Pass and play</p>
-        <h1>
-          Player {currentPlayerIndex + 1} / {session.player_names.length}
-        </h1>
-        <p className="muted-text">
-          Hand the device to <strong>{currentPlayerName}</strong>. Nobody else should look.
-        </p>
-
+        <p className="placeholder-kicker">{t("reveal.kicker")}</p>
+        <h1>{t("reveal.playerOf", { n: currentPlayerIndex + 1, total: session.player_names.length })}</h1>
+        <p className="muted-text">{t("reveal.handDevice", { name: currentPlayerName })}</p>
         <div className="surface-panel stack-lg">
           <h2>{currentPlayerName}</h2>
-
           {!currentReveal ? (
             <>
-              <p className="helper-text">Only reveal when the correct player is ready.</p>
+              <p className="helper-text">{t("reveal.readyHint")}</p>
               <div className="button-row">
-                <button
-                  type="button"
-                  className="button button--primary"
-                  onClick={() => void revealCurrentPlayer()}
-                  disabled={isRevealing}
-                >
-                  {isRevealing ? "Revealing..." : "Tap to reveal"}
+                <button type="button" className="button button--primary" onClick={() => void revealCurrentPlayer()} disabled={isRevealing}>
+                  {isRevealing ? t("reveal.revealing") : t("reveal.tapToReveal")}
                 </button>
               </div>
             </>
           ) : (
             <>
               <div className="reveal-display">{currentReveal.display}</div>
-              <p className="muted-text">
-                {currentReveal.display.includes("IMPOSTER")
-                  ? "You are the Imposter. Blend in and improvise carefully."
-                  : "Remember the word, then hide the screen and pass the device on."}
-              </p>
+              <p className="muted-text">{currentReveal.display.includes("IMPOSTER") ? t("reveal.imposterMsg") : t("reveal.wordMsg")}</p>
               <div className="button-row">
-                <button
-                  type="button"
-                  className="button button--secondary"
-                  onClick={continueAfterReveal}
-                >
-                  {isLastPlayer ? "Start discussion" : "Hide and pass on"}
+                <button type="button" className="button button--secondary" onClick={continueAfterReveal}>
+                  {isLastPlayer ? t("reveal.startDiscussion") : t("reveal.hideAndPass")}
                 </button>
               </div>
             </>
           )}
-
           {errorMessage && <p className="alert-text">{errorMessage}</p>}
         </div>
       </section>
     );
   }
 
+  // ──── DISCUSSION ────
   if (step === "discussion") {
     return (
       <section className="placeholder-page stack-lg">
         {backToSetupButton}
-        <p className="placeholder-kicker">Discussion</p>
-        <h1>Discuss and find the Imposter</h1>
+        <p className="placeholder-kicker">{t("discussion.kicker")}</p>
+        <h1>{t("discussion.title")}</h1>
         <div className="surface-panel stack-lg">
-          <div className={`timer-display${timeLeft <= 30 ? " alert-text" : ""}`}>
-            {formatDuration(timeLeft)}
-          </div>
+          <div className={`timer-display${timeLeft <= 30 ? " alert-text" : ""}`}>{formatDuration(timeLeft)}</div>
           <div className="inline-meta">
-            <span>Players: {session.player_names.length}</span>
-            <span>Category: {resolvedCategory}</span>
+            <span>{t("discussion.players", { n: session.player_names.length })}</span>
+            <span>{t("discussion.category", { cat: resolvedCategory })}</span>
           </div>
-          <p className="muted-text">
-            The secret word stays hidden until the discussion is over.
-          </p>
+          <p className="muted-text">{t("discussion.secretHint")}</p>
           <div className="button-row">
-            <button
-              type="button"
-              className="button button--secondary"
-              onClick={() => setStep("result")}
-            >
-              End discussion now
-            </button>
+            <button type="button" className="button button--secondary" onClick={() => setStep("result")}>{t("discussion.endNow")}</button>
           </div>
         </div>
       </section>
     );
   }
 
+  // ──── RESULT ────
   return (
     <section className="placeholder-page stack-lg">
       {backToSetupButton}
-      <p className="placeholder-kicker">Round result</p>
-      <h1>Reveal the answer</h1>
-
+      <p className="placeholder-kicker">{t("result.kicker")}</p>
+      <h1>{t("result.title")}</h1>
       <div className="surface-panel stack-lg">
         <div className="inline-meta">
-          <span>Category: {resolvedCategory}</span>
-          <span>Timer: {formatDuration(session.timer_seconds)}</span>
-          <span>Round: {roundCount}</span>
+          <span>{t("discussion.category", { cat: resolvedCategory })}</span>
+          <span>{t("result.timer", { time: formatDuration(session.timer_seconds) })}</span>
+          <span>{t("result.round", { n: roundCount })}</span>
         </div>
-
         <div className="word-title-row">
           <div className="reveal-display">{session.word}</div>
           <div className="bubble-anchor" ref={bubbleRef}>
-            <button
-              type="button"
-              className="icon-button"
-              aria-label="Show word details"
-              onClick={() => setIsWordInfoOpen((current) => !current)}
-            >
-              i
-            </button>
-
+            <button type="button" className="icon-button" aria-label={t("result.showWordDetails")} onClick={() => setIsWordInfoOpen((c) => !c)}>i</button>
             {isWordInfoOpen && (
               <div className="info-bubble stack-md">
                 <div className="info-bubble__title">
-                  <strong>Word info</strong>
-                  <button
-                    type="button"
-                    className="button button--ghost back-button"
-                    onClick={() => setIsWordInfoOpen(false)}
-                  >
-                    Close
-                  </button>
+                  <strong>{t("result.wordInfo")}</strong>
+                  <button type="button" className="button button--ghost back-button" onClick={() => setIsWordInfoOpen(false)}>{t("close")}</button>
                 </div>
-
                 <ul className="info-list">
-                  <li>
-                    <strong>Word:</strong> {session.word}
-                  </li>
-                  <li>
-                    <strong>Category:</strong> {resolvedCategory}
-                  </li>
-                  <li>
-                    <strong>Uploaded by:</strong> {session.word_details.uploaded_by ?? "Unknown"}
-                  </li>
-                  {session.word_details.description && (
-                    <li>
-                      <strong>Meaning:</strong> {session.word_details.description}
-                    </li>
-                  )}
+                  <li><strong>{t("result.word")}</strong> {session.word}</li>
+                  <li><strong>{t("result.category")}</strong> {resolvedCategory}</li>
+                  <li><strong>{t("result.uploadedBy")}</strong> {session.word_details.uploaded_by ?? t("result.unknown")}</li>
+                  {session.word_details.description && <li><strong>{t("result.meaning")}</strong> {session.word_details.description}</li>}
                 </ul>
-
-                <p className="helper-text">
-                  Source: {session.word_details.source}
-                </p>
-
+                <p className="helper-text">{t("result.source", { source: session.word_details.source })}</p>
                 <div className="meta-block">
-                  <p className="helper-text">Report this word</p>
+                  <p className="helper-text">{t("result.reportWord")}</p>
                   <div className="choice-chips">
-                    {REPORT_REASON_OPTIONS.map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        className={`choice-chip${reportReason === option.value ? " choice-chip--selected" : ""}`}
-                        onClick={() => setReportReason(option.value)}
-                      >
-                        {option.label}
-                      </button>
+                    {REPORT_REASON_OPTIONS.map((opt) => (
+                      <button key={opt.value} type="button" className={`choice-chip${reportReason === opt.value ? " choice-chip--selected" : ""}`} onClick={() => setReportReason(opt.value)}>{t(opt.labelKey)}</button>
                     ))}
                   </div>
-                  <textarea
-                    className="text-area"
-                    rows={3}
-                    value={reportNotes}
-                    placeholder="Optional note"
-                    onChange={(event) => setReportNotes(event.target.value)}
-                  />
-                  {reportMessage && (
-                    <p className={reportMessage.startsWith("Thanks") ? "helper-text" : "alert-text"}>
-                      {reportMessage}
-                    </p>
-                  )}
+                  <textarea className="text-area" rows={3} value={reportNotes} placeholder={t("result.optionalNote")} onChange={(e) => setReportNotes(e.target.value)} />
+                  {reportMessage && <p className={reportMessage === t("result.reportSuccess") ? "helper-text" : "alert-text"}>{reportMessage}</p>}
                   <div className="button-row">
-                    <button
-                      type="button"
-                      className="button button--danger"
-                      onClick={() => void reportCurrentWord()}
-                      disabled={isReporting}
-                    >
-                      {isReporting ? "Reporting..." : "Send report"}
-                    </button>
+                    <button type="button" className="button button--danger" onClick={() => void reportCurrentWord()} disabled={isReporting}>{isReporting ? t("result.reporting") : t("result.sendReport")}</button>
                   </div>
                 </div>
               </div>
             )}
           </div>
         </div>
-
-        <p>
-          <strong>Imposter:</strong> {session.player_names[session.imposter_index]}
-        </p>
-
+        <p><strong>{t("result.imposter", { name: session.player_names[session.imposter_index] })}</strong></p>
         <div className="stack-md">
-          <p className="helper-text">How did the round end? (optional)</p>
+          <p className="helper-text">{t("result.howDidItEnd")}</p>
           <div className="choice-chips">
-            {END_REASON_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                className={`choice-chip${endReason === option.value ? " choice-chip--selected" : ""}`}
-                onClick={() => toggleEndReason(option.value)}
-              >
-                {option.label}
-              </button>
+            {END_REASON_OPTIONS.map((opt) => (
+              <button key={opt.value} type="button" className={`choice-chip${endReason === opt.value ? " choice-chip--selected" : ""}`} onClick={() => toggleEndReason(opt.value)}>{t(opt.labelKey)}</button>
             ))}
           </div>
-
           {endReason === "FOUND_IMPOSTER" && (
             <div className="choice-chips">
-              {IMPOSTER_FATE_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={`choice-chip${imposterFate === option.value ? " choice-chip--selected" : ""}`}
-                  onClick={() => setImposterFate((current) => current === option.value ? "" : option.value)}
-                >
-                  {option.label}
-                </button>
+              {IMPOSTER_FATE_OPTIONS.map((opt) => (
+                <button key={opt.value} type="button" className={`choice-chip${imposterFate === opt.value ? " choice-chip--selected" : ""}`} onClick={() => setImposterFate((c) => c === opt.value ? "" : opt.value)}>{t(opt.labelKey)}</button>
               ))}
             </div>
           )}
         </div>
-
         <div className="button-row">
-          <button
-            type="button"
-            className="button button--primary button--hero"
-            onClick={() => void startGame(session.player_names)}
-            disabled={isStarting}
-          >
-            {isStarting ? "Creating round..." : "Play again"}
-          </button>
+          <button type="button" className="button button--primary button--hero" onClick={() => void startGame(session.player_names)} disabled={isStarting}>{isStarting ? t("result.creating") : t("result.playAgain")}</button>
         </div>
       </div>
     </section>

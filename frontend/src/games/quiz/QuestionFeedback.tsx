@@ -12,6 +12,11 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation, mergeTranslations } from "../../core/i18n";
+import { coreTranslations } from "../../core/translations";
+import { quizTranslations } from "./translations";
+
+const translations = mergeTranslations(coreTranslations, quizTranslations);
 
 // --- Types exposed to parent components ---
 
@@ -26,25 +31,25 @@ type FeedbackView = "idle" | "thumbs-down-details" | "report-details";
 // --- Category definitions (must match backend THUMBS_DOWN_CATEGORIES / REPORT_CATEGORIES) ---
 
 const PROBLEM_GROUP = [
-  { value: "PROBLEM_WITH_QUESTION", label: "Frage" },
-  { value: "PROBLEM_WITH_ANSWERS", label: "Antworten" },
+  { value: "PROBLEM_WITH_QUESTION", labelKey: "fb.problemQuestion" },
+  { value: "PROBLEM_WITH_ANSWERS", labelKey: "fb.problemAnswers" },
 ];
 
 const DIFFICULTY_GROUP = [
-  { value: "TOO_HARD", label: "Zu schwer" },
-  { value: "TOO_EASY", label: "Zu leicht" },
+  { value: "TOO_HARD", labelKey: "fb.tooHard" },
+  { value: "TOO_EASY", labelKey: "fb.tooEasy" },
 ];
 
 const EXTRA_GROUP = [
-  { value: "NOT_A_GOOD_QUESTION", label: "Keine gute Frage" },
-  { value: "DUPLICATE", label: "Duplikat" },
+  { value: "NOT_A_GOOD_QUESTION", labelKey: "fb.notGood" },
+  { value: "DUPLICATE", labelKey: "fb.duplicate" },
 ];
 
 const REPORT_GROUP = [
-  { value: "QUESTION_INACCURATE", label: "Ungenau" },
-  { value: "ANSWER_INCORRECT", label: "Falsch" },
-  { value: "OFFENSIVE_CONTENT", label: "Unangemessen" },
-  { value: "OTHER", label: "Sonstiges" },
+  { value: "QUESTION_INACCURATE", labelKey: "fb.inaccurate" },
+  { value: "ANSWER_INCORRECT", labelKey: "fb.incorrect" },
+  { value: "OFFENSIVE_CONTENT", labelKey: "fb.offensive" },
+  { value: "OTHER", labelKey: "fb.other" },
 ];
 
 // --- Props ---
@@ -57,6 +62,7 @@ type Props = {
 };
 
 export default function QuestionFeedback({ onPendingChange, inline }: Props) {
+  const { t } = useTranslation(translations);
   const [view, setView] = useState<FeedbackView>("idle");
   const [pendingType, setPendingType] = useState<PendingFeedback["feedback_type"] | null>(null);
 
@@ -184,21 +190,21 @@ export default function QuestionFeedback({ onPendingChange, inline }: Props) {
       <button
         className={`q-feedback__btn q-feedback__btn--up${pendingType === "THUMBS_UP" ? " q-feedback__btn--active-up" : ""}`}
         onClick={handleThumbsUp}
-        title="Gute Frage"
+        title={t("fb.goodQuestion")}
       >
         👍
       </button>
       <button
         className={`q-feedback__btn q-feedback__btn--down${pendingType === "THUMBS_DOWN" ? " q-feedback__btn--active-down" : ""}${view === "thumbs-down-details" ? " q-feedback__btn--open" : ""}`}
         onClick={handleThumbsDown}
-        title="Schlechte Frage"
+        title={t("fb.badQuestion")}
       >
         👎
       </button>
       <button
         className={`q-feedback__btn q-feedback__btn--report${pendingType === "REPORT" ? " q-feedback__btn--active-report" : ""}${view === "report-details" ? " q-feedback__btn--open" : ""}`}
         onClick={handleReport}
-        title="Frage melden"
+        title={t("fb.reportQuestion")}
       >
         🚩
       </button>
@@ -207,7 +213,7 @@ export default function QuestionFeedback({ onPendingChange, inline }: Props) {
 
   // --- Render: Segmented pill helper ---
   const segmentedPill = (
-    options: { value: string; label: string }[],
+    options: { value: string; labelKey: string }[],
     selected: string | null,
     onSelect: (value: string | null) => void,
   ) => (
@@ -218,14 +224,14 @@ export default function QuestionFeedback({ onPendingChange, inline }: Props) {
           className={`q-pill__seg${selected === opt.value ? " q-pill__seg--on" : ""}${i === 0 ? " q-pill__seg--first" : ""}${i === options.length - 1 ? " q-pill__seg--last" : ""}`}
           onClick={() => onSelect(selected === opt.value ? null : opt.value)}
         >
-          {opt.label}
+          {t(opt.labelKey)}
         </button>
       ))}
     </div>
   );
 
   const toggleChips = (
-    options: { value: string; label: string }[],
+    options: { value: string; labelKey: string }[],
     selected: Set<string>,
     onToggle: (value: string) => void,
   ) => (
@@ -236,7 +242,7 @@ export default function QuestionFeedback({ onPendingChange, inline }: Props) {
           className={`q-feedback__mini-chip${selected.has(opt.value) ? " q-feedback__mini-chip--on" : ""}`}
           onClick={() => onToggle(opt.value)}
         >
-          {opt.label}
+          {t(opt.labelKey)}
         </button>
       ))}
     </div>
@@ -250,15 +256,15 @@ export default function QuestionFeedback({ onPendingChange, inline }: Props) {
         <div className="q-feedback__detail-panel">
           <div className="q-feedback__groups">
             <div className="q-feedback__group">
-              <span className="q-feedback__group-label">Problem</span>
+              <span className="q-feedback__group-label">{t("fb.problem")}</span>
               {segmentedPill(PROBLEM_GROUP, problemWith, setProblemWith)}
             </div>
             <div className="q-feedback__group">
-              <span className="q-feedback__group-label">Schwierigkeit</span>
+              <span className="q-feedback__group-label">{t("fb.difficulty")}</span>
               {segmentedPill(DIFFICULTY_GROUP, difficulty, setDifficulty)}
             </div>
             <div className="q-feedback__group">
-              <span className="q-feedback__group-label">Weitere</span>
+              <span className="q-feedback__group-label">{t("fb.extra")}</span>
               {toggleChips(EXTRA_GROUP, extras, toggleExtra)}
             </div>
           </div>
@@ -266,12 +272,12 @@ export default function QuestionFeedback({ onPendingChange, inline }: Props) {
             <input
               className="q-feedback__comment"
               type="text"
-              placeholder="Kommentar (optional)"
+              placeholder={t("fb.comment")}
               maxLength={500}
               value={comment}
               onChange={(e) => setComment(e.target.value)}
             />
-            <button className="q-feedback__back" onClick={resetAll}>← Zurück</button>
+            <button className="q-feedback__back" onClick={resetAll}>{t("fb.back")}</button>
           </div>
         </div>
       </div>
@@ -286,7 +292,7 @@ export default function QuestionFeedback({ onPendingChange, inline }: Props) {
         <div className="q-feedback__detail-panel">
           <div className="q-feedback__groups">
             <div className="q-feedback__group">
-              <span className="q-feedback__group-label">Grund</span>
+              <span className="q-feedback__group-label">{t("fb.reason")}</span>
               {segmentedPill(REPORT_GROUP, reportCategory, setReportCategory)}
             </div>
           </div>
@@ -294,12 +300,12 @@ export default function QuestionFeedback({ onPendingChange, inline }: Props) {
             <input
               className="q-feedback__comment"
               type="text"
-              placeholder="Kommentar (optional)"
+              placeholder={t("fb.comment")}
               maxLength={500}
               value={reportComment}
               onChange={(e) => setReportComment(e.target.value)}
             />
-            <button className="q-feedback__back" onClick={resetAll}>← Zurück</button>
+            <button className="q-feedback__back" onClick={resetAll}>{t("fb.back")}</button>
           </div>
         </div>
       </div>

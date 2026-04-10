@@ -1,0 +1,132 @@
+import type { TranslationBundle } from "../../core/i18n";
+
+export const piccoloTranslations: TranslationBundle = {
+  de: {
+    // Intensity options
+    "intensity.mild": "Mild",
+    "intensity.mild.desc": "Denker-Version ohne Trinkzwang.",
+    "intensity.medium": "Medium",
+    "intensity.medium.desc": "Klassischer Trinkspielmodus für normale Runden.",
+    "intensity.spicy": "Spicy",
+    "intensity.spicy.desc": "Wildcard-Modus für lautere und wildere Partys.",
+
+    // Category labels
+    "cat.dare": "Dare",
+    "cat.question": "Frage",
+    "cat.group": "Gruppe",
+    "cat.vote": "Abstimmung",
+    "cat.versus": "Versus",
+    "cat.automarken": "Automarken",
+    "cat.kofferPacken": "Koffer packen",
+    "cat.ichHabeSchonMal": "Ich habe schon mal",
+    "cat.trinkregeln": "Trinkregeln",
+
+    // Setup
+    "setup.kicker": "Phase 2",
+    "setup.title": "🎉 Piccolo",
+    "setup.description": "Erstelle eine Party-Runde mit Spielern, Kategorie-Filtern und dem Challenge-Flow.",
+    "setup.helperText": "Leere Namen werden automatisch zu Spieler 1, Spieler 2, ... für schnelleres Testen.",
+    "setup.intensity": "Intensität",
+    "setup.categories": "Kategorien (optional)",
+    "setup.loadingCategories": "Kategorien werden geladen...",
+    "setup.creating": "Runde wird erstellt...",
+    "setup.start": "Piccolo starten",
+    "setup.errorMinPlayers": "Bitte mindestens zwei Spielernamen eingeben.",
+    "setup.errorNoCache": "Keine gecachten Challenges vorhanden. Bitte einmal online laden, um Challenges zu cachen.",
+
+    // Fullscreen game
+    "game.kicker": "Piccolo-Runde",
+    "game.players": "Spieler: {n}",
+    "game.intensity": "Intensität: {label}",
+    "game.available": "Verfügbare Challenges: {n}",
+    "game.tapNext": "Tippe irgendwo für die nächste Challenge",
+    "game.loadingNext": "Nächste Challenge wird geladen...",
+    "game.noChallenge": "Noch keine Challenge geladen.",
+    "game.noMoreChallenges": "Keine Challenges mehr verfügbar.",
+    "game.noSession": "Keine Session vorhanden.",
+    "game.targets": "Ziele: {targets}",
+
+    // Report
+    "report.title": "🚩 Challenge melden",
+    "report.titleShort": "Challenge melden",
+    "report.inappropriate": "Unangemessen",
+    "report.boring": "Langweilig",
+    "report.broken": "Kaputt",
+    "report.other": "Anderes",
+    "report.comment": "Kommentar (optional)",
+    "report.sending": "Sende...",
+    "report.send": "Absenden",
+    "report.cancel": "Abbrechen",
+    "report.success": "✅ Danke für dein Feedback!",
+    "report.close": "Schließen",
+  },
+
+  en: {
+    "intensity.mild": "Mild",
+    "intensity.mild.desc": "Thinker version without drinking pressure.",
+    "intensity.medium": "Medium",
+    "intensity.medium.desc": "Classic drinking-game mode for regular rounds.",
+    "intensity.spicy": "Spicy",
+    "intensity.spicy.desc": "Wildcard mode for louder and wilder parties.",
+
+    "cat.dare": "Dare",
+    "cat.question": "Question",
+    "cat.group": "Group",
+    "cat.vote": "Vote",
+    "cat.versus": "Versus",
+    "cat.automarken": "Car Brands",
+    "cat.kofferPacken": "Pack Your Bags",
+    "cat.ichHabeSchonMal": "Never Have I Ever",
+    "cat.trinkregeln": "Drinking Rules",
+
+    "setup.kicker": "Phase 2",
+    "setup.title": "🎉 Piccolo",
+    "setup.description": "Build a local party round with players, category filters and the next challenge flow.",
+    "setup.helperText": "Empty names automatically become Player 1, Player 2, ... for faster testing.",
+    "setup.intensity": "Intensity",
+    "setup.categories": "Categories (optional)",
+    "setup.loadingCategories": "Loading categories...",
+    "setup.creating": "Creating round...",
+    "setup.start": "Start Piccolo",
+    "setup.errorMinPlayers": "Please enter at least two player names.",
+    "setup.errorNoCache": "No cached challenges available. Please load once online to cache challenges.",
+
+    "game.kicker": "Piccolo round",
+    "game.players": "Players: {n}",
+    "game.intensity": "Intensity: {label}",
+    "game.available": "Available challenges: {n}",
+    "game.tapNext": "Tap anywhere for the next challenge",
+    "game.loadingNext": "Loading next challenge...",
+    "game.noChallenge": "No challenge loaded yet.",
+    "game.noMoreChallenges": "No more challenges available.",
+    "game.noSession": "No session available.",
+    "game.targets": "Targets: {targets}",
+
+    "report.title": "🚩 Report challenge",
+    "report.titleShort": "Report challenge",
+    "report.inappropriate": "Inappropriate",
+    "report.boring": "Boring",
+    "report.broken": "Broken",
+    "report.other": "Other",
+    "report.comment": "Comment (optional)",
+    "report.sending": "Sending...",
+    "report.send": "Submit",
+    "report.cancel": "Cancel",
+    "report.success": "✅ Thanks for your feedback!",
+    "report.close": "Close",
+  },
+};
+
+/** Map backend category slug → translation key for display label. */
+export const CATEGORY_TRANSLATION_KEYS: Record<string, string> = {
+  dare: "cat.dare",
+  question: "cat.question",
+  group: "cat.group",
+  vote: "cat.vote",
+  versus: "cat.versus",
+  automarken: "cat.automarken",
+  "koffer packen": "cat.kofferPacken",
+  "ich habe schon mal": "cat.ichHabeSchonMal",
+  trinkregeln: "cat.trinkregeln",
+};
+

@@ -6,6 +6,11 @@
  */
 
 import { useState, useEffect } from "react";
+import { useTranslation, mergeTranslations } from "../../core/i18n";
+import { coreTranslations } from "../../core/translations";
+import { quizTranslations } from "./translations";
+
+const translations = mergeTranslations(coreTranslations, quizTranslations);
 
 const API_BASE =
   typeof window !== "undefined"
@@ -22,6 +27,7 @@ type LeaderboardEntry = {
 };
 
 export default function LeaderboardView({ onBack }: { onBack: () => void }) {
+  const { t } = useTranslation(translations);
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -36,7 +42,7 @@ export default function LeaderboardView({ onBack }: { onBack: () => void }) {
         const data: LeaderboardEntry[] = await res.json();
         if (!ignore) setEntries(data);
       } catch (e) {
-        if (!ignore) setError(e instanceof Error ? e.message : "Fehler beim Laden");
+        if (!ignore) setError(e instanceof Error ? e.message : t("elo.loadError"));
       } finally {
         if (!ignore) setLoading(false);
       }
@@ -50,26 +56,26 @@ export default function LeaderboardView({ onBack }: { onBack: () => void }) {
     <div className="quiz-container">
       <div className="leaderboard">
         <button className="quiz-back-btn" onClick={onBack} style={{ alignSelf: "flex-start" }}>
-          ← Zurück
+          {t("back")}
         </button>
-        <h1 className="leaderboard__title">🏆 Leaderboard</h1>
-        <p className="leaderboard__subtitle">Top-Spieler nach ELO-Rating</p>
+        <h1 className="leaderboard__title">{t("lb.title")}</h1>
+        <p className="leaderboard__subtitle">{t("lb.subtitle")}</p>
 
-        {loading && <p className="leaderboard__status">Lade Leaderboard...</p>}
+        {loading && <p className="leaderboard__status">{t("lb.loading")}</p>}
         {error && <p className="alert-text">{error}</p>}
 
         {!loading && entries.length === 0 && !error && (
-          <p className="leaderboard__status">Noch keine Spieler vorhanden.</p>
+          <p className="leaderboard__status">{t("lb.empty")}</p>
         )}
 
         {entries.length > 0 && (
           <div className="leaderboard__table">
             <div className="leaderboard__header">
               <span className="leaderboard__col leaderboard__col--rank">#</span>
-              <span className="leaderboard__col leaderboard__col--name">Name</span>
-              <span className="leaderboard__col leaderboard__col--elo">ELO</span>
-              <span className="leaderboard__col leaderboard__col--games">Spiele</span>
-              <span className="leaderboard__col leaderboard__col--correct">Richtig</span>
+              <span className="leaderboard__col leaderboard__col--name">{t("lb.colName")}</span>
+              <span className="leaderboard__col leaderboard__col--elo">{t("lb.colElo")}</span>
+              <span className="leaderboard__col leaderboard__col--games">{t("lb.colGames")}</span>
+              <span className="leaderboard__col leaderboard__col--correct">{t("lb.colCorrect")}</span>
             </div>
             {entries.map((entry) => {
               const medal = entry.rank === 1 ? "🥇" : entry.rank === 2 ? "🥈" : entry.rank === 3 ? "🥉" : "";
@@ -94,7 +100,7 @@ export default function LeaderboardView({ onBack }: { onBack: () => void }) {
                   <span className="leaderboard__col leaderboard__col--games">
                     {entry.games_played}
                   </span>
-                  <span className="leaderboard__col leaderboard__col--correct" title={`${accuracy}% Trefferquote`}>
+                  <span className="leaderboard__col leaderboard__col--correct" title={t("lb.accuracy", { pct: accuracy })}>
                     {entry.correct_count}
                   </span>
                 </div>
@@ -106,4 +112,3 @@ export default function LeaderboardView({ onBack }: { onBack: () => void }) {
     </div>
   );
 }
-

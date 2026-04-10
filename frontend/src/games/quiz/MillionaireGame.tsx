@@ -32,6 +32,11 @@ import {
   truthToDisplayQuestion,
   evaluateFromCache,
 } from "./questionTruthCache";
+import { useTranslation, mergeTranslations } from "../../core/i18n";
+import { coreTranslations } from "../../core/translations";
+import { quizTranslations } from "./translations";
+
+const millI18n = mergeTranslations(coreTranslations, quizTranslations);
 
 const API_BASE =
   typeof window !== "undefined"
@@ -286,6 +291,8 @@ function OrderingTimer({
 }
 
 export default function MillionaireGame({ onBack }: { onBack: () => void }) {
+  const { t } = useTranslation(millI18n);
+
   // Game state
   const [player, setPlayer] = useState<PlayerOut | null>(null);
   const [session, setSession] = useState<SessionOut | null>(null);
@@ -915,24 +922,24 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
   if (loading) {
     return (
       <div className="wwm-container">
-        <div className="wwm-loading">Lade Fragen...</div>
+        <div className="wwm-loading">{t("mill.loading")}</div>
       </div>
     );
   }
 
-  // --- Ordering Phase (Kandidaten-Auswahlfrage) ---
+  // --- Ordering Phase ---
   if (orderingPhase && orderingQ) {
     return (
       <div className="wwm-container">
         <div className="wwm-header">
-          <button className="wwm-back" onClick={onBack} title="Zurück">←</button>
-          <span className="wwm-ordering-title">Kandidaten-Auswahlfrage</span>
+          <button className="wwm-back" onClick={onBack} title={t("back")}>←</button>
+          <span className="wwm-ordering-title">{t("mill.ordering.title")}</span>
           <div className="wwm-header-right">
             <div className="wwm-volume">
               <button
                 className="wwm-volume__btn"
                 onClick={() => setMuted((m) => !m)}
-                title={muted ? "Ton einschalten" : "Ton ausschalten"}
+                title={muted ? t("mill.volume.unmute") : t("mill.volume.mute")}
               >
                 {muted ? "🔇" : volume < 0.3 ? "🔈" : volume < 0.7 ? "🔉" : "🔊"}
               </button>
@@ -958,10 +965,10 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
           {!orderingReady && (
             <div className="wwm-ordering__ready">
               <p className="wwm-ordering__ready-hint">
-                Du hast <strong>{ORDERING_TIME_LIMIT_MS / 1000} Sekunden</strong> Zeit, die Antworten in die richtige Reihenfolge zu bringen.
+                {t("mill.ordering.timeHint", { sec: ORDERING_TIME_LIMIT_MS / 1000 })}
               </p>
               <button className="wwm-btn wwm-btn--primary wwm-ordering__ready-btn" onClick={startOrdering}>
-                Bereit!
+                {t("mill.ordering.ready")}
               </button>
             </div>
           )}
@@ -1013,8 +1020,8 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
                         className="wwm-ordering__reset"
                         onClick={orderingReset}
                         disabled={orderingSelected.length === 0 || orderingChecking}
-                        title="Auswahl zurücksetzen"
-                      >↺ Reset</button>
+                        title={t("mill.ordering.resetTitle")}
+                      >{t("mill.ordering.reset")}</button>
                     </>
                   )}
                 </div>
@@ -1027,7 +1034,7 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
                 <div className="wwm-ordering__timer">{(orderingTimerMs / 1000).toFixed(1)}s</div>
               )}
               {orderingTimedOut && !orderingResult && (
-                <div className="wwm-ordering__timer wwm-ordering__timer--urgent">⏰ Zeit abgelaufen!</div>
+                <div className="wwm-ordering__timer wwm-ordering__timer--urgent">{t("mill.ordering.timedOut")}</div>
               )}
             </>
           )}
@@ -1037,19 +1044,19 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
               {orderingResult.correct ? (
                 <>
                   <p className="wwm-ordering__result-text wwm-ordering__result-text--correct">
-                    ✓ Richtig! Du erhältst ein Extra-Leben!
+                    {t("mill.ordering.correct")}
                   </p>
                   <p className="wwm-ordering__result-hint">
-                    Du darfst bis €32.000 eine Frage falsch beantworten und es nochmal versuchen.
+                    {t("mill.ordering.correctHint")}
                   </p>
                 </>
               ) : (
                 <>
                   <p className="wwm-ordering__result-text wwm-ordering__result-text--wrong">
-                    ✗ Leider falsch!
+                    {t("mill.ordering.wrong")}
                   </p>
                   <div className="wwm-ordering__correct-order">
-                    <p>Richtige Reihenfolge:</p>
+                    <p>{t("mill.ordering.correctOrder")}</p>
                     {orderingResult.correct_order.map((a, i) => (
                       <div key={i} className="wwm-ordering__slot wwm-ordering__slot--correct">
                         <span className="wwm-ordering__slot-num">{i + 1}.</span>
@@ -1060,7 +1067,7 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
                 </>
               )}
               <button className="wwm-btn wwm-btn--primary" onClick={finishOrderingPhase}>
-                Weiter zum Spiel →
+                {t("mill.ordering.continue")}
               </button>
             </div>
           )}
@@ -1119,13 +1126,13 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
         {gameWon && <ConfettiParticles count={60} />}
         <div className="wwm-result">
           <h1 className="wwm-result__title">
-            {gameWon ? "🏆 ELITE-HAIDER!" : "Leider verloren!"}
+            {gameWon ? t("mill.result.won") : t("mill.result.lost")}
           </h1>
           <div className={`wwm-result__prize${gameWon ? " wwm-result__prize--win" : ""}`}>
             {finalPrize}
           </div>
           {!gameWon && (
-            <p className="wwm-result__safety">Gesichert bei: {getSafetyPrize()}</p>
+            <p className="wwm-result__safety">{t("mill.result.safety", { prize: getSafetyPrize() })}</p>
           )}
           <p className="wwm-result__elo">
             {isOffline ? "📴 Offline — kein ELO-Tracking" : `ELO: ${Math.round(player?.elo_score || 1200)}`}
@@ -1137,9 +1144,9 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
           )}
           <div className="wwm-result__actions">
             <button className="wwm-btn wwm-btn--primary" onClick={replay}>
-              🔄 Nochmal spielen
+              {t("mill.result.replay")}
             </button>
-            <button className="wwm-btn" onClick={onBack}>Zurück zum Menü</button>
+            <button className="wwm-btn" onClick={onBack}>{t("mill.result.backToMenu")}</button>
           </div>
         </div>
       </div>
@@ -1153,7 +1160,6 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="wwm-container">
-      {/* Safety mark celebration overlay */}
       {celebratingSafety && (
         <div className="wwm-safety-overlay" aria-live="assertive">
           <ConfettiParticles count={30} />
@@ -1162,41 +1168,40 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
             <div className="wwm-safety-overlay__amount">
               {celebratingSafety === 5 ? "€500" : "€16.000"}
             </div>
-            <div className="wwm-safety-overlay__label">GESICHERT!</div>
+            <div className="wwm-safety-overlay__label">{t("mill.result.secured")}</div>
           </div>
         </div>
       )}
 
-      {/* Header: Back + Jokers + Prize + Volume */}
       <div className="wwm-header">
-        <button className="wwm-back" onClick={onBack} title="Zurück">←</button>
+        <button className="wwm-back" onClick={onBack} title={t("back")}>←</button>
         <div className="wwm-jokers">
           <button
             className={`wwm-joker ${jokerFiftyUsed ? "wwm-joker--used" : ""}`}
             disabled={jokerFiftyUsed || !!attempt || isOffline}
             onClick={useFiftyFifty}
-            title={isOffline ? "50:50 — Offline nicht verfügbar" : "50:50"}
+            title={isOffline ? t("mill.joker.fiftyOffline") : t("mill.joker.fiftyTitle")}
           >50:50</button>
           <button
             className={`wwm-joker ${jokerAudienceUsed ? "wwm-joker--used" : ""}`}
             disabled={jokerAudienceUsed || !!attempt || isOffline}
             onClick={useAudience}
-            title={isOffline ? "Publikumsjoker — Offline nicht verfügbar" : "Publikumsjoker"}
+            title={isOffline ? t("mill.joker.audienceOffline") : t("mill.joker.audienceTitle")}
           >👥</button>
           <button
             className={`wwm-joker ${jokerPhoneUsed ? "wwm-joker--used" : ""}`}
             disabled={jokerPhoneUsed || !!attempt || isOffline}
             onClick={usePhone}
-            title={isOffline ? "Telefonjoker — Offline nicht verfügbar" : "Telefonjoker"}
+            title={isOffline ? t("mill.joker.phoneOffline") : t("mill.joker.phoneTitle")}
           >📞</button>
           {hasExtraLife && (
             <span
               className={`wwm-joker wwm-joker--extra-life${extraLifeUsed ? " wwm-joker--used" : ""}`}
-              title={extraLifeUsed ? "Extra-Leben verbraucht" : "Extra-Leben (bis €32.000)"}
+              title={extraLifeUsed ? t("mill.joker.extraLifeUsed") : t("mill.joker.extraLife")}
             >🛡️</span>
           )}
           {isOffline && (
-            <span className="wwm-joker" style={{ color: "#4ade80", fontSize: "0.7rem", cursor: "default" }} title="Offline-Modus — kein ELO-Tracking">📴</span>
+            <span className="wwm-joker" style={{ color: "#4ade80", fontSize: "0.7rem", cursor: "default" }} title={t("mill.joker.offlineMode")}>📴</span>
           )}
         </div>
         <div className="wwm-header-right">
@@ -1205,8 +1210,8 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
             <button
               className="wwm-volume__btn"
               onClick={() => setMuted((m) => !m)}
-              title={muted ? "Ton einschalten" : "Ton ausschalten"}
-              aria-label={muted ? "Ton einschalten" : "Ton ausschalten"}
+              title={muted ? t("mill.volume.unmute") : t("mill.volume.mute")}
+              aria-label={muted ? t("mill.volume.unmute") : t("mill.volume.mute")}
             >
               {muted ? "🔇" : volume < 0.3 ? "🔈" : volume < 0.7 ? "🔉" : "🔊"}
             </button>
@@ -1220,7 +1225,7 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
                 if (v > 0 && muted) setMuted(false);
                 if (v === 0) setMuted(true);
               }}
-              aria-label="Lautstärke"
+              aria-label={t("mill.volume.label")}
             />
           </div>
         </div>
@@ -1254,14 +1259,14 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
                 <div className="wwm-phone-bubble">
                   <span className="wwm-phone-bubble__icon">📞</span>
                   <p className="wwm-phone-bubble__msg">"{phoneHint.message}"</p>
-                  <span className="wwm-phone-bubble__conf">Sicherheit: {phoneHint.confidence}%</span>
+                  <span className="wwm-phone-bubble__conf">{t("mill.phone.confidence", { pct: phoneHint.confidence })}</span>
                 </div>
               )}
 
               {/* Audience Poll */}
               {audiencePoll && !attempt && (
                 <div className="wwm-audience">
-                  <div className="wwm-audience__title">👥 Publikum</div>
+                  <div className="wwm-audience__title">{t("mill.audience.title")}</div>
                   <div className="wwm-audience__bars">
                     {audiencePoll.map((entry, i) => {
                       const ans = currentQuestion.answers.find((a) => a.id === entry.answer_id);
@@ -1285,14 +1290,14 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
                 {currentQuestion.media_url && (
                   <div className="wwm-media">
                     {currentQuestion.media_type === "image" && (
-                      <img src={currentQuestion.media_url} alt="Frage-Bild" className="wwm-media__img" />
+                      <img src={currentQuestion.media_url} alt={t("playing.imgAlt")} className="wwm-media__img" />
                     )}
                     {currentQuestion.media_type === "video" && (
                       <video src={currentQuestion.media_url} controls className="wwm-media__video" />
                     )}
                     {currentQuestion.media_type === "document" && (
                       <a href={currentQuestion.media_url} target="_blank" rel="noopener noreferrer" className="wwm-media__link">
-                        📄 Dokument anzeigen
+                        {t("playing.docLink")}
                       </a>
                     )}
                   </div>
@@ -1348,22 +1353,22 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
                   {/* Result text — always shown */}
                   {attempt.correct ? (
                     <p className="wwm-feedback__text wwm-feedback__text--correct">
-                      ✓ Richtig! {PRIZE_LADDER[currentIdx]?.prize} gesichert!
+                      {t("mill.feedback.correct", { prize: PRIZE_LADDER[currentIdx]?.prize })}
                     </p>
                   ) : (
                     <p className="wwm-feedback__text wwm-feedback__text--wrong">
                       {phoneSecondChance
-                        ? "✗ Falsch — aber dein Telefonjoker gibt dir eine 2. Chance!"
+                        ? t("mill.feedback.wrongPhone")
                         : hasExtraLife && !extraLifeUsed && currentLevel <= EXTRA_LIFE_MAX_LEVEL
-                          ? "✗ Falsch — aber dein Extra-Leben rettet dich!"
-                          : "✗ Leider falsch!"}
+                          ? t("mill.feedback.wrongExtraLife")
+                          : t("mill.feedback.wrong")}
                     </p>
                   )}
 
                   {/* Explanation note + feedback icons — always shown */}
                   {attempt.note ? (
                     <div className="wwm-explanation">
-                      <div className="wwm-explanation__title">💡 Hinweis</div>
+                      <div className="wwm-explanation__title">{t("playing.hint")}</div>
                       {attempt.note}
                       <QuestionFeedback
                         onPendingChange={setPendingFeedback}
@@ -1379,26 +1384,26 @@ export default function MillionaireGame({ onBack }: { onBack: () => void }) {
                   {/* Game-over pending: show safety prize info */}
                   {gameOverPending && (
                     <p className="wwm-feedback__safety">
-                      Du gehst mit {getSafetyPrize()} nach Hause.
+                      {t("mill.feedback.safetyPrize", { prize: getSafetyPrize() })}
                     </p>
                   )}
 
                   {/* Action buttons — depends on scenario */}
                   {attempt.correct ? (
                     <button className="wwm-btn wwm-btn--primary" onClick={nextQuestion}>
-                      {currentLevel >= 15 ? "🏆 Gewinn einlösen" : "Nächste Frage →"}
+                      {currentLevel >= 15 ? t("mill.feedback.claimPrize") : t("mill.feedback.nextQuestion")}
                     </button>
                   ) : phoneSecondChance ? (
                     <button className="wwm-btn wwm-btn--primary" onClick={retryWithSecondChance}>
-                      Nochmal versuchen
+                      {t("mill.feedback.retryPhone")}
                     </button>
                   ) : hasExtraLife && !extraLifeUsed && currentLevel <= EXTRA_LIFE_MAX_LEVEL ? (
                     <button className="wwm-btn wwm-btn--primary" onClick={retryWithExtraLife}>
-                      🛡️ Extra-Leben einsetzen
+                      {t("mill.feedback.retryExtraLife")}
                     </button>
                   ) : (
                     <button className="wwm-btn wwm-btn--primary" onClick={nextQuestion}>
-                      Weiter
+                      {t("continue")}
                     </button>
                   )}
                 </div>

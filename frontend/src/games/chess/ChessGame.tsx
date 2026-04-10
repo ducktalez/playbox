@@ -8,20 +8,17 @@
 import { useState, useCallback } from "react";
 import ChessBoard from "./ChessBoard";
 import { createGame, makeMove, resignGame, type GameState, type MoveResult } from "./api";
+import { useTranslation, mergeTranslations } from "../../core/i18n";
+import { coreTranslations } from "../../core/translations";
+import { chessTranslations } from "./translations";
 import "./chess.css";
+
+const translations = mergeTranslations(coreTranslations, chessTranslations);
 
 type Phase = "setup" | "playing" | "result";
 
-const STATUS_LABELS: Record<string, string> = {
-  ACTIVE: "Am Zug",
-  CHECK: "Schach!",
-  CHECKMATE: "Schachmatt!",
-  STALEMATE: "Patt",
-  DRAW: "Remis",
-  RESIGNED: "Aufgegeben",
-};
-
 export default function ChessGame() {
+  const { t } = useTranslation(translations);
   const [phase, setPhase] = useState<Phase>("setup");
   const [game, setGame] = useState<GameState | null>(null);
   const [error, setError] = useState("");
@@ -38,9 +35,9 @@ export default function ChessGame() {
       setLastMove("");
       setPhase("playing");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Fehler beim Erstellen");
+      setError(e instanceof Error ? e.message : t("setup.errorCreate"));
     }
-  }, [nameWhite, nameBlack]);
+  }, [nameWhite, nameBlack, t]);
 
   // --- Gameplay ---
   const handleMove = useCallback(
@@ -59,10 +56,10 @@ export default function ChessGame() {
           setPhase("result");
         }
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Ungültiger Zug");
+        setError(e instanceof Error ? e.message : t("setup.errorMove"));
       }
     },
-    [game]
+    [game, t]
   );
 
   const handleResign = useCallback(async () => {
@@ -73,9 +70,9 @@ export default function ChessGame() {
       setGame(updated);
       setPhase("result");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Fehler");
+      setError(e instanceof Error ? e.message : t("setup.error"));
     }
-  }, [game]);
+  }, [game, t]);
 
   const handlePlayAgain = useCallback(() => {
     setPhase("setup");
@@ -89,27 +86,27 @@ export default function ChessGame() {
     return (
       <div className="chess-container">
         <div className="chess-setup">
-          <h1 className="chess-setup__title">♟️ Schach</h1>
-          <p className="chess-setup__subtitle">Lokales 1v1 auf einem Gerät</p>
+          <h1 className="chess-setup__title">{t("setup.title")}</h1>
+          <p className="chess-setup__subtitle">{t("setup.subtitle")}</p>
 
           <div className="chess-setup__form">
             <label className="chess-setup__label">
-              ⬜ Weiß
+              {t("setup.white")}
               <input
                 className="chess-setup__input"
                 type="text"
-                placeholder="Player 1"
+                placeholder={t("setup.whitePlaceholder")}
                 value={nameWhite}
                 onChange={(e) => setNameWhite(e.target.value)}
                 maxLength={50}
               />
             </label>
             <label className="chess-setup__label">
-              ⬛ Schwarz
+              {t("setup.black")}
               <input
                 className="chess-setup__input"
                 type="text"
-                placeholder="Player 2"
+                placeholder={t("setup.blackPlaceholder")}
                 value={nameBlack}
                 onChange={(e) => setNameBlack(e.target.value)}
                 maxLength={50}
@@ -118,13 +115,13 @@ export default function ChessGame() {
           </div>
 
           <button className="chess-start-btn" onClick={handleStart}>
-            Spiel starten
+            {t("setup.start")}
           </button>
 
           {error && <p className="chess-error">{error}</p>}
 
           <p className="chess-setup__hint">
-            Standard 8×8 Schach · Mini-Varianten (6×8, 7×8) folgen bald
+            {t("setup.hint")}
           </p>
         </div>
       </div>
@@ -153,11 +150,11 @@ export default function ChessGame() {
       {/* Header */}
       <div className="chess-header">
         <button className="quiz-back-btn" onClick={handlePlayAgain}>
-          ← Zurück
+          {t("playing.back")}
         </button>
         <div className="chess-header__info">
           <span className="chess-header__status">
-            {STATUS_LABELS[game.status] ?? game.status}
+            {t(`status.${game.status.toLowerCase()}`) || game.status}
           </span>
           {!isOver && (
             <span className="chess-header__turn">
@@ -169,10 +166,10 @@ export default function ChessGame() {
 
       {/* Captured pieces */}
       <div className="chess-captured">
-        <span className="chess-captured__row" title={`${game.player_white} hat geschlagen`}>
+        <span className="chess-captured__row" title={t("playing.captured", { name: game.player_white })}>
           ⬜ {game.captured_white.join(" ")}
         </span>
-        <span className="chess-captured__row" title={`${game.player_black} hat geschlagen`}>
+        <span className="chess-captured__row" title={t("playing.captured", { name: game.player_black })}>
           ⬛ {game.captured_black.join(" ")}
         </span>
       </div>
@@ -193,7 +190,7 @@ export default function ChessGame() {
       {/* Move history */}
       {game.move_history.length > 0 && (
         <div className="chess-history">
-          <span className="chess-history__label">Züge:</span>
+          <span className="chess-history__label">{t("playing.moves")}</span>
           <span className="chess-history__moves">
             {game.move_history
               .filter((m) => !m.startsWith("resign:"))
@@ -205,7 +202,7 @@ export default function ChessGame() {
       {/* Actions */}
       {!isOver && (
         <button className="chess-resign-btn" onClick={handleResign}>
-          🏳️ Aufgeben
+          {t("playing.resign")}
         </button>
       )}
 
@@ -213,19 +210,19 @@ export default function ChessGame() {
       {isOver && (
         <div className="chess-result">
           <h2 className="chess-result__title">
-            {game.status === "CHECKMATE" && "♚ Schachmatt!"}
-            {game.status === "STALEMATE" && "Patt — Unentschieden"}
-            {game.status === "DRAW" && "Remis — Unentschieden"}
-            {game.status === "RESIGNED" && "🏳️ Aufgegeben"}
+            {game.status === "CHECKMATE" && t("result.checkmate")}
+            {game.status === "STALEMATE" && t("result.stalemate")}
+            {game.status === "DRAW" && t("result.draw")}
+            {game.status === "RESIGNED" && t("result.resigned")}
           </h2>
           {winner && (
-            <p className="chess-result__winner">{winner} gewinnt!</p>
+            <p className="chess-result__winner">{t("result.winner", { name: winner })}</p>
           )}
           <p className="chess-result__moves">
-            {game.move_history.filter((m) => !m.startsWith("resign:")).length} Züge gespielt
+            {t("result.movesPlayed", { n: game.move_history.filter((m) => !m.startsWith("resign:")).length })}
           </p>
           <button className="chess-start-btn" onClick={handlePlayAgain}>
-            Nochmal spielen
+            {t("playAgain")}
           </button>
         </div>
       )}

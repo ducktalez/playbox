@@ -9,27 +9,20 @@ import {
   type OfflineSession,
 } from "./offlineSession";
 import { getOfflinePiccoloCategories, syncPiccolo } from "../../core/offlineManager";
+import { useTranslation, mergeTranslations } from "../../core/i18n";
+import { coreTranslations } from "../../core/translations";
+import { piccoloTranslations, CATEGORY_TRANSLATION_KEYS } from "./translations";
+
+const translations = mergeTranslations(coreTranslations, piccoloTranslations);
 
 const API_BASE = "/api/v1/piccolo";
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 20;
 const INTENSITY_OPTIONS = [
-  { value: "mild", label: "Mild", description: "Thinker version without drinking pressure." },
-  { value: "medium", label: "Medium", description: "Classic drinking-game mode for regular rounds." },
-  { value: "spicy", label: "Spicy", description: "Wildcard mode for louder and wilder parties." },
+  { value: "mild", labelKey: "intensity.mild", descKey: "intensity.mild.desc" },
+  { value: "medium", labelKey: "intensity.medium", descKey: "intensity.medium.desc" },
+  { value: "spicy", labelKey: "intensity.spicy", descKey: "intensity.spicy.desc" },
 ] as const;
-
-const CATEGORY_LABELS: Record<string, string> = {
-  dare: "Dare",
-  question: "Question",
-  group: "Group",
-  vote: "Vote",
-  versus: "Versus",
-  automarken: "Automarken",
-  "koffer packen": "Koffer packen",
-  "ich habe schon mal": "Ich habe schon mal",
-  trinkregeln: "Trinkregeln",
-};
 
 const CATEGORY_COLOR_CLASSES: Record<string, string> = {
   dare: "piccolo-card--dare",
@@ -59,6 +52,7 @@ type ChallengeResponse = {
 
 
 export default function PiccoloGame() {
+  const { t } = useTranslation(translations);
   const [playerNames, setPlayerNames] = useState<string[]>(["", ""]);
   const [categories, setCategories] = useState<string[]>([]);
   const [categoriesError, setCategoriesError] = useState("");
@@ -202,10 +196,10 @@ export default function PiccoloGame() {
         setCurrentChallenge(result);
         setSlideKey((k) => k + 1);
       } else {
-        setErrorMessage("Keine Challenges mehr verfügbar.");
+        setErrorMessage(t("game.noMoreChallenges"));
       }
     } else {
-      setErrorMessage("Keine Session vorhanden.");
+      setErrorMessage(t("game.noSession"));
     }
     setIsLoadingChallenge(false);
   }
@@ -214,7 +208,7 @@ export default function PiccoloGame() {
     const players = normalizePlayerNames(playerNames);
 
     if (players.length < MIN_PLAYERS) {
-      setErrorMessage("Please enter at least two player names.");
+      setErrorMessage(t("setup.errorMinPlayers"));
       return;
     }
 
@@ -249,9 +243,7 @@ export default function PiccoloGame() {
       }
     } else {
       setSession(null);
-      setErrorMessage(
-        "Keine gecachten Challenges vorhanden. Bitte einmal online laden, um Challenges zu cachen.",
-      );
+      setErrorMessage(t("setup.errorNoCache"));
     }
 
     setIsStarting(false);
@@ -260,16 +252,16 @@ export default function PiccoloGame() {
   if (!session) {
     return (
       <section className="placeholder-page stack-lg">
-        <p className="placeholder-kicker">Phase 2</p>
-        <h1>🎉 Piccolo</h1>
-        <p>Build a local party round with players, category filters and the next challenge flow.</p>
+        <p className="placeholder-kicker">{t("setup.kicker")}</p>
+        <h1>{t("setup.title")}</h1>
+        <p>{t("setup.description")}</p>
 
         <div className="surface-panel stack-lg">
           <PlayerNameFields
             playerNames={playerNames}
             minPlayers={MIN_PLAYERS}
             maxPlayers={MAX_PLAYERS}
-            helperText="Empty names automatically become Player 1, Player 2, ... for faster testing."
+            helperText={t("setup.helperText")}
             onUpdatePlayerName={updatePlayerName}
             onAddPlayerField={addPlayerField}
             onRemovePlayerField={removePlayerField}
@@ -277,7 +269,7 @@ export default function PiccoloGame() {
 
           <div className="stack-md">
             <div>
-              <p className="helper-text">Intensity</p>
+              <p className="helper-text">{t("setup.intensity")}</p>
               <div className="choice-chips">
                 {INTENSITY_OPTIONS.map((option) => (
                   <button
@@ -286,19 +278,19 @@ export default function PiccoloGame() {
                     className={`choice-chip${intensity === option.value ? " choice-chip--selected" : ""}`}
                     onClick={() => setIntensity(option.value)}
                   >
-                    {option.label}
+                    {t(option.labelKey)}
                   </button>
                 ))}
               </div>
               {selectedIntensity && (
                 <p className="helper-text" style={{ marginTop: "0.6rem" }}>
-                  {selectedIntensity.description}
+                  {t(selectedIntensity.descKey)}
                 </p>
               )}
             </div>
 
             <div>
-              <p className="helper-text">Categories (optional)</p>
+              <p className="helper-text">{t("setup.categories")}</p>
               {categories.length > 0 ? (
                 <div className="choice-chips">
                   {categories.map((category) => (
@@ -308,12 +300,12 @@ export default function PiccoloGame() {
                       className={`choice-chip${selectedCategories.includes(category) ? " choice-chip--selected" : ""}`}
                       onClick={() => toggleCategory(category)}
                     >
-                      {CATEGORY_LABELS[category] ?? category}
+                      {t(CATEGORY_TRANSLATION_KEYS[category] ?? category)}
                     </button>
                   ))}
                 </div>
               ) : (
-                <p className="helper-text">{categoriesError || "Loading categories..."}</p>
+                <p className="helper-text">{categoriesError || t("setup.loadingCategories")}</p>
               )}
             </div>
           </div>
@@ -327,7 +319,7 @@ export default function PiccoloGame() {
               onClick={() => void startGame()}
               disabled={isStarting}
             >
-              {isStarting ? "Creating round..." : "Start Piccolo"}
+              {isStarting ? t("setup.creating") : t("setup.start")}
             </button>
           </div>
         </div>
@@ -351,7 +343,7 @@ export default function PiccoloGame() {
           type="button"
           className="button button--ghost piccolo-fullscreen__report"
           onClick={(e) => { e.stopPropagation(); setReportOpen(!reportOpen); setReportSent(false); }}
-          title="Challenge melden"
+          title={t("report.titleShort")}
           style={{ position: "absolute", top: "0.75rem", right: "0.75rem", zIndex: 20, fontSize: "1.2rem", opacity: 0.7 }}
         >
           🚩
@@ -371,19 +363,19 @@ export default function PiccoloGame() {
         >
           {reportSent ? (
             <div style={{ textAlign: "center", padding: "1rem 0" }}>
-              <p style={{ fontSize: "1.1rem" }}>✅ Danke für dein Feedback!</p>
+              <p style={{ fontSize: "1.1rem" }}>{t("report.success")}</p>
               <button
                 type="button"
                 className="button button--ghost"
                 onClick={resetReportState}
                 style={{ marginTop: "0.75rem" }}
               >
-                Schließen
+                {t("report.close")}
               </button>
             </div>
           ) : (
             <>
-              <p style={{ fontWeight: 600, marginBottom: "0.5rem" }}>🚩 Challenge melden</p>
+              <p style={{ fontWeight: 600, marginBottom: "0.5rem" }}>{t("report.title")}</p>
               <div className="choice-chips" style={{ marginBottom: "0.75rem" }}>
                 {(["INAPPROPRIATE", "BORING", "BROKEN_TEMPLATE", "OTHER"] as const).map((cat) => (
                   <button
@@ -392,15 +384,15 @@ export default function PiccoloGame() {
                     className={`choice-chip${reportCategory === cat ? " choice-chip--selected" : ""}`}
                     onClick={() => setReportCategory(reportCategory === cat ? null : cat)}
                   >
-                    {cat === "INAPPROPRIATE" ? "Unangemessen" :
-                     cat === "BORING" ? "Langweilig" :
-                     cat === "BROKEN_TEMPLATE" ? "Kaputt" : "Anderes"}
+                    {cat === "INAPPROPRIATE" ? t("report.inappropriate") :
+                     cat === "BORING" ? t("report.boring") :
+                     cat === "BROKEN_TEMPLATE" ? t("report.broken") : t("report.other")}
                   </button>
                 ))}
               </div>
               <textarea
                 className="text-input"
-                placeholder="Kommentar (optional)"
+                placeholder={t("report.comment")}
                 value={reportComment}
                 onChange={(e) => setReportComment(e.target.value)}
                 rows={2}
@@ -415,14 +407,14 @@ export default function PiccoloGame() {
                   onClick={() => void submitReport()}
                   style={{ flex: 1 }}
                 >
-                  {reportSending ? "Sende..." : "Absenden"}
+                  {reportSending ? t("report.sending") : t("report.send")}
                 </button>
                 <button
                   type="button"
                   className="button button--ghost"
                   onClick={resetReportState}
                 >
-                  Abbrechen
+                  {t("report.cancel")}
                 </button>
               </div>
             </>
@@ -441,21 +433,21 @@ export default function PiccoloGame() {
         disabled={isLoadingChallenge}
       >
         <div className="piccolo-fullscreen__content stack-lg">
-          <p className="placeholder-kicker">Piccolo round</p>
+          <p className="placeholder-kicker">{t("game.kicker")}</p>
 
           <div className="inline-meta">
-            <span>Players: {session.player_names.length}</span>
-            <span>Intensity: {selectedIntensity?.label ?? session.intensity}</span>
-            <span>Available challenges: {session.total_challenges}</span>
+            <span>{t("game.players", { n: session.player_names.length })}</span>
+            <span>{t("game.intensity", { label: selectedIntensity ? t(selectedIntensity.labelKey) : session.intensity })}</span>
+            <span>{t("game.available", { n: session.total_challenges })}</span>
           </div>
 
-          {selectedIntensity && <p className="helper-text">{selectedIntensity.description}</p>}
+          {selectedIntensity && <p className="helper-text">{t(selectedIntensity.descKey)}</p>}
 
           {currentChallenge ? (
             <div key={slideKey} className="piccolo-challenge-slide">
               <div className="choice-chips">
                 <span className="choice-chip choice-chip--selected">
-                  {CATEGORY_LABELS[currentChallenge.category] ?? currentChallenge.category}
+                  {t(CATEGORY_TRANSLATION_KEYS[currentChallenge.category] ?? currentChallenge.category)}
                 </span>
                 <span className="choice-chip">{currentChallenge.intensity}</span>
               </div>
@@ -463,15 +455,15 @@ export default function PiccoloGame() {
               <div className="piccolo-fullscreen__challenge reveal-display">{currentChallenge.text}</div>
 
               {currentChallenge.targets.length > 0 && (
-                <p className="muted-text">Targets: {currentChallenge.targets.join(", ")}</p>
+                <p className="muted-text">{t("game.targets", { targets: currentChallenge.targets.join(", ") })}</p>
               )}
 
               <p className="helper-text piccolo-card__hint">
-                {isLoadingChallenge ? "Loading next challenge..." : "Tap anywhere for the next challenge"}
+                {isLoadingChallenge ? t("game.loadingNext") : t("game.tapNext")}
               </p>
             </div>
           ) : (
-            <p className="helper-text">No challenge loaded yet.</p>
+            <p className="helper-text">{t("game.noChallenge")}</p>
           )}
 
           {errorMessage && <p className="alert-text">{errorMessage}</p>}

@@ -7,6 +7,11 @@
  */
 
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation, mergeTranslations } from "../../core/i18n";
+import { coreTranslations } from "../../core/translations";
+import { quizTranslations } from "./translations";
+
+const translations = mergeTranslations(coreTranslations, quizTranslations);
 
 const API_BASE =
   typeof window !== "undefined"
@@ -34,6 +39,7 @@ const CHART_W = W - PAD_LEFT - PAD_RIGHT;
 const CHART_H = H - PAD_TOP - PAD_BOTTOM;
 
 export default function EloChart({ playerId }: { playerId: string }) {
+  const { t } = useTranslation(translations);
   const [entries, setEntries] = useState<EloHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -88,7 +94,7 @@ export default function EloChart({ playerId }: { playerId: string }) {
   }, [entries]);
 
   if (loading) {
-    return <p className="elo-chart__status">Lade ELO-Verlauf...</p>;
+    return <p className="elo-chart__status">{t("elo.loading")}</p>;
   }
 
   if (error) {
@@ -98,7 +104,7 @@ export default function EloChart({ playerId }: { playerId: string }) {
   if (points.length < 2) {
     return (
       <p className="elo-chart__status">
-        Noch nicht genug Daten für den ELO-Verlauf.
+        {t("elo.notEnough")}
       </p>
     );
   }
@@ -260,13 +266,13 @@ export default function EloChart({ playerId }: { playerId: string }) {
       {/* Legend */}
       <div className="elo-chart__legend">
         <span className="elo-chart__legend-item">
-          <span className="elo-chart__dot elo-chart__dot--correct" /> Richtig
+          <span className="elo-chart__dot elo-chart__dot--correct" /> {t("elo.correct")}
         </span>
         <span className="elo-chart__legend-item">
-          <span className="elo-chart__dot elo-chart__dot--wrong" /> Falsch
+          <span className="elo-chart__dot elo-chart__dot--wrong" /> {t("elo.wrong")}
         </span>
         <span className="elo-chart__legend-item">
-          <span className="elo-chart__dot elo-chart__dot--start" /> Start
+          <span className="elo-chart__dot elo-chart__dot--start" /> {t("elo.start")}
         </span>
       </div>
     </div>

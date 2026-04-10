@@ -111,6 +111,24 @@ a:hover {
   color: var(--text-primary);
 }
 
+.lang-toggle {
+  margin-left: auto;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--text-dim);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color var(--transition), border-color var(--transition);
+}
+.lang-toggle:hover {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
 /* Bottom navigation — mobile only ------------------------------ */
 .bottom-nav {
   position: fixed;

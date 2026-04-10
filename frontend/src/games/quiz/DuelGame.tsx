@@ -18,6 +18,11 @@ import {
   truthToDisplayQuestion,
   evaluateFromCache,
 } from "./questionTruthCache";
+import { useTranslation, mergeTranslations } from "../../core/i18n";
+import { coreTranslations } from "../../core/translations";
+import { quizTranslations } from "./translations";
+
+const duelI18n = mergeTranslations(coreTranslations, quizTranslations);
 
 const API_BASE =
   typeof window !== "undefined"
@@ -43,6 +48,8 @@ type AttemptOut = {
 type DuelStep = "names" | "handover" | "playing" | "result";
 
 export default function DuelGame({ onBack }: { onBack: () => void }) {
+  const { t } = useTranslation(duelI18n);
+
   // Player setup
   const [player1Name, setPlayer1Name] = useState("");
   const [player2Name, setPlayer2Name] = useState("");
@@ -73,12 +80,12 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
   const activePlayerIdx = currentIdx % 2;
   const activePlayer = players?.[activePlayerIdx] ?? null;
   const activeSession = sessions?.[activePlayerIdx] ?? null;
-  const activeName = activePlayer?.name ?? `Spieler ${activePlayerIdx + 1}`;
+  const activeName = activePlayer?.name ?? t("duel.player1");
 
   // --- Initialize game ---
   const initGame = async () => {
-    const name1 = player1Name.trim() || "Spieler 1";
-    const name2 = player2Name.trim() || "Spieler 2";
+    const name1 = player1Name.trim() || t("duel.player1");
+    const name2 = player2Name.trim() || t("duel.player2");
 
     setLoading(true);
     try {
@@ -117,7 +124,7 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
       if (!qRes.ok) throw new Error("Question fetch failed");
       const qData = await qRes.json();
       const ids = qData.items.map((q: { id: string }) => q.id);
-      if (ids.length === 0) { alert("Keine Fragen vorhanden!"); onBack(); return; }
+      if (ids.length === 0) { alert(t("duel.noQuestions")); onBack(); return; }
 
       // Pre-cache all game questions (includes is_correct) for cache-first loading
       cacheServerQuestions(truthCacheRef.current, qData.items);
@@ -143,7 +150,7 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
         setCurrentIdx(0);
         setDuelStep("handover");
       } else {
-        alert("Offline und keine gecachten Fragen vorhanden. Bitte einmal online spielen.");
+        alert(t("duel.offlineError"));
       }
     } finally {
       setLoading(false);
@@ -338,41 +345,17 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
     return (
       <div className="quiz-container">
         <div className="quiz-setup">
-          <button className="quiz-back-btn" onClick={onBack} style={{ alignSelf: "flex-start" }}>← Zurück</button>
-          <h1 className="quiz-setup__title">⚔️ Quizduell 1v1</h1>
-          <p className="quiz-setup__subtitle">Zwei Spieler, ein Gerät — wer weiß mehr?</p>
+          <button className="quiz-back-btn" onClick={onBack} style={{ alignSelf: "flex-start" }}>{t("playing.back")}</button>
+          <h1 className="quiz-setup__title">{t("duel.title")}</h1>
+          <p className="quiz-setup__subtitle">{t("duel.subtitle")}</p>
 
           <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            <label className="field-label">
-              Spieler 1
-              <input
-                className="text-input"
-                type="text"
-                placeholder="Spieler 1"
-                value={player1Name}
-                onChange={(e) => setPlayer1Name(e.target.value)}
-                maxLength={20}
-              />
-            </label>
-            <label className="field-label">
-              Spieler 2
-              <input
-                className="text-input"
-                type="text"
-                placeholder="Spieler 2"
-                value={player2Name}
-                onChange={(e) => setPlayer2Name(e.target.value)}
-                maxLength={20}
-              />
-            </label>
+            <input className="text-input" type="text" placeholder={t("duel.player1")} value={player1Name} onChange={(e) => setPlayer1Name(e.target.value)} maxLength={20} />
+            <input className="text-input" type="text" placeholder={t("duel.player2")} value={player2Name} onChange={(e) => setPlayer2Name(e.target.value)} maxLength={20} />
           </div>
 
-          <button
-            className="quiz-mode-btn quiz-mode-btn--primary"
-            onClick={() => void initGame()}
-            disabled={loading}
-          >
-            {loading ? "Starte..." : "Duell starten"}
+          <button className="quiz-mode-btn quiz-mode-btn--primary" onClick={() => void initGame()} disabled={loading}>
+            {loading ? t("duel.starting") : t("duel.start")}
           </button>
         </div>
       </div>
@@ -384,25 +367,22 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
     return (
       <div className="quiz-container">
         <div className="quiz-setup" style={{ textAlign: "center" }}>
-          <p className="quiz-setup__subtitle">Frage {currentIdx + 1} / {questionIds.length}</p>
+          <p className="quiz-setup__subtitle">{t("duel.questionOf", { n: currentIdx + 1, total: questionIds.length })}</p>
           <h1 className="quiz-setup__title" style={{ fontSize: "1.6rem" }}>
-            📱 Gib das Gerät an
+            {t("duel.handover")}
           </h1>
           <div className="duel-handover-name">{activeName}</div>
           <div className="duel-score-preview">
             <span className={activePlayerIdx === 0 ? "duel-score--active" : ""}>
-              {players?.[0]?.name ?? "Spieler 1"}: {scores[0]}
+              {players?.[0]?.name ?? t("duel.player1")}: {scores[0]}
             </span>
             <span className="duel-score-divider">—</span>
             <span className={activePlayerIdx === 1 ? "duel-score--active" : ""}>
-              {players?.[1]?.name ?? "Spieler 2"}: {scores[1]}
+              {players?.[1]?.name ?? t("duel.player2")}: {scores[1]}
             </span>
           </div>
-          <button
-            className="quiz-mode-btn quiz-mode-btn--primary"
-            onClick={startTurn}
-          >
-            Bereit — Frage zeigen
+          <button className="quiz-mode-btn quiz-mode-btn--primary" onClick={startTurn}>
+            {t("duel.ready")}
           </button>
         </div>
       </div>
@@ -411,15 +391,15 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
 
   // --- Result screen ---
   if (duelStep === "result") {
-    const p1Name = players?.[0]?.name ?? "Spieler 1";
-    const p2Name = players?.[1]?.name ?? "Spieler 2";
+    const p1Name = players?.[0]?.name ?? t("duel.player1");
+    const p2Name = players?.[1]?.name ?? t("duel.player2");
     const winner = scores[0] > scores[1] ? p1Name : scores[1] > scores[0] ? p2Name : null;
 
     return (
       <div className="quiz-container">
         <div className="quiz-result">
           <h1 className="quiz-result__title">
-            {winner ? `🏆 ${winner} gewinnt!` : "🤝 Unentschieden!"}
+            {winner ? t("duel.wins", { name: winner }) : t("duel.draw")}
           </h1>
 
           <div className="duel-result-scores">
@@ -427,7 +407,7 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
               <span className="duel-result-player__name">{p1Name}</span>
               <span className="duel-result-player__score">{scores[0]}</span>
               <span className="duel-result-player__elo">
-                {isOffline ? "Offline" : `ELO ${Math.round(players?.[0]?.elo_score ?? 1200)}`}
+                {isOffline ? t("offline") : `ELO ${Math.round(players?.[0]?.elo_score ?? 1200)}`}
               </span>
             </div>
             <div className="duel-result-vs">vs</div>
@@ -435,23 +415,23 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
               <span className="duel-result-player__name">{p2Name}</span>
               <span className="duel-result-player__score">{scores[1]}</span>
               <span className="duel-result-player__elo">
-                {isOffline ? "Offline" : `ELO ${Math.round(players?.[1]?.elo_score ?? 1200)}`}
+                {isOffline ? t("offline") : `ELO ${Math.round(players?.[1]?.elo_score ?? 1200)}`}
               </span>
             </div>
           </div>
 
           <div className="quiz-result__details">
-            {scores[0] + scores[1]} / {questionIds.length} Fragen richtig beantwortet
+            {t("duel.questionsCorrect", { n: scores[0] + scores[1], total: questionIds.length })}
           </div>
 
           {isOffline && (
             <p className="quiz-result__details" style={{ color: "#4ade80", fontSize: "0.85rem" }}>
-              📴 Offline-Modus — kein ELO-Tracking
+              {t("offlineNoElo")}
             </p>
           )}
 
           <button className="quiz-mode-btn quiz-mode-btn--primary" style={{ marginTop: "1rem" }} onClick={onBack}>
-            Zurück zum Menü
+            {t("duel.backToMenu")}
           </button>
         </div>
       </div>
@@ -470,7 +450,7 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
       </div>
 
       <div className="quiz-header">
-        <button className="quiz-back-btn" onClick={onBack} title="Zurück">←</button>
+        <button className="quiz-back-btn" onClick={onBack} title={t("back")}>←</button>
         <div className="quiz-meta">
           <span>{currentIdx + 1}/{questionIds.length}</span>
           <span className="duel-turn-badge">🎯 {activeName}</span>
@@ -516,28 +496,23 @@ export default function DuelGame({ onBack }: { onBack: () => void }) {
           {attempt && (
             <div className="quiz-feedback">
               <p className={`quiz-feedback__result ${attempt.correct ? "quiz-feedback__result--correct" : "quiz-feedback__result--wrong"}`}>
-                {attempt.correct ? "✓ Richtig!" : "✗ Falsch!"}
+                {attempt.correct ? t("playing.correct") : t("playing.wrong")}
               </p>
 
               {attempt.note && (
                 <div className="quiz-explanation">
-                  <div className="quiz-explanation__title">💡 Hinweis</div>
+                  <div className="quiz-explanation__title">{t("playing.hint")}</div>
                   {attempt.note}
-                  <QuestionFeedback
-                    onPendingChange={setPendingFeedback}
-                    inline
-                  />
+                  <QuestionFeedback onPendingChange={setPendingFeedback} inline />
                 </div>
               )}
 
               {!attempt.note && (
-                <QuestionFeedback
-                  onPendingChange={setPendingFeedback}
-                />
+                <QuestionFeedback onPendingChange={setPendingFeedback} />
               )}
 
               <button className="quiz-next-btn" onClick={nextQuestion}>
-                {currentIdx + 1 >= questionIds.length ? "Ergebnis anzeigen" : "Weiter →"}
+                {currentIdx + 1 >= questionIds.length ? t("duel.showResult") : t("duel.next")}
               </button>
             </div>
           )}

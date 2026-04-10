@@ -1,3 +1,6 @@
+import { useTranslation } from "./i18n";
+import { coreTranslations } from "./translations";
+
 type PlayerNameFieldsProps = {
   playerNames: string[];
   minPlayers: number;
@@ -17,6 +20,7 @@ export function PlayerNameFields({
   onAddPlayerField,
   onRemovePlayerField,
 }: PlayerNameFieldsProps) {
+  const { t } = useTranslation(coreTranslations);
   const canAdd = playerNames.length < maxPlayers;
 
   return (
@@ -27,7 +31,7 @@ export function PlayerNameFields({
             className="text-input player-row__input"
             type="text"
             value={playerName}
-            placeholder={`Player ${index + 1}`}
+            placeholder={t("player.placeholder", { n: index + 1 })}
             onChange={(event) => onUpdatePlayerName(index, event.target.value)}
           />
           {playerNames.length > minPlayers && (
@@ -35,7 +39,7 @@ export function PlayerNameFields({
               type="button"
               className="player-row__remove"
               onClick={() => onRemovePlayerField(index)}
-              aria-label={`Remove player ${index + 1}`}
+              aria-label={t("player.removeLabel", { n: index + 1 })}
             >
               ×
             </button>
@@ -52,7 +56,7 @@ export function PlayerNameFields({
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onAddPlayerField(); }}
         >
           <span className="text-input player-row__placeholder">
-            Player {playerNames.length + 1}
+            {t("player.placeholder", { n: playerNames.length + 1 })}
           </span>
         </div>
       )}
@@ -61,4 +65,3 @@ export function PlayerNameFields({
     </div>
   );
 }
-

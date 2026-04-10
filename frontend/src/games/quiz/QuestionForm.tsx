@@ -9,6 +9,11 @@
  */
 
 import { useState, useEffect } from "react";
+import { useTranslation, mergeTranslations } from "../../core/i18n";
+import { coreTranslations } from "../../core/translations";
+import { quizTranslations } from "./translations";
+
+const translations = mergeTranslations(coreTranslations, quizTranslations);
 
 const API_BASE =
   typeof window !== "undefined"
@@ -23,6 +28,8 @@ type CategoryOut = {
 };
 
 export default function QuestionForm({ onBack }: { onBack: () => void }) {
+  const { t } = useTranslation(translations);
+
   // Form state
   const [text, setText] = useState("");
   const [note, setNote] = useState("");
@@ -59,18 +66,17 @@ export default function QuestionForm({ onBack }: { onBack: () => void }) {
     setSuccessMsg(null);
     setErrorMsg(null);
 
-    // Validation
     if (!text.trim()) {
-      setErrorMsg("Bitte Fragetext eingeben.");
+      setErrorMsg(t("form.errorText"));
       return;
     }
     if (!correctAnswer.trim()) {
-      setErrorMsg("Bitte die richtige Antwort eingeben.");
+      setErrorMsg(t("form.errorCorrect"));
       return;
     }
     const filledWrong = wrongAnswers.filter((a) => a.trim());
     if (filledWrong.length < 1) {
-      setErrorMsg("Mindestens eine falsche Antwort eingeben.");
+      setErrorMsg(t("form.errorWrong"));
       return;
     }
 
@@ -124,7 +130,7 @@ export default function QuestionForm({ onBack }: { onBack: () => void }) {
         }
       }
 
-      setSuccessMsg("✓ Frage erfolgreich hinzugefügt!");
+      setSuccessMsg(t("form.success"));
       // Reset form
       setText("");
       setNote("");
@@ -133,7 +139,7 @@ export default function QuestionForm({ onBack }: { onBack: () => void }) {
       setTagsInput("");
       setMediaFile(null);
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : "Unbekannter Fehler");
+      setErrorMsg(e instanceof Error ? e.message : t("form.unknownError"));
     } finally {
       setSubmitting(false);
     }
@@ -143,21 +149,21 @@ export default function QuestionForm({ onBack }: { onBack: () => void }) {
     <div className="quiz-container">
       <div className="quiz-form">
         <div className="quiz-form__header">
-          <button className="quiz-back-btn" onClick={onBack} title="Zurück">
+          <button className="quiz-back-btn" onClick={onBack} title={t("back")}>
             ←
           </button>
-          <h1 className="quiz-form__title">Neue Frage erstellen</h1>
+          <h1 className="quiz-form__title">{t("form.title")}</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="quiz-form__body">
           {/* Question text */}
           <label className="quiz-form__label">
-            Fragetext *
+            {t("form.questionText")}
             <textarea
               className="quiz-form__textarea"
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="z.B. Wie heißt der Drachenlord mit bürgerlichem Namen?"
+              placeholder={t("form.questionPlaceholder")}
               rows={3}
               maxLength={1000}
               required
@@ -166,13 +172,13 @@ export default function QuestionForm({ onBack }: { onBack: () => void }) {
 
           {/* Correct answer */}
           <label className="quiz-form__label">
-            Richtige Antwort *
+            {t("form.correctAnswer")}
             <input
               className="quiz-form__input quiz-form__input--correct"
               type="text"
               value={correctAnswer}
               onChange={(e) => setCorrectAnswer(e.target.value)}
-              placeholder="z.B. Rainer Winkler"
+              placeholder={t("form.correctPlaceholder")}
               maxLength={500}
               required
             />
@@ -181,7 +187,7 @@ export default function QuestionForm({ onBack }: { onBack: () => void }) {
           {/* Wrong answers */}
           <fieldset className="quiz-form__fieldset">
             <legend className="quiz-form__legend">
-              Falsche Antworten (min. 1, max. 3)
+              {t("form.wrongAnswers")}
             </legend>
             {wrongAnswers.map((wa, i) => (
               <input
@@ -190,7 +196,7 @@ export default function QuestionForm({ onBack }: { onBack: () => void }) {
                 type="text"
                 value={wa}
                 onChange={(e) => updateWrongAnswer(i, e.target.value)}
-                placeholder={`Falsche Antwort ${i + 1}`}
+                placeholder={t("form.wrongPlaceholder", { n: i + 1 })}
                 maxLength={500}
               />
             ))}
@@ -198,12 +204,12 @@ export default function QuestionForm({ onBack }: { onBack: () => void }) {
 
           {/* Note / Hinweis (optional) */}
           <label className="quiz-form__label">
-            Hinweis (optional)
+            {t("form.note")}
             <textarea
               className="quiz-form__textarea"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Wird nach Beantwortung angezeigt"
+              placeholder={t("form.notePlaceholder")}
               rows={2}
               maxLength={2000}
             />
@@ -211,13 +217,13 @@ export default function QuestionForm({ onBack }: { onBack: () => void }) {
 
           {/* Category */}
           <label className="quiz-form__label">
-            Kategorie
+            {t("form.category")}
             <select
               className="quiz-form__select"
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
             >
-              <option value="">— Keine Kategorie —</option>
+              <option value="">{t("form.noCategory")}</option>
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
                   {cat.name} ({cat.question_count})
@@ -228,19 +234,19 @@ export default function QuestionForm({ onBack }: { onBack: () => void }) {
 
           {/* Tags */}
           <label className="quiz-form__label">
-            Tags (kommagetrennt)
+            {t("form.tags")}
             <input
               className="quiz-form__input"
               type="text"
               value={tagsInput}
               onChange={(e) => setTagsInput(e.target.value)}
-              placeholder="z.B. drachenlord, basics, identity"
+              placeholder={t("form.tagsPlaceholder")}
             />
           </label>
 
           {/* Media upload (optional) */}
           <label className="quiz-form__label">
-            Bild / Video / Dokument (optional)
+            {t("form.media")}
             <input
               className="quiz-form__input"
               type="file"
@@ -264,11 +270,10 @@ export default function QuestionForm({ onBack }: { onBack: () => void }) {
             type="submit"
             disabled={submitting}
           >
-            {submitting ? "Wird gespeichert..." : "Frage absenden"}
+            {submitting ? t("form.saving") : t("form.submit")}
           </button>
         </form>
       </div>
     </div>
   );
 }
-

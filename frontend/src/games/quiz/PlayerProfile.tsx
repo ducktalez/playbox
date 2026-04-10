@@ -7,6 +7,11 @@
 
 import { useState, useEffect } from "react";
 import EloChart from "./EloChart";
+import { useTranslation, mergeTranslations } from "../../core/i18n";
+import { coreTranslations } from "../../core/translations";
+import { quizTranslations } from "./translations";
+
+const translations = mergeTranslations(coreTranslations, quizTranslations);
 
 const API_BASE =
   typeof window !== "undefined"
@@ -30,12 +35,6 @@ type ProfileData = {
   recent_sessions: SessionEntry[];
 };
 
-const MODE_LABELS: Record<string, string> = {
-  millionaire: "Millionär",
-  duel: "Quizduell 1v1",
-  speed: "Speed-Modus",
-};
-
 export default function PlayerProfile({
   playerId,
   onBack,
@@ -43,6 +42,7 @@ export default function PlayerProfile({
   playerId: string;
   onBack: () => void;
 }) {
+  const { t } = useTranslation(translations);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -70,7 +70,7 @@ export default function PlayerProfile({
   if (loading) {
     return (
       <div className="quiz-container">
-        <p className="leaderboard__status">Lade Profil...</p>
+        <p className="leaderboard__status">{t("profile.loading")}</p>
       </div>
     );
   }
@@ -79,9 +79,9 @@ export default function PlayerProfile({
     return (
       <div className="quiz-container">
         <button className="quiz-back-btn" onClick={onBack} style={{ alignSelf: "flex-start" }}>
-          ← Zurück
+          {t("back")}
         </button>
-        <p className="alert-text">{error || "Spieler nicht gefunden"}</p>
+        <p className="alert-text">{error || t("profile.notFound")}</p>
       </div>
     );
   }
@@ -92,7 +92,7 @@ export default function PlayerProfile({
     <div className="quiz-container">
       <div className="player-profile">
         <button className="quiz-back-btn" onClick={onBack} style={{ alignSelf: "flex-start" }}>
-          ← Zurück
+          {t("back")}
         </button>
 
         <h1 className="player-profile__name">👤 {profile.name}</h1>
@@ -100,38 +100,38 @@ export default function PlayerProfile({
         <div className="player-profile__stats">
           <div className="player-profile__stat">
             <span className="player-profile__stat-value">{Math.round(profile.elo_score)}</span>
-            <span className="player-profile__stat-label">ELO</span>
+            <span className="player-profile__stat-label">{t("profile.elo")}</span>
           </div>
           <div className="player-profile__stat">
             <span className="player-profile__stat-value">{profile.games_played}</span>
-            <span className="player-profile__stat-label">Spiele</span>
+            <span className="player-profile__stat-label">{t("profile.games")}</span>
           </div>
           <div className="player-profile__stat">
             <span className="player-profile__stat-value">{profile.correct_count}</span>
-            <span className="player-profile__stat-label">Richtig</span>
+            <span className="player-profile__stat-label">{t("profile.correct")}</span>
           </div>
           <div className="player-profile__stat">
             <span className="player-profile__stat-value">{accuracyPct}%</span>
-            <span className="player-profile__stat-label">Trefferquote</span>
+            <span className="player-profile__stat-label">{t("profile.accuracy")}</span>
           </div>
         </div>
 
-        <h2 className="player-profile__section-title">ELO-Verlauf</h2>
+        <h2 className="player-profile__section-title">{t("profile.eloHistory")}</h2>
         <EloChart playerId={playerId} />
 
-        <h2 className="player-profile__section-title">Letzte Spiele</h2>
+        <h2 className="player-profile__section-title">{t("profile.recentGames")}</h2>
 
         {profile.recent_sessions.length === 0 ? (
-          <p className="leaderboard__status">Noch keine Spiele absolviert.</p>
+          <p className="leaderboard__status">{t("profile.noGames")}</p>
         ) : (
           <div className="player-profile__sessions">
             {profile.recent_sessions.map((s) => (
               <div key={s.id} className="player-profile__session-row">
                 <span className="player-profile__session-mode">
-                  {MODE_LABELS[s.mode] || s.mode}
+                  {t(`profile.mode${s.mode.charAt(0).toUpperCase() + s.mode.slice(1)}`) || s.mode}
                 </span>
                 <span className="player-profile__session-score">
-                  {s.score} Punkte
+                  {t("profile.points", { n: s.score })}
                 </span>
                 <span className="player-profile__session-status">
                   {s.finished_at ? "✅" : "⏳"}
