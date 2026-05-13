@@ -1,15 +1,25 @@
 /**
- * Mob Control — minimal arcade game.
+ * Mob Control — arcade game.
  *
- * Pure frontend, no backend. Player controls a blob of soldiers (blue circle)
- * that passes through gate pairs (+, −, ×, ÷) and then battles a red enemy blob.
- * Gate choice: tap left or right half of the canvas.
+ * Pure frontend, no backend.
+ *
+ * Controls:
+ *   Mouse / touch: move left or right — the player blob follows the cursor.
+ *   Gates are passed automatically: when a gate band scrolls down to the player,
+ *   whichever side (left/right of centre) the player is on determines the operator.
  *
  * World model:
- *   scroll increases each frame.
+ *   `scroll` increases each frame.
  *   screenY(obj) = obj.baseY + scroll
  *   Objects start at negative baseY (above screen) and scroll downward.
- *   When screenY >= CHOICE_Y the game pauses and waits for player input.
+ *   Gate triggers when screenY >= PLAYER_Y − GATE_H/2 (band overlaps player).
+ *
+ * Rendering:
+ *   Player / enemy blobs = cluster of small filled circles (phyllotaxis layout).
+ *   Count shown as text below the cluster.
+ *
+ * Speed constant:
+ *   Set SCROLL_SPEED to TEST_SPEED for fast testing, PLAY_SPEED for normal gameplay.
  */
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useTranslation } from "../../core/i18n";
@@ -18,33 +28,32 @@ import { mobControlTranslations } from "./translations";
 // ── Canvas geometry ───────────────────────────────────────────────────────────
 const CW = 400;
 const CH = 620;
-const PLAYER_X = CW / 2;
-const PLAYER_Y = 520;
-const CHOICE_Y = 350; // gate/enemy triggers choice when screenY >= CHOICE_Y
-const BLOB_R = 32;
+const PLAYER_Y = 510; // fixed screen-Y for the player blob
 
-// ── Scrolling & animation ─────────────────────────────────────────────────────
-const SCROLL_SPEED = 2.5; // px/frame
-const GATE_SPACING = 185; // world pixels between consecutive gate rows
-const FIRST_GATE_BASE_Y = -120; // first gate starts this far above screen
-const ENEMY_EXTRA_GAP = 220; // extra gap between last gate and enemy
-const FLASH_FRAMES = 28; // flash effect duration
-const BATTLE_DELAY_MS = 1300; // ms before next level / game-over after battle
+// ── Speeds (swap for testing) ─────────────────────────────────────────────────
+const PLAY_SPEED = 1.1; // px/frame — normal gameplay
+// const TEST_SPEED = 4.0; // px/frame — fast testing
+const SCROLL_SPEED = PLAY_SPEED;
+
+const PLAYER_LERP = 0.10; // horizontal smoothing (0=no movement, 1=instant)
+
+// ── Level layout ──────────────────────────────────────────────────────────────
+const FIRST_GATE_BASE_Y = -130; // first gate starts above screen
+const GATE_SPACING = 220; // world-px between consecutive gates (player reaction time)
+const ENEMY_EXTRA_GAP = 280; // extra gap after last gate before enemy
 
 // ── Gate dimensions ───────────────────────────────────────────────────────────
-const GATE_W = 114;
-const GATE_H = 46;
-const GATE_GAP = 12;
+const GATE_H = 54; // height of the gate band
+
+// ── Dot cluster rendering ─────────────────────────────────────────────────────
+const DOT_R = 5; // radius of each soldier dot
+const MAX_VISUAL_DOTS = 30; // cap dots for performance / readability
+const FLASH_FRAMES = 30;
+const BATTLE_DELAY_MS = 1400;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Op = "+" | "−" | "×" | "÷";
-type Phase =
-  | "start"
-  | "scroll"
-  | "choose"
-  | "resolve"
-  | "battle"
-  | "game-over";
+type Phase = "start" | "playing" | "battle" | "game-over";
 
 interface GateOpt {
   op: Op;
@@ -54,22 +63,23 @@ interface GateOpt {
 interface Gate {
   left: GateOpt;
   right: GateOpt;
-  /** Y offset from canvas top when scroll=0 (negative = above screen). */
+  /** Y offset (negative = above canvas). screenY = baseY + scroll. */
   baseY: number;
   cleared: boolean;
 }
 
-/** All mutable game state — lives in a ref, never triggers re-renders directly. */
+/** Mutable game state stored in a ref — never causes React re-renders on its own. */
 interface GS {
   phase: Phase;
   soldiers: number;
   level: number;
   score: number;
   scroll: number;
+  playerX: number; // current (lerped) horizontal position
+  targetX: number; // mouse/touch target
   gates: Gate[];
   enemy: number;
   enemyBaseY: number;
-  pendingGate: Gate | null;
   flash: number;
   flashMsg: string;
   flashGreen: boolean;
@@ -80,14 +90,10 @@ interface GS {
 
 function applyOp(n: number, opt: GateOpt): number {
   switch (opt.op) {
-    case "+":
-      return n + opt.val;
-    case "−":
-      return Math.max(1, n - opt.val);
-    case "×":
-      return n * opt.val;
-    case "÷":
-      return Math.max(1, Math.round(n / opt.val));
+    case "+": return n + opt.val;
+    case "−": return Math.max(1, n - opt.val);
+    case "×": return n * opt.val;
+    case "÷": return Math.max(1, Math.round(n / opt.val));
   }
 }
 
@@ -99,216 +105,209 @@ function isPositiveOp(opt: GateOpt): boolean {
   return opt.op === "+" || opt.op === "×";
 }
 
-function makeSingleOpt(level: number): GateOpt {
+// ── Level generation ──────────────────────────────────────────────────────────
+
+function makeOpt(level: number): GateOpt {
   const r = Math.random();
-  if (r < 0.38) {
-    return { op: "+", val: 3 + Math.floor(Math.random() * (5 + level)) };
-  } else if (r < 0.6) {
-    return {
-      op: "×",
-      val: 2 + (level >= 3 ? Math.floor(Math.random() * 2) : 0),
-    };
-  } else if (r < 0.82) {
-    return {
-      op: "−",
-      val: 1 + Math.floor(Math.random() * (2 + Math.floor(level * 0.6))),
-    };
-  } else {
-    return { op: "÷", val: 2 + (level >= 5 ? 1 : 0) };
-  }
+  if (r < 0.38) return { op: "+", val: 3 + Math.floor(Math.random() * (5 + level)) };
+  if (r < 0.60) return { op: "×", val: 2 + (level >= 3 ? Math.floor(Math.random() * 2) : 0) };
+  if (r < 0.82) return { op: "−", val: 1 + Math.floor(Math.random() * (2 + Math.floor(level * 0.6))) };
+  return { op: "÷", val: 2 + (level >= 5 ? 1 : 0) };
 }
 
 function makeLevel(level: number, soldiers: number) {
   const gateCount = Math.min(2 + Math.floor(level / 2), 6);
-  // Enemy scales with total potential after gates (rough estimate: assume +50% per gate path)
   const enemyTarget = Math.floor(soldiers * (1.4 + level * 0.25));
-  const enemy =
-    Math.max(5, enemyTarget) + Math.floor(Math.random() * (1 + level * 3));
+  const enemy = Math.max(5, enemyTarget) + Math.floor(Math.random() * (1 + level * 3));
 
   const gates: Gate[] = [];
   for (let i = 0; i < gateCount; i++) {
-    const left = makeSingleOpt(level);
-    const right = makeSingleOpt(level);
     gates.push({
-      left,
-      right,
+      left: makeOpt(level),
+      right: makeOpt(level),
       baseY: FIRST_GATE_BASE_Y - i * GATE_SPACING,
       cleared: false,
     });
   }
 
-  const enemyBaseY =
-    FIRST_GATE_BASE_Y - gateCount * GATE_SPACING - ENEMY_EXTRA_GAP;
-
+  const enemyBaseY = FIRST_GATE_BASE_Y - gateCount * GATE_SPACING - ENEMY_EXTRA_GAP;
   return { gates, enemy, enemyBaseY, scroll: 0 as const };
 }
 
-// ── Canvas drawing ────────────────────────────────────────────────────────────
+// ── Dot cluster helpers ───────────────────────────────────────────────────────
 
-function drawRoundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-) {
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, r);
+/**
+ * Phyllotaxis (golden-angle spiral) layout — gives a natural "crowd" look.
+ * Returns up to n positions, stable across frames (deterministic for same n).
+ */
+function phyllotaxisPositions(n: number): [number, number][] {
+  const phi = Math.PI * (3 - Math.sqrt(5)); // golden angle ≈ 137.5°
+  const spread = 9 + Math.sqrt(n) * 4.5;    // cluster radius grows with count
+  const result: [number, number][] = [];
+  for (let i = 0; i < n; i++) {
+    const r = spread * Math.sqrt((i + 0.5) / n);
+    const theta = i * phi;
+    result.push([r * Math.cos(theta), r * Math.sin(theta)]);
+  }
+  return result;
 }
 
-function drawBlob(
+function clusterRadius(vis: number): number {
+  return 9 + Math.sqrt(vis) * 4.5;
+}
+
+/**
+ * Draw a soldier/enemy blob as a cluster of small circles.
+ */
+function drawDotCluster(
   ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  n: number,
+  cx: number,
+  cy: number,
+  count: number,
   fill: string,
   glow: string,
 ) {
-  ctx.shadowColor = glow;
-  ctx.shadowBlur = 18;
-  ctx.beginPath();
-  ctx.arc(x, y, BLOB_R, 0, Math.PI * 2);
-  ctx.fillStyle = fill;
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = "rgba(255,255,255,0.2)";
-  ctx.lineWidth = 2;
-  ctx.stroke();
+  const vis = Math.min(count, MAX_VISUAL_DOTS);
+  const positions = phyllotaxisPositions(vis);
 
+  ctx.shadowColor = glow;
+  ctx.shadowBlur = 14;
+  ctx.fillStyle = fill;
+  for (const [dx, dy] of positions) {
+    ctx.beginPath();
+    ctx.arc(cx + dx, cy + dy, DOT_R, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.shadowBlur = 0;
+
+  // Count label below the cluster
+  const r = clusterRadius(vis);
   ctx.fillStyle = "#fff";
-  const fontSize = n > 9999 ? 14 : n > 999 ? 16 : n > 99 ? 19 : 22;
-  ctx.font = `bold ${fontSize}px system-ui`;
+  ctx.font = "bold 15px system-ui";
   ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(String(n), x, y);
+  ctx.textBaseline = "top";
+  ctx.fillText(String(count), cx, cy + r + 5);
 }
 
-function drawScene(
-  ctx: CanvasRenderingContext2D,
-  g: GS,
-  highSide: "left" | "right" | null,
-) {
+// ── Scene drawing ─────────────────────────────────────────────────────────────
+
+function drawScene(ctx: CanvasRenderingContext2D, g: GS) {
   // Background
   ctx.fillStyle = "#0b0b1a";
   ctx.fillRect(0, 0, CW, CH);
 
-  // Road strip
-  const roadLeft = CW / 2 - 76;
-  const roadRight = CW / 2 + 76;
-  ctx.fillStyle = "#14142a";
-  ctx.fillRect(roadLeft, 0, roadRight - roadLeft, CH);
+  // Road (decorative strip)
+  const RL = CW / 2 - 80;
+  const RR = CW / 2 + 80;
+  ctx.fillStyle = "#13132a";
+  ctx.fillRect(RL, 0, RR - RL, CH);
 
   // Road edges
-  ctx.strokeStyle = "#252545";
+  ctx.strokeStyle = "#252548";
   ctx.lineWidth = 1.5;
   ctx.setLineDash([]);
-  ctx.beginPath();
-  ctx.moveTo(roadLeft, 0);
-  ctx.lineTo(roadLeft, CH);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(roadRight, 0);
-  ctx.lineTo(roadRight, CH);
-  ctx.stroke();
+  for (const x of [RL, RR]) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CH); ctx.stroke();
+  }
 
-  // Center dashes
-  ctx.strokeStyle = "#222244";
+  // Centre dash
+  ctx.strokeStyle = "#20204a";
   ctx.lineWidth = 1;
-  ctx.setLineDash([14, 18]);
-  ctx.beginPath();
-  ctx.moveTo(CW / 2, 0);
-  ctx.lineTo(CW / 2, CH);
-  ctx.stroke();
+  ctx.setLineDash([12, 18]);
+  ctx.beginPath(); ctx.moveTo(CW / 2, 0); ctx.lineTo(CW / 2, CH); ctx.stroke();
   ctx.setLineDash([]);
 
-  // Gates
+  // ── Gates ────────────────────────────────────────────────────────────────
   for (const gate of g.gates) {
     if (gate.cleared) continue;
     const sy = gate.baseY + g.scroll;
     if (sy < -GATE_H - 10 || sy > CH + 10) continue;
 
-    const lx = CW / 2 - GATE_GAP / 2 - GATE_W;
-    const rx = CW / 2 + GATE_GAP / 2;
-    const gy = sy - GATE_H / 2;
+    const top = sy - GATE_H / 2;
+    const mid = CW / 2;
 
-    const isPending = g.pendingGate === gate;
-    const lHl = isPending && highSide === "left";
-    const rHl = isPending && highSide === "right";
+    // Which side is the player on right now?
+    const playerSide = g.playerX < mid ? "left" : "right";
 
-    // Left gate
-    const lGood = isPositiveOp(gate.left);
-    ctx.fillStyle = lHl
-      ? "#1a4a2e"
-      : lGood
-        ? "#162838"
-        : "#321622";
-    drawRoundRect(ctx, lx, gy, GATE_W, GATE_H, 10);
-    ctx.fill();
-    ctx.strokeStyle = lHl ? "#44ffaa" : lGood ? "#3399cc" : "#cc3366";
-    ctx.lineWidth = lHl ? 2.5 : 1.5;
-    drawRoundRect(ctx, lx, gy, GATE_W, GATE_H, 10);
-    ctx.stroke();
-    ctx.fillStyle = "#fff";
-    ctx.font = `bold 19px system-ui`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(optLabel(gate.left), lx + GATE_W / 2, sy);
+    // Highlight intensity grows as gate approaches player
+    const dist = Math.max(0, 90 - Math.abs(sy - PLAYER_Y));
+    const hlAlpha = dist / 90;
 
-    // Right gate
-    const rGood = isPositiveOp(gate.right);
-    ctx.fillStyle = rHl
-      ? "#1a4a2e"
-      : rGood
-        ? "#162838"
-        : "#321622";
-    drawRoundRect(ctx, rx, gy, GATE_W, GATE_H, 10);
-    ctx.fill();
-    ctx.strokeStyle = rHl ? "#44ffaa" : rGood ? "#3399cc" : "#cc3366";
-    ctx.lineWidth = rHl ? 2.5 : 1.5;
-    drawRoundRect(ctx, rx, gy, GATE_W, GATE_H, 10);
-    ctx.stroke();
-    ctx.fillStyle = "#fff";
-    ctx.font = `bold 19px system-ui`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(optLabel(gate.right), rx + GATE_W / 2, sy);
+    for (const side of ["left", "right"] as const) {
+      const isLeft = side === "left";
+      const opt = isLeft ? gate.left : gate.right;
+      const x = isLeft ? 0 : mid;
+      const w = mid;
+
+      const good = isPositiveOp(opt);
+      const active = playerSide === side;
+
+      // Base background
+      ctx.fillStyle = good ? "#162838" : "#321622";
+      ctx.fillRect(x, top, w, GATE_H);
+
+      // Active-side tint
+      if (active && hlAlpha > 0) {
+        ctx.fillStyle = good
+          ? `rgba(0,180,80,${0.30 * hlAlpha})`
+          : `rgba(200,40,40,${0.28 * hlAlpha})`;
+        ctx.fillRect(x, top, w, GATE_H);
+      }
+
+      // Border
+      ctx.strokeStyle = good
+        ? (active ? "#44ffaa" : "#2288aa")
+        : (active ? "#ff5566" : "#883344");
+      ctx.lineWidth = active && hlAlpha > 0.3 ? 2.5 : 1.5;
+      ctx.strokeRect(x + 1, top + 1, w - 2, GATE_H - 2);
+
+      // Label
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 20px system-ui";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(optLabel(opt), x + w / 2, sy);
+    }
   }
 
-  // Enemy blob
+  // ── Enemy cluster ─────────────────────────────────────────────────────────
   const esy = g.enemyBaseY + g.scroll;
-  if (esy > -BLOB_R * 2 && esy < CH + BLOB_R) {
-    drawBlob(ctx, PLAYER_X, esy, g.enemy, "#cc2233", "#ff4466");
+  if (esy > -80 && esy < CH + 40) {
+    drawDotCluster(ctx, CW / 2, esy, g.enemy, "#cc2233", "#ff4466");
   }
 
-  // Player blob
-  drawBlob(ctx, PLAYER_X, PLAYER_Y, g.soldiers, "#2255dd", "#4477ff");
+  // ── Player cluster ────────────────────────────────────────────────────────
+  drawDotCluster(ctx, g.playerX, PLAYER_Y, g.soldiers, "#2255dd", "#3366ff");
 
-  // Flash overlay
+  // ── Flash overlay ─────────────────────────────────────────────────────────
   if (g.flash > 0) {
-    const alpha = (g.flash / FLASH_FRAMES) * 0.35;
+    const alpha = (g.flash / FLASH_FRAMES) * 0.32;
     ctx.fillStyle = g.flashGreen
       ? `rgba(0,200,80,${alpha})`
       : `rgba(200,30,50,${alpha})`;
     ctx.fillRect(0, 0, CW, CH);
 
     if (g.flashMsg) {
-      ctx.fillStyle = "#fff";
-      ctx.font = "bold 28px system-ui";
+      ctx.fillStyle = g.flashGreen ? "#66ffaa" : "#ff6677";
+      ctx.font = "bold 26px system-ui";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(g.flashMsg, CW / 2, PLAYER_Y - BLOB_R - 24);
+      ctx.fillText(g.flashMsg, CW / 2, PLAYER_Y - 70);
     }
   }
 
-  // Choose hint: arrow indicators
-  if (g.phase === "choose") {
-    ctx.fillStyle = "rgba(255,255,255,0.12)";
-    ctx.font = "14px system-ui";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("◀ links", CW / 4, CH - 20);
-    ctx.fillText("rechts ▶", (CW * 3) / 4, CH - 20);
+  // ── Steering hint when a gate is approaching ──────────────────────────────
+  if (g.phase === "playing") {
+    const near = g.gates.find(
+      (gt) => !gt.cleared && gt.baseY + g.scroll > -80 && gt.baseY + g.scroll < PLAYER_Y - 10,
+    );
+    if (near) {
+      ctx.fillStyle = "rgba(255,255,255,0.18)";
+      ctx.font = "13px system-ui";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("← bewegen →", CW / 2, CH - 18);
+    }
   }
 }
 
@@ -316,7 +315,6 @@ function drawScene(
 export default function MobControlGame() {
   const { t } = useTranslation(mobControlTranslations);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const highlightRef = useRef<"left" | "right" | null>(null);
 
   const gsRef = useRef<GS>({
     phase: "start",
@@ -324,10 +322,11 @@ export default function MobControlGame() {
     level: 1,
     score: 0,
     scroll: 0,
+    playerX: CW / 2,
+    targetX: CW / 2,
     gates: [],
     enemy: 0,
     enemyBaseY: 0,
-    pendingGate: null,
     flash: 0,
     flashMsg: "",
     flashGreen: true,
@@ -354,140 +353,120 @@ export default function MobControlGame() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    if (g.phase === "scroll") {
+    if (g.phase === "playing") {
+      // Advance world
       g.scroll += SCROLL_SPEED;
 
-      // Check gates
+      // Smooth player toward mouse/touch target
+      g.playerX += (g.targetX - g.playerX) * PLAYER_LERP;
+      g.playerX = Math.max(DOT_R * 2, Math.min(CW - DOT_R * 2, g.playerX));
+
+      // Countdown flash
+      if (g.flash > 0) g.flash--;
+
+      // Check gates — auto-apply based on player side
+      let uiDirty = false;
       for (const gate of g.gates) {
         if (gate.cleared) continue;
-        if (gate.baseY + g.scroll >= CHOICE_Y) {
-          g.phase = "choose";
-          g.pendingGate = gate;
-          syncUi();
-          break;
+        if (gate.baseY + g.scroll >= PLAYER_Y - GATE_H / 2) {
+          const side: "left" | "right" = g.playerX < CW / 2 ? "left" : "right";
+          const opt = side === "left" ? gate.left : gate.right;
+          const prev = g.soldiers;
+          g.soldiers = applyOp(g.soldiers, opt);
+          gate.cleared = true;
+
+          const delta = g.soldiers - prev;
+          g.flashMsg = delta >= 0 ? `+${delta}` : `${delta}`;
+          g.flashGreen = delta >= 0;
+          g.flash = FLASH_FRAMES;
+          uiDirty = true;
         }
       }
 
-      // Check enemy (only if no gate triggered)
-      if (g.phase === "scroll" && g.enemyBaseY + g.scroll >= CHOICE_Y) {
+      // Check enemy
+      if (g.enemyBaseY + g.scroll >= PLAYER_Y - GATE_H / 2) {
         const win = g.soldiers > g.enemy;
         g.phase = "battle";
-        g.flash = FLASH_FRAMES;
-        g.flashGreen = win;
         g.flashMsg = win ? "✔ Sieg!" : "✘ Niederlage";
-        syncUi();
+        g.flashGreen = win;
+        g.flash = FLASH_FRAMES * 2;
+        uiDirty = true;
 
         setTimeout(() => {
           const g2 = gsRef.current;
           if (win) {
             g2.score += 1;
             g2.level += 1;
-            // Survivors advance to next level
             g2.soldiers = Math.max(5, g2.soldiers - Math.floor(g2.enemy * 0.6));
             const next = makeLevel(g2.level, g2.soldiers);
             g2.gates = next.gates;
             g2.enemy = next.enemy;
             g2.enemyBaseY = next.enemyBaseY;
             g2.scroll = 0;
-            g2.pendingGate = null;
             g2.flash = 0;
-            g2.phase = "scroll";
+            g2.phase = "playing";
           } else {
             g2.phase = "game-over";
           }
           syncUi();
-          if (g2.phase === "scroll") {
+          if (g2.phase === "playing") {
             g2.raf = requestAnimationFrame(gameLoop);
           }
         }, BATTLE_DELAY_MS);
       }
-    } else if (g.phase === "resolve") {
-      g.scroll += SCROLL_SPEED * 0.5;
-      g.flash = Math.max(0, g.flash - 1);
-      if (g.flash === 0) {
-        g.phase = "scroll";
-        g.pendingGate = null;
-        highlightRef.current = null;
-        syncUi();
-      }
+
+      if (uiDirty) syncUi();
     } else if (g.phase === "battle") {
-      g.flash = Math.max(0, g.flash - 1);
+      if (g.flash > 0) g.flash--;
     }
 
-    drawScene(ctx, g, highlightRef.current);
+    drawScene(ctx, g);
 
-    if (g.phase !== "game-over" && g.phase !== "start" && g.phase !== "battle") {
+    if (g.phase === "playing" || g.phase === "battle") {
       g.raf = requestAnimationFrame(gameLoop);
     }
   }, []); // stable: reads only from refs
 
-  // ── Start / restart ─────────────────────────────────────────────────────────
-  function startGame() {
-    const g = gsRef.current;
-    cancelAnimationFrame(g.raf);
-
-    const level = 1;
-    const soldiers = 10;
-    const levelData = makeLevel(level, soldiers);
-
-    g.phase = "scroll";
-    g.soldiers = soldiers;
-    g.level = level;
-    g.score = 0;
-    g.gates = levelData.gates;
-    g.enemy = levelData.enemy;
-    g.enemyBaseY = levelData.enemyBaseY;
-    g.scroll = 0;
-    g.pendingGate = null;
-    g.flash = 0;
-    g.flashMsg = "";
-    highlightRef.current = null;
-
-    syncUi();
-    g.raf = requestAnimationFrame(gameLoop);
-  }
-
-  // ── Input ────────────────────────────────────────────────────────────────────
-  function handleInput(clientX: number) {
-    const g = gsRef.current;
-    if (g.phase !== "choose" || !g.pendingGate) return;
-
+  // ── Mouse / touch tracking ────────────────────────────────────────────────
+  function updateTargetX(clientX: number) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     const cx = ((clientX - rect.left) / rect.width) * CW;
-    const side: "left" | "right" = cx < CW / 2 ? "left" : "right";
-    const opt = side === "left" ? g.pendingGate.left : g.pendingGate.right;
+    gsRef.current.targetX = Math.max(0, Math.min(CW, cx));
+  }
 
-    const prev = g.soldiers;
-    g.soldiers = applyOp(g.soldiers, opt);
-    g.pendingGate.cleared = true;
+  // ── Start / restart ──────────────────────────────────────────────────────
+  function startGame() {
+    const g = gsRef.current;
+    cancelAnimationFrame(g.raf);
 
-    const delta = g.soldiers - prev;
-    highlightRef.current = side;
-    g.flashMsg = delta >= 0 ? `+${delta}` : `${delta}`;
-    g.flashGreen = delta >= 0;
-    g.flash = FLASH_FRAMES;
-    g.phase = "resolve";
+    const levelData = makeLevel(1, 10);
+    Object.assign(g, {
+      phase: "playing",
+      soldiers: 10,
+      level: 1,
+      score: 0,
+      playerX: CW / 2,
+      targetX: CW / 2,
+      flash: 0,
+      flashMsg: "",
+      ...levelData,
+    });
 
     syncUi();
-    cancelAnimationFrame(g.raf);
     g.raf = requestAnimationFrame(gameLoop);
   }
 
-  // ── Lifecycle ─────────────────────────────────────────────────────────────────
+  // ── Canvas initial render ─────────────────────────────────────────────────
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
-    if (ctx) {
-      ctx.fillStyle = "#0b0b1a";
-      ctx.fillRect(0, 0, CW, CH);
-    }
+    if (ctx) { ctx.fillStyle = "#0b0b1a"; ctx.fillRect(0, 0, CW, CH); }
     return () => cancelAnimationFrame(gsRef.current.raf);
   }, []);
 
-  const isChoosing = ui.phase === "choose";
   const showOverlay = ui.phase === "start" || ui.phase === "game-over";
 
   return (
@@ -501,8 +480,8 @@ export default function MobControlGame() {
         userSelect: "none",
       }}
     >
-      {/* HUD — only during active game */}
-      {ui.phase !== "start" && ui.phase !== "game-over" && (
+      {/* HUD */}
+      {!showOverlay && (
         <div
           style={{
             display: "flex",
@@ -515,26 +494,24 @@ export default function MobControlGame() {
             justifyContent: "center",
           }}
         >
-          <span>
-            Level <strong>{ui.level}</strong>
-          </span>
-          <span>
-            🏆 <strong>{ui.score}</strong>
-          </span>
-          <span>
-            🪖 <strong>{ui.soldiers}</strong>
-          </span>
+          <span>Level <strong>{ui.level}</strong></span>
+          <span>🏆 <strong>{ui.score}</strong></span>
+          <span>🪖 <strong>{ui.soldiers}</strong></span>
         </div>
       )}
 
-      {/* Canvas wrapper */}
+      {/* Canvas wrapper — captures mouse/touch for steering */}
       <div
         style={{
           position: "relative",
           width: "100%",
           maxWidth: CW,
           aspectRatio: `${CW} / ${CH}`,
+          cursor: ui.phase === "playing" ? "none" : "default",
         }}
+        onMouseMove={(e) => updateTargetX(e.clientX)}
+        onTouchMove={(e) => { e.preventDefault(); updateTargetX(e.touches[0].clientX); }}
+        onTouchStart={(e) => { e.preventDefault(); updateTargetX(e.touches[0].clientX); }}
       >
         <canvas
           ref={canvasRef}
@@ -546,16 +523,10 @@ export default function MobControlGame() {
             borderRadius: 12,
             display: "block",
             touchAction: "none",
-            cursor: isChoosing ? "pointer" : "default",
-          }}
-          onClick={(e) => handleInput(e.clientX)}
-          onTouchStart={(e) => {
-            e.preventDefault();
-            handleInput(e.touches[0].clientX);
           }}
         />
 
-        {/* Overlay: start or game-over */}
+        {/* Start / Game-Over overlay */}
         {showOverlay && (
           <div
             style={{
@@ -574,16 +545,11 @@ export default function MobControlGame() {
               <>
                 <div style={{ fontSize: "3rem" }}>⚔️</div>
                 <h1 style={{ margin: 0, fontSize: "1.8rem" }}>{t("title")}</h1>
-                <p
-                  style={{
-                    color: "var(--text-muted)",
-                    margin: 0,
-                    textAlign: "center",
-                    maxWidth: "80%",
-                    fontSize: "0.9rem",
-                  }}
-                >
+                <p style={{ color: "var(--text-muted)", margin: 0, textAlign: "center", maxWidth: "75%", fontSize: "0.9rem" }}>
                   {t("subtitle")}
+                </p>
+                <p style={{ color: "var(--text-muted)", margin: 0, textAlign: "center", maxWidth: "75%", fontSize: "0.85rem" }}>
+                  {t("hint")}
                 </p>
                 <button
                   className="button button--primary"
@@ -597,32 +563,9 @@ export default function MobControlGame() {
               <>
                 <div style={{ fontSize: "2.5rem" }}>💀</div>
                 <h2 style={{ margin: 0 }}>{t("gameOver")}</h2>
-                <div
-                  style={{
-                    background: "var(--bg-surface)",
-                    padding: "0.6rem 1.4rem",
-                    borderRadius: 10,
-                    textAlign: "center",
-                  }}
-                >
-                  <p
-                    style={{
-                      margin: 0,
-                      color: "var(--text-muted)",
-                      fontSize: "0.8rem",
-                    }}
-                  >
-                    {t("finalScore")}
-                  </p>
-                  <p
-                    style={{
-                      margin: "0.2rem 0 0",
-                      fontSize: "2rem",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {ui.score}
-                  </p>
+                <div style={{ background: "var(--bg-surface)", padding: "0.6rem 1.4rem", borderRadius: 10, textAlign: "center" }}>
+                  <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.8rem" }}>{t("finalScore")}</p>
+                  <p style={{ margin: "0.2rem 0 0", fontSize: "2rem", fontWeight: "bold" }}>{ui.score}</p>
                 </div>
                 <button
                   className="button button--primary"

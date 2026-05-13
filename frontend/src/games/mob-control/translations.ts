@@ -4,6 +4,7 @@ export const mobControlTranslations: TranslationBundle = {
   de: {
     "title": "Mob Control",
     "subtitle": "Führe deine Soldaten durch die Tore und besiege den Feind!",
+    "hint": "Maus/Finger bewegen → Seite wählen",
     "start": "Spielen",
     "playAgain": "Nochmal",
     "gameOver": "Game Over",
@@ -17,6 +18,7 @@ export const mobControlTranslations: TranslationBundle = {
   en: {
     "title": "Mob Control",
     "subtitle": "Lead your soldiers through the gates and defeat the enemy!",
+    "hint": "Move mouse/finger → choose side",
     "start": "Play",
     "playAgain": "Play again",
     "gameOver": "Game Over",
@@ -28,4 +30,6 @@ export const mobControlTranslations: TranslationBundle = {
     "soldiers": "Soldiers",
   },
 };
+
+
 
