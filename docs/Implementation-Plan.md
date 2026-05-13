@@ -3,7 +3,7 @@
 ## Current Status
 
 **Phase:** All phases complete — maintenance mode
-**Last Updated:** 2026-04-10
+**Last Updated:** 2026-05-13
 
 ## Roadmap
 
@@ -17,6 +17,7 @@
 | 5 | Chess Variants — MVP (low priority) | 2026-04 | ✅ done (8×8 only) |
 | 6 | Polish, PWA optimization, offline hardening | 2026-04 | ✅ done (icons deferred) |
 | 7 | Documentation & quality pass | 2026-04 | ✅ done |
+| 8 | Mob Control — arcade game MVP | 2026-05 | ✅ done |
 
 ---
 
@@ -428,6 +429,26 @@
 - Imposter and Piccolo are the quickest wins — fully offline, minimal backend
 - Quiz is the most complex game — plan for iterative development
 - Chess is explicitly lowest priority — implement only after the other three are stable
+- Mob Control is a pure frontend arcade game (no backend) — self-contained in `frontend/src/games/mob-control/`
+
+## Phase 8 — Mob Control MVP
+
+Pure frontend arcade game inspired by "Mob Control". No backend needed.
+
+### Done
+
+- [x] Canvas-based game loop with `requestAnimationFrame`
+- [x] Soldier blob (blue circle) + enemy blob (red circle) with dynamic number display
+- [x] Gate pairs (`+`, `−`, `×`, `÷`) scrolling toward the player
+- [x] Tap left/right canvas half to choose a gate
+- [x] Operator applied to soldier count; flash feedback on choice
+- [x] Battle resolution at end of each level (soldiers vs. enemy)
+- [x] Level scaling: more gates, higher enemy counts, harder operators each level
+- [x] Survivors applied to next level (soldiers − 60 % of enemy on win)
+- [x] HUD: current level, score, soldier count
+- [x] Start screen + Game Over screen with final score
+- [x] Route `/mob-control`, lazy-loaded, added to Home grid and navigation
+- [x] German/English translations via shared i18n system
 
 
 

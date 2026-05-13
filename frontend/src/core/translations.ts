@@ -7,6 +7,7 @@ export const coreTranslations: TranslationBundle = {
     "nav.piccolo": "Piccolo",
     "nav.quiz": "Quiz",
     "nav.chess": "Schach",
+    "nav.mobcontrol": "Mob Control",
     "nav.home": "Home",
     "nav.ariaLabel": "Spiele-Navigation",
 
@@ -28,6 +29,8 @@ export const coreTranslations: TranslationBundle = {
     "home.quiz.desc": "Quiz mit ELO-System. Wie gut kennst du die Lore?",
     "home.chess.name": "Schach",
     "home.chess.desc": "Lokales 1v1 Standard-Schach.",
+    "home.mobcontrol.name": "Mob Control",
+    "home.mobcontrol.desc": "Führe Soldaten durch Tore und besiege Feinde!",
 
     // Relative time
     "time.never": "Nie",
@@ -66,6 +69,7 @@ export const coreTranslations: TranslationBundle = {
     "nav.piccolo": "Piccolo",
     "nav.quiz": "Quiz",
     "nav.chess": "Chess",
+    "nav.mobcontrol": "Mob Control",
     "nav.home": "Home",
     "nav.ariaLabel": "Game Navigation",
 
@@ -87,6 +91,8 @@ export const coreTranslations: TranslationBundle = {
     "home.quiz.desc": "Quiz with ELO system. How well do you know the lore?",
     "home.chess.name": "Chess",
     "home.chess.desc": "Local 1v1 standard chess.",
+    "home.mobcontrol.name": "Mob Control",
+    "home.mobcontrol.desc": "Lead soldiers through gates and defeat enemies!",
 
     // Relative time
     "time.never": "Never",

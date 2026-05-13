@@ -37,6 +37,14 @@ const games = [
 		status: "ready",
 		offlineKey: null,
 	},
+	{
+		nameKey: "home.mobcontrol.name",
+		path: "/mob-control",
+		emoji: "⚔️",
+		descKey: "home.mobcontrol.desc",
+		status: "ready",
+		offlineKey: null,
+	},
 ];
 
 export function Home() {

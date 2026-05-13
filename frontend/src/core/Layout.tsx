@@ -10,6 +10,7 @@ export function Layout() {
     { to: "/piccolo", emoji: "🎉", labelKey: "nav.piccolo" },
     { to: "/quiz", emoji: "🧠", labelKey: "nav.quiz" },
     { to: "/chess", emoji: "♟️", labelKey: "nav.chess" },
+    { to: "/mob-control", emoji: "⚔️", labelKey: "nav.mobcontrol" },
   ];
 
   return (

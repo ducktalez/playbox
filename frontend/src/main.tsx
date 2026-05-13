@@ -20,6 +20,7 @@ const ImposterGame = React.lazy(() => import("./games/imposter/ImposterGame"));
 const PiccoloGame = React.lazy(() => import("./games/piccolo/PiccoloGame"));
 const QuizGame = React.lazy(() => import("./games/quiz/QuizGame"));
 const ChessGame = React.lazy(() => import("./games/chess/ChessGame"));
+const MobControlGame = React.lazy(() => import("./games/mob-control/MobControlGame"));
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -61,6 +62,14 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               }
             />
             <Route path="*" element={<NotFound />} />
+            <Route
+              path="mob-control/*"
+              element={
+                <React.Suspense fallback={<Fallback />}>
+                  <MobControlGame />
+                </React.Suspense>
+              }
+            />
           </Route>
         </Routes>
       </BrowserRouter>
