@@ -512,6 +512,10 @@ export default function MobControlGame() {
 
             setTimeout(() => {
               const g2 = gsRef.current;
+              // Cancel the RAF that was still running during the battle flash,
+              // otherwise a second loop would start alongside the new one.
+              cancelAnimationFrame(g2.raf);
+
               if (isBoss) {
                 // Boss defeated → next level
                 g2.score += 1;
@@ -531,9 +535,7 @@ export default function MobControlGame() {
                 g2.phase = "playing";
               }
               syncUi();
-              if (g2.phase === "playing") {
-                g2.raf = requestAnimationFrame(gameLoop);
-              }
+              g2.raf = requestAnimationFrame(gameLoop);
             }, isBoss ? BATTLE_DELAY_MS : 600);
           } else {
             g.flashMsg = "✘ Niederlage";
@@ -711,6 +713,7 @@ export default function MobControlGame() {
     </div>
   );
 }
+
 
 
 
