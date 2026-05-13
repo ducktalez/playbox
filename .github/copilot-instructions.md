@@ -12,8 +12,9 @@ The project is in early development. Only implement what is **technically necess
 - **App-like optimization is part of development.** Prefer tap-friendly, shared-device, PWA-appropriate flows for game screens where it improves the current MVP.
 - **All apps should be mobile-optimized during development.** Default to layouts and interactions that work well on phones first.
 - **Social/party-game player registration should be generalized where practical.** If no names are entered, fall back to `Player 1`, `Player 2`, `Player 3`, ... instead of blocking local testing.
-- Priority order: **Imposter → Piccolo → Quiz → Chess (lowest).**
+- Priority order: **Imposter → Piccolo → Quiz → Chess (lowest) → Mob Control (maintenance).**
 - Within each game: **Backend API → Tests → Seed data → Frontend (minimal).**
+- **Frontend-only games** (Mob Control) skip the backend steps entirely — document architecture decisions in the game's instruction file.
 
 ## Coding Conventions
 - All code, comments, docstrings, and documentation in **English**.
@@ -40,6 +41,7 @@ The project is in early development. Only implement what is **technically necess
 - **Tests must run from `backend/`**: `cd backend && python -m pytest tests/ -v`.
 - **Quiz uses PostgreSQL**, Imposter/Piccolo use **in-memory or SQLite**. Prefer **in-memory SQLite during development** when persistence is not technically required. Don't mix the engines per game.
 - Imposter/Piccolo sessions are **in-memory only** — no DB persistence, data resets on restart.
+- **Mob Control has no backend** — it is a pure frontend Canvas game. Do not add a backend module for it unless there is a concrete technical reason (e.g. leaderboard API). All game state lives in a React `useRef`; only the HUD and overlays use React state.
 - Quiz ELO: both questions and players have ELO scores. Always update **both** after an attempt.
 - Quiz answers: exactly 1 correct, N wrong (N ≥ 1). The pool can be arbitrarily large; the API selects a random subset per request.
 - Media (clips, images, docs) are stored as **files**, referenced by URL — never binary in the DB.

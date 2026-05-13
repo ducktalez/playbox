@@ -7,27 +7,29 @@ PlayBox is a multi-game platform serving browser-based party and quiz games as a
 ## System Context
 
 ```
-┌─────────────┐        ┌──────────────────────────────────────────┐
-│   Browser   │◄──────►│              PlayBox PWA                 │
-│   (PWA)     │        │                                          │
-│             │        │  ┌──────────┬──────────┬───────┬───────┐ │
-│             │        │  │ Imposter │ Piccolo  │ Quiz  │ Chess │ │
-│             │        │  └──────────┴──────────┴───┬───┴───────┘ │
-│             │        │                            │              │
-│             │        │  ┌─────────────────────────▼────────────┐ │
-│             │        │  │        FastAPI Backend               │ │
-│             │        │  │  /api/v1/imposter  /api/v1/piccolo   │ │
-│             │        │  │  /api/v1/quiz      /api/v1/chess     │ │
-│             │        │  └─────────────┬───────────────────────┘ │
-│             │        │                │                          │
-│             │        │  ┌─────────────▼───────────────────────┐ │
-│             │        │  │  PostgreSQL (Quiz)  │  SQLite (local)│ │
-│             │        │  └─────────────────────────────────────┘ │
-└─────────────┘        └──────────────────────────────────────────┘
+┌─────────────┐        ┌──────────────────────────────────────────────────┐
+│   Browser   │◄──────►│                  PlayBox PWA                     │
+│   (PWA)     │        │                                                  │
+│             │        │  ┌──────────┬──────────┬───────┬───────┬───────┐ │
+│             │        │  │ Imposter │ Piccolo  │ Quiz  │ Chess │  Mob  │ │
+│             │        │  │          │          │       │       │Control│ │
+│             │        │  └──────────┴──────────┴──┬────┴───────┴───────┘ │
+│             │        │                           │  (Mob Control: no API)│
+│             │        │  ┌────────────────────────▼─────────────────────┐ │
+│             │        │  │          FastAPI Backend                     │ │
+│             │        │  │  /api/v1/imposter  /api/v1/piccolo           │ │
+│             │        │  │  /api/v1/quiz      /api/v1/chess             │ │
+│             │        │  └────────────────┬──────────────────────────── ┘ │
+│             │        │                   │                               │
+│             │        │  ┌────────────────▼──────────────────────────── ┐ │
+│             │        │  │  PostgreSQL (Quiz)  │  SQLite (local)        │ │
+│             │        │  └───────────────────────────────────────────── ┘ │
+└─────────────┘        └──────────────────────────────────────────────────┘
 ```
 
 - **No external API dependencies** — all game logic is self-contained
 - **Offline-first** for Imposter & Piccolo (Service Worker caches everything)
+- **Fully offline** for Mob Control (pure frontend, no backend at all)
 - **Online required** for Quiz (question DB, ELO updates, media) — offline play supported via IndexedDB cache fallback
 - **Online required** for Chess (game state managed by backend via `python-chess`)
 
@@ -45,6 +47,7 @@ PlayBox is a multi-game platform serving browser-based party and quiz games as a
 | `frontend/src/games/piccolo/` | Piccolo UI (challenge display) | React |
 | `frontend/src/games/quiz/` | Quiz UI (both game modes, question submission) | React |
 | `frontend/src/games/chess/` | Chess variant UI (board rendering) | React, CSS Grid, Unicode pieces |
+| `frontend/src/games/mob-control/` | Mob Control arcade game — **no backend** | React, Canvas API |
 
 ## Technology Stack
 
