@@ -26,7 +26,11 @@ start → playing → battle-anim → battle → playing (non-boss win)
                                         → game-over (lose)
 ```
 - `playing`: world scrolls, player steers, gates auto-apply, enemy collision detected.
-- `battle-anim`: both clusters shrink one dot at a time; scroll paused.
+- `battle-anim` — **two sub-phases**:
+  1. *Approach* (`battleApproachFrames > 0`): enemy cluster moves toward player until
+     outer edges touch (`battleContactY = PLAYER_Y − playerRadius − enemyRadius`).
+  2. *Clash* (`battleApproachFrames == 0`): dot counts decrement; outermost-facing dots
+     disappear first (pre-sorted positions, computed once at battle start).
 - `battle`: brief result flash; `setTimeout` triggers next-level or game-over.
 - `start` / `game-over`: canvas is static; DOM overlay rendered on top.
 
@@ -40,6 +44,10 @@ start → playing → battle-anim → battle → playing (non-boss win)
 - Blobs are rendered as clusters of small circles (phyllotaxis / golden-angle spiral layout).
 - `phyllotaxisPositions(n)` is deterministic for a given `n` — stable across frames, no RNG per draw.
 - Visual dot count capped at `MAX_VISUAL_DOTS` (30); actual count shown as text below cluster.
+- During `battle-anim`, positions are **pre-sorted once** at battle start — not recomputed per frame:
+  - Player: sorted ascending Y (topmost = facing enemy) → index 0 removed first.
+  - Enemy: sorted descending Y (bottommost = facing player) → index 0 removed first.
+  - `drawBattleCluster` skips the first `(total - visCount)` entries, so front-facing dots disappear first.
 
 ### Controls
 - Mouse `mousemove` / touch `touchmove` on the canvas wrapper updates `gsRef.current.targetX`.
@@ -67,8 +75,9 @@ GATE GATE → ENEMY(checkpoint) → GATE GATE → ENEMY(boss)
   Passing anything else into it will cause stale-closure bugs.
 - `requestAnimationFrame` is continued only for phases `"playing"`, `"battle-anim"`, `"battle"`.
   All other phases (`"start"`, `"game-over"`) rely on DOM overlays, not the canvas loop.
-- After a `setTimeout` resolves (next level / game-over transition), always check
-  `g2.phase === "playing"` before scheduling a new `requestAnimationFrame`.
+- **Always call `cancelAnimationFrame(g2.raf)` at the top of every `setTimeout` callback**
+  before scheduling a new RAF. The `battle` phase keeps the RAF running for the flash
+  countdown; without the cancel, a second loop starts and the game doubles in speed per battle.
 
 ## File Structure
 ```
@@ -94,4 +103,7 @@ frontend/src/games/mob-control/
 - Touch-left / touch-right zone hints on mobile
 - Sound effects on gate pass and battle
 - Enemy variety (different colours / speeds for boss vs. checkpoint)
+
+
+
 

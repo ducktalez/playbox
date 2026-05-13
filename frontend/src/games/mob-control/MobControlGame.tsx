@@ -50,6 +50,7 @@ const DOT_R = 5; // radius of each soldier dot
 const MAX_VISUAL_DOTS = 30; // cap dots for performance / readability
 const FLASH_FRAMES = 30;
 const BATTLE_DELAY_MS = 1400;
+const BATTLE_APPROACH_FRAMES = 20; // frames for the two clusters to close in before clashing
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Op = "+" | "−" | "×" | "÷";
@@ -102,11 +103,22 @@ interface GS {
   flashMsg: string;
   flashGreen: boolean;
   // ── Battle animation state ──────────────────────────────────────────────
-  battlePlayerVis: number;    // animated player count (counts down during battle-anim)
-  battleEnemyVis: number;     // animated enemy count (counts down during battle-anim)
-  battleAnimTimer: number;    // frames remaining until next decrement step
-  battleFramesPerStep: number; // frames between decrements (controls animation speed)
-  battleEnemyY: number;       // fixed screen-Y for enemy during battle (scroll paused)
+  battlePlayerVis: number;    // actual player count (counts down during clash)
+  battleEnemyVis: number;     // actual enemy count (counts down during clash)
+  battleAnimTimer: number;    // frames until next clash decrement step
+  battleFramesPerStep: number; // frames between decrements
+  battleEnemyY: number;       // current screen-Y of enemy cluster during battle
+
+  // Pre-computed once at battle start (approach phase)
+  battleApproachFrames: number;  // remaining approach frames (0 = clash phase)
+  battleApproachStep: number;    // enemy Y delta per approach frame
+  battleContactY: number;        // enemy center Y when outer edges touch
+
+  // Sorted dot positions: outermost-facing dots are at index 0 (removed first).
+  // Computed once at battle start; drawn by skipping the first N removed entries.
+  battlePlayerSortedPos: [number, number][];
+  battleEnemySortedPos: [number, number][];
+
   raf: number;
 }
 
@@ -242,6 +254,43 @@ function drawDotCluster(
   ctx.fillText(String(count), cx, cy + r + 5);
 }
 
+/**
+ * Draw a cluster during battle using pre-sorted positions.
+ * sortedPos[0] = the dot facing the opponent (removed first).
+ * We skip the first (total - show) entries so that front-facing dots vanish first.
+ */
+function drawBattleCluster(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  sortedPos: [number, number][],
+  visCount: number,   // how many dots are still alive (actual count, capped at sortedPos.length)
+  actualCount: number, // displayed number label
+  fill: string,
+  glow: string,
+) {
+  const total = sortedPos.length;
+  const show = Math.min(visCount, total);
+  const skip = total - show; // skip front-facing dots first
+
+  ctx.shadowColor = glow;
+  ctx.shadowBlur = 14;
+  ctx.fillStyle = fill;
+  for (let i = skip; i < total; i++) {
+    ctx.beginPath();
+    ctx.arc(cx + sortedPos[i][0], cy + sortedPos[i][1], DOT_R, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.shadowBlur = 0;
+
+  const r = clusterRadius(show);
+  ctx.fillStyle = "#fff";
+  ctx.font = "bold 15px system-ui";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.fillText(String(actualCount), cx, cy + r + 5);
+}
+
 // ── Scene drawing ─────────────────────────────────────────────────────────────
 
 function drawScene(ctx: CanvasRenderingContext2D, g: GS) {
@@ -325,11 +374,13 @@ function drawScene(ctx: CanvasRenderingContext2D, g: GS) {
 
   // ── Enemy clusters ────────────────────────────────────────────────────────
   if (g.phase === "battle-anim" || g.phase === "battle") {
-    // The active battle enemy is frozen at battleEnemyY with animated count
-    if (g.battleEnemyVis > 0) {
-      drawDotCluster(ctx, CW / 2, g.battleEnemyY, g.battleEnemyVis, "#cc2233", "#ff4466");
+    // Active battle enemy: uses pre-sorted positions, moves during approach
+    if (g.battleEnemyVis > 0 || g.phase === "battle-anim") {
+      drawBattleCluster(ctx, CW / 2, g.battleEnemyY,
+        g.battleEnemySortedPos, g.battleEnemyVis,
+        Math.max(0, g.battleEnemyVis), "#cc2233", "#ff4466");
     }
-    // Draw other non-cleared enemies normally (they're still scrolling)
+    // Other non-cleared enemies scroll normally
     for (const enemy of g.enemies) {
       if (enemy.cleared || enemy === g.currentBattleEnemy) continue;
       const esy = enemy.baseY + g.scroll;
@@ -349,9 +400,9 @@ function drawScene(ctx: CanvasRenderingContext2D, g: GS) {
 
   // ── Player cluster ────────────────────────────────────────────────────────
   if (g.phase === "battle-anim" || g.phase === "battle") {
-    if (g.battlePlayerVis > 0) {
-      drawDotCluster(ctx, g.playerX, PLAYER_Y, g.battlePlayerVis, "#2255dd", "#3366ff");
-    }
+    drawBattleCluster(ctx, g.playerX, PLAYER_Y,
+      g.battlePlayerSortedPos, g.battlePlayerVis,
+      Math.max(0, g.battlePlayerVis), "#2255dd", "#3366ff");
   } else {
     drawDotCluster(ctx, g.playerX, PLAYER_Y, g.soldiers, "#2255dd", "#3366ff");
   }
@@ -412,6 +463,11 @@ export default function MobControlGame() {
     battleAnimTimer: 0,
     battleFramesPerStep: 2,
     battleEnemyY: 0,
+    battleApproachFrames: 0,
+    battleApproachStep: 0,
+    battleContactY: 0,
+    battlePlayerSortedPos: [],
+    battleEnemySortedPos: [],
     raf: 0,
   });
 
@@ -469,80 +525,97 @@ export default function MobControlGame() {
         if (enemy.cleared) continue;
         if (enemy.baseY + g.scroll >= PLAYER_Y - GATE_H / 2) {
           g.currentBattleEnemy = enemy;
-          g.battleEnemyY = enemy.baseY + g.scroll;
-          g.battlePlayerVis = g.soldiers;
-          g.battleEnemyVis = enemy.count;
 
-          // Speed: ~90 frames total regardless of count
+          const startY = enemy.baseY + g.scroll;
+          const playerDots = Math.min(g.soldiers, MAX_VISUAL_DOTS);
+          const enemyDots  = Math.min(enemy.count, MAX_VISUAL_DOTS);
+
+          // Pre-sort positions once: index 0 = dot facing the opponent (removed first)
+          // Player: top-most dots (smallest Y) face the enemy above → sort ascending Y
+          // Enemy:  bottom-most dots (largest Y) face the player below → sort descending Y
+          g.battlePlayerSortedPos = phyllotaxisPositions(playerDots)
+            .sort(([, ay], [, by]) => ay - by);
+          g.battleEnemySortedPos  = phyllotaxisPositions(enemyDots)
+            .sort(([, ay], [, by]) => by - ay);
+
+          // Approach: enemy moves until outer edges of both clusters touch
+          const contactY = PLAYER_Y - clusterRadius(playerDots) - clusterRadius(enemyDots);
+          g.battleEnemyY       = startY;
+          g.battleContactY     = contactY;
+          g.battleApproachStep  = (contactY - startY) / BATTLE_APPROACH_FRAMES;
+          g.battleApproachFrames = BATTLE_APPROACH_FRAMES;
+
+          // Clash speed: ~90 frames regardless of troop count
           const steps = Math.max(1, Math.min(g.soldiers, enemy.count));
           g.battleFramesPerStep = Math.max(1, Math.round(90 / Math.min(steps, 60)));
           g.battleAnimTimer = g.battleFramesPerStep;
 
+          g.battlePlayerVis = g.soldiers;
+          g.battleEnemyVis  = enemy.count;
+
           g.phase = "battle-anim";
           uiDirty = true;
-          break; // one battle at a time
+          break;
         }
       }
 
       if (uiDirty) syncUi();
 
     } else if (g.phase === "battle-anim") {
-      // ── Dot-by-dot removal animation ───────────────────────────────────────
-      g.battleAnimTimer--;
-      if (g.battleAnimTimer <= 0) {
-        g.battleAnimTimer = g.battleFramesPerStep;
+      // Phase 1 — approach: enemy moves toward player until outer edges touch
+      if (g.battleApproachFrames > 0) {
+        g.battleApproachFrames--;
+        g.battleEnemyY += g.battleApproachStep;
+      } else {
+        // Phase 2 — clash: outermost (facing) dots removed first via sorted positions
+        g.battleAnimTimer--;
+        if (g.battleAnimTimer <= 0) {
+          g.battleAnimTimer = g.battleFramesPerStep;
+          if (g.battlePlayerVis > 0) g.battlePlayerVis--;
+          if (g.battleEnemyVis > 0) g.battleEnemyVis--;
 
-        if (g.battlePlayerVis > 0) g.battlePlayerVis--;
-        if (g.battleEnemyVis > 0) g.battleEnemyVis--;
+          if (g.battlePlayerVis === 0 || g.battleEnemyVis === 0) {
+            const currentEnemy = g.currentBattleEnemy!;
+            const win = g.soldiers > currentEnemy.count;
+            g.soldiers = win ? Math.max(1, g.battlePlayerVis) : 0;
+            g.phase = "battle";
+            g.flashGreen = win;
+            g.flash = FLASH_FRAMES;
+            syncUi();
 
-        if (g.battlePlayerVis === 0 || g.battleEnemyVis === 0) {
-          const currentEnemy = g.currentBattleEnemy!;
-          const win = g.soldiers > currentEnemy.count;
-          g.soldiers = win ? Math.max(1, g.battlePlayerVis) : 0;
-
-          g.phase = "battle";
-          g.flashGreen = win;
-          g.flash = FLASH_FRAMES;
-          syncUi();
-
-          if (win) {
-            currentEnemy.cleared = true;
-            const isBoss = currentEnemy.isBoss;
-            g.flashMsg = isBoss ? "✔ Level klar!" : "✔ Sieg!";
-
-            setTimeout(() => {
-              const g2 = gsRef.current;
-              // Cancel the RAF that was still running during the battle flash,
-              // otherwise a second loop would start alongside the new one.
-              cancelAnimationFrame(g2.raf);
-
-              if (isBoss) {
-                // Boss defeated → next level
-                g2.score += 1;
-                g2.level += 1;
-                g2.soldiers = Math.max(5, g2.soldiers);
-                const next = makeLevel(g2.level, g2.soldiers);
-                g2.gates = next.gates;
-                g2.enemies = next.enemies;
-                g2.currentBattleEnemy = null;
-                g2.scroll = 0;
-                g2.flash = 0;
-                g2.phase = "playing";
-              } else {
-                // Checkpoint defeated → keep scrolling
-                g2.currentBattleEnemy = null;
-                g2.flash = 0;
-                g2.phase = "playing";
-              }
-              syncUi();
-              g2.raf = requestAnimationFrame(gameLoop);
-            }, isBoss ? BATTLE_DELAY_MS : 600);
-          } else {
-            g.flashMsg = "✘ Niederlage";
-            setTimeout(() => {
-              gsRef.current.phase = "game-over";
-              syncUi();
-            }, BATTLE_DELAY_MS);
+            if (win) {
+              currentEnemy.cleared = true;
+              const isBoss = currentEnemy.isBoss;
+              g.flashMsg = isBoss ? "✔ Level klar!" : "✔ Sieg!";
+              setTimeout(() => {
+                const g2 = gsRef.current;
+                cancelAnimationFrame(g2.raf);
+                if (isBoss) {
+                  g2.score += 1;
+                  g2.level += 1;
+                  g2.soldiers = Math.max(5, g2.soldiers);
+                  const next = makeLevel(g2.level, g2.soldiers);
+                  g2.gates = next.gates;
+                  g2.enemies = next.enemies;
+                  g2.currentBattleEnemy = null;
+                  g2.scroll = 0;
+                  g2.flash = 0;
+                  g2.phase = "playing";
+                } else {
+                  g2.currentBattleEnemy = null;
+                  g2.flash = 0;
+                  g2.phase = "playing";
+                }
+                syncUi();
+                g2.raf = requestAnimationFrame(gameLoop);
+              }, isBoss ? BATTLE_DELAY_MS : 600);
+            } else {
+              g.flashMsg = "✘ Niederlage";
+              setTimeout(() => {
+                gsRef.current.phase = "game-over";
+                syncUi();
+              }, BATTLE_DELAY_MS);
+            }
           }
         }
       }
@@ -713,6 +786,14 @@ export default function MobControlGame() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
 
 
 
