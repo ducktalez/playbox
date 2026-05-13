@@ -53,7 +53,14 @@ const BATTLE_DELAY_MS = 1400;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Op = "+" | "−" | "×" | "÷";
-type Phase = "start" | "playing" | "battle" | "game-over";
+/**
+ * Phase transitions:
+ *   start → playing → battle-anim → battle (flash) → playing | game-over
+ *
+ * battle-anim: both clusters shrink one dot at a time until the loser reaches 0.
+ * battle:      brief result flash before the next level starts or game ends.
+ */
+type Phase = "start" | "playing" | "battle-anim" | "battle" | "game-over";
 
 interface GateOpt {
   op: Op;
@@ -83,6 +90,12 @@ interface GS {
   flash: number;
   flashMsg: string;
   flashGreen: boolean;
+  // ── Battle animation state ──────────────────────────────────────────────
+  battlePlayerVis: number;   // animated player count (counts down during battle-anim)
+  battleEnemyVis: number;    // animated enemy count (counts down during battle-anim)
+  battleAnimTimer: number;   // frames remaining until next decrement step
+  battleFramesPerStep: number; // how many frames between decrements (controls speed)
+  battleEnemyY: number;      // fixed screen-Y for enemy during battle (stops scrolling)
   raf: number;
 }
 
@@ -271,13 +284,26 @@ function drawScene(ctx: CanvasRenderingContext2D, g: GS) {
   }
 
   // ── Enemy cluster ─────────────────────────────────────────────────────────
-  const esy = g.enemyBaseY + g.scroll;
-  if (esy > -80 && esy < CH + 40) {
-    drawDotCluster(ctx, CW / 2, esy, g.enemy, "#cc2233", "#ff4466");
+  if (g.phase === "battle-anim" || g.phase === "battle") {
+    // Fixed position; count reflects animation state
+    if (g.battleEnemyVis > 0) {
+      drawDotCluster(ctx, CW / 2, g.battleEnemyY, g.battleEnemyVis, "#cc2233", "#ff4466");
+    }
+  } else {
+    const esy = g.enemyBaseY + g.scroll;
+    if (esy > -80 && esy < CH + 40) {
+      drawDotCluster(ctx, CW / 2, esy, g.enemy, "#cc2233", "#ff4466");
+    }
   }
 
   // ── Player cluster ────────────────────────────────────────────────────────
-  drawDotCluster(ctx, g.playerX, PLAYER_Y, g.soldiers, "#2255dd", "#3366ff");
+  if (g.phase === "battle-anim" || g.phase === "battle") {
+    if (g.battlePlayerVis > 0) {
+      drawDotCluster(ctx, g.playerX, PLAYER_Y, g.battlePlayerVis, "#2255dd", "#3366ff");
+    }
+  } else {
+    drawDotCluster(ctx, g.playerX, PLAYER_Y, g.soldiers, "#2255dd", "#3366ff");
+  }
 
   // ── Flash overlay ─────────────────────────────────────────────────────────
   if (g.flash > 0) {
@@ -330,6 +356,11 @@ export default function MobControlGame() {
     flash: 0,
     flashMsg: "",
     flashGreen: true,
+    battlePlayerVis: 0,
+    battleEnemyVis: 0,
+    battleAnimTimer: 0,
+    battleFramesPerStep: 2,
+    battleEnemyY: 0,
     raf: 0,
   });
 
@@ -383,46 +414,75 @@ export default function MobControlGame() {
         }
       }
 
-      // Check enemy
+      // Check enemy — start battle animation instead of instant resolution
       if (g.enemyBaseY + g.scroll >= PLAYER_Y - GATE_H / 2) {
-        const win = g.soldiers > g.enemy;
-        g.phase = "battle";
-        g.flashMsg = win ? "✔ Sieg!" : "✘ Niederlage";
-        g.flashGreen = win;
-        g.flash = FLASH_FRAMES * 2;
-        uiDirty = true;
+        // Freeze enemy at its current screen position
+        g.battleEnemyY = g.enemyBaseY + g.scroll;
+        g.battlePlayerVis = g.soldiers;
+        g.battleEnemyVis = g.enemy;
 
-        setTimeout(() => {
-          const g2 = gsRef.current;
-          if (win) {
-            g2.score += 1;
-            g2.level += 1;
-            g2.soldiers = Math.max(5, g2.soldiers - Math.floor(g2.enemy * 0.6));
-            const next = makeLevel(g2.level, g2.soldiers);
-            g2.gates = next.gates;
-            g2.enemy = next.enemy;
-            g2.enemyBaseY = next.enemyBaseY;
-            g2.scroll = 0;
-            g2.flash = 0;
-            g2.phase = "playing";
-          } else {
-            g2.phase = "game-over";
-          }
-          syncUi();
-          if (g2.phase === "playing") {
-            g2.raf = requestAnimationFrame(gameLoop);
-          }
-        }, BATTLE_DELAY_MS);
+        // Speed: aim for ~90 frames total regardless of troop count
+        const steps = Math.max(1, Math.min(g.soldiers, g.enemy));
+        g.battleFramesPerStep = Math.max(1, Math.round(90 / Math.min(steps, 60)));
+        g.battleAnimTimer = g.battleFramesPerStep;
+
+        g.phase = "battle-anim";
+        uiDirty = true;
       }
 
       if (uiDirty) syncUi();
+
+    } else if (g.phase === "battle-anim") {
+      // ── Dot-by-dot removal animation ───────────────────────────────────────
+      g.battleAnimTimer--;
+      if (g.battleAnimTimer <= 0) {
+        g.battleAnimTimer = g.battleFramesPerStep;
+
+        if (g.battlePlayerVis > 0) g.battlePlayerVis--;
+        if (g.battleEnemyVis > 0) g.battleEnemyVis--;
+
+        // Done when the loser (or both) reaches 0
+        if (g.battlePlayerVis === 0 || g.battleEnemyVis === 0) {
+          const win = g.soldiers > g.enemy;
+          // Update soldiers to survivor count
+          g.soldiers = win ? g.battlePlayerVis : 0;
+
+          g.phase = "battle";
+          g.flashMsg = win ? "✔ Sieg!" : "✘ Niederlage";
+          g.flashGreen = win;
+          g.flash = FLASH_FRAMES;
+          syncUi();
+
+          setTimeout(() => {
+            const g2 = gsRef.current;
+            if (win) {
+              g2.score += 1;
+              g2.level += 1;
+              g2.soldiers = Math.max(5, g2.battlePlayerVis);
+              const next = makeLevel(g2.level, g2.soldiers);
+              g2.gates = next.gates;
+              g2.enemy = next.enemy;
+              g2.enemyBaseY = next.enemyBaseY;
+              g2.scroll = 0;
+              g2.flash = 0;
+              g2.phase = "playing";
+            } else {
+              g2.phase = "game-over";
+            }
+            syncUi();
+            if (g2.phase === "playing") {
+              g2.raf = requestAnimationFrame(gameLoop);
+            }
+          }, BATTLE_DELAY_MS);
+        }
+      }
     } else if (g.phase === "battle") {
       if (g.flash > 0) g.flash--;
     }
 
     drawScene(ctx, g);
 
-    if (g.phase === "playing" || g.phase === "battle") {
+    if (g.phase === "playing" || g.phase === "battle-anim" || g.phase === "battle") {
       g.raf = requestAnimationFrame(gameLoop);
     }
   }, []); // stable: reads only from refs
@@ -582,4 +642,10 @@ export default function MobControlGame() {
     </div>
   );
 }
+
+
+
+
+
+
 
