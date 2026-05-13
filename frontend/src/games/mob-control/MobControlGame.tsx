@@ -31,11 +31,11 @@ const CH = 620;
 const PLAYER_Y = 510; // fixed screen-Y for the player blob
 
 // ── Speeds (swap for testing) ─────────────────────────────────────────────────
-const PLAY_SPEED = 1.1; // px/frame — normal gameplay
+const PLAY_SPEED = 1.1; // px/frame — constant, never increases with level
 // const TEST_SPEED = 4.0; // px/frame — fast testing
 const SCROLL_SPEED = PLAY_SPEED;
 
-const PLAYER_LERP = 0.10; // horizontal smoothing (0=no movement, 1=instant)
+// No lerp — player moves to mouse/touch position directly each frame
 
 // ── Level layout ──────────────────────────────────────────────────────────────
 const FIRST_GATE_BASE_Y = -130; // first gate starts above screen
@@ -55,10 +55,13 @@ const BATTLE_DELAY_MS = 1400;
 type Op = "+" | "−" | "×" | "÷";
 /**
  * Phase transitions:
- *   start → playing → battle-anim → battle (flash) → playing | game-over
+ *   start → playing → battle-anim → battle (flash) → playing (if non-boss win)
+ *                                                   → playing (next level, if boss win)
+ *                                                   → game-over (if lose)
  *
  * battle-anim: both clusters shrink one dot at a time until the loser reaches 0.
- * battle:      brief result flash before the next level starts or game ends.
+ * battle:      brief result flash after animation.
+ * Enemies can appear at any point in the level; only the last (boss) triggers level end.
  */
 type Phase = "start" | "playing" | "battle-anim" | "battle" | "game-over";
 
@@ -75,6 +78,14 @@ interface Gate {
   cleared: boolean;
 }
 
+/** An enemy group on the track. Clearing the boss ends the level. */
+interface EnemyEncounter {
+  count: number;
+  baseY: number;
+  cleared: boolean;
+  isBoss: boolean;
+}
+
 /** Mutable game state stored in a ref — never causes React re-renders on its own. */
 interface GS {
   phase: Phase;
@@ -82,20 +93,20 @@ interface GS {
   level: number;
   score: number;
   scroll: number;
-  playerX: number; // current (lerped) horizontal position
-  targetX: number; // mouse/touch target
+  playerX: number; // current horizontal position (direct, no interpolation)
+  targetX: number; // mouse/touch position
   gates: Gate[];
-  enemy: number;
-  enemyBaseY: number;
+  enemies: EnemyEncounter[];
+  currentBattleEnemy: EnemyEncounter | null; // enemy being fought right now
   flash: number;
   flashMsg: string;
   flashGreen: boolean;
   // ── Battle animation state ──────────────────────────────────────────────
-  battlePlayerVis: number;   // animated player count (counts down during battle-anim)
-  battleEnemyVis: number;    // animated enemy count (counts down during battle-anim)
-  battleAnimTimer: number;   // frames remaining until next decrement step
-  battleFramesPerStep: number; // how many frames between decrements (controls speed)
-  battleEnemyY: number;      // fixed screen-Y for enemy during battle (stops scrolling)
+  battlePlayerVis: number;    // animated player count (counts down during battle-anim)
+  battleEnemyVis: number;     // animated enemy count (counts down during battle-anim)
+  battleAnimTimer: number;    // frames remaining until next decrement step
+  battleFramesPerStep: number; // frames between decrements (controls animation speed)
+  battleEnemyY: number;       // fixed screen-Y for enemy during battle (scroll paused)
   raf: number;
 }
 
@@ -128,23 +139,52 @@ function makeOpt(level: number): GateOpt {
   return { op: "÷", val: 2 + (level >= 5 ? 1 : 0) };
 }
 
+/**
+ * Generates a level as interleaved gate segments and enemy groups.
+ *
+ * Structure (example, 2 enemy groups):
+ *   GATE GATE → ENEMY(checkpoint) → GATE GATE → ENEMY(boss)
+ *
+ * Scroll speed is constant; difficulty comes from more/stronger enemies,
+ * not faster scrolling.
+ */
 function makeLevel(level: number, soldiers: number) {
-  const gateCount = Math.min(2 + Math.floor(level / 2), 6);
-  const enemyTarget = Math.floor(soldiers * (1.4 + level * 0.25));
-  const enemy = Math.max(5, enemyTarget) + Math.floor(Math.random() * (1 + level * 3));
+  // Fixed gates per segment — keeps the pace consistent regardless of level
+  const GATES_PER_SEG = 2;
+  // 1 group at level 1, add one every 2 levels, cap at 3
+  const groupCount = Math.min(1 + Math.floor(level / 2), 3);
 
   const gates: Gate[] = [];
-  for (let i = 0; i < gateCount; i++) {
-    gates.push({
-      left: makeOpt(level),
-      right: makeOpt(level),
-      baseY: FIRST_GATE_BASE_Y - i * GATE_SPACING,
-      cleared: false,
-    });
+  const enemies: EnemyEncounter[] = [];
+
+  let y = FIRST_GATE_BASE_Y;
+
+  for (let e = 0; e < groupCount; e++) {
+    const isBoss = e === groupCount - 1;
+
+    // Gate segment before this enemy group
+    for (let gi = 0; gi < GATES_PER_SEG; gi++) {
+      gates.push({ left: makeOpt(level), right: makeOpt(level), baseY: y, cleared: false });
+      y -= GATE_SPACING;
+    }
+
+    // Extra gap so players can react before the enemy
+    y -= ENEMY_EXTRA_GAP;
+
+    // Enemy size:
+    //   checkpoints ≈ 40 % of current soldiers (manageable, but punishing if ignored)
+    //   boss        ≈ 140 % + level scaling (forces optimal gate use)
+    const sizeRatio = isBoss
+      ? 1.4 + level * 0.12
+      : 0.4 + e * 0.15;
+    const count = Math.max(3, Math.floor(soldiers * sizeRatio) + Math.floor(Math.random() * (1 + level)));
+
+    enemies.push({ count, baseY: y, cleared: false, isBoss });
+    // Gap after enemy before the next segment
+    y -= GATE_SPACING;
   }
 
-  const enemyBaseY = FIRST_GATE_BASE_Y - gateCount * GATE_SPACING - ENEMY_EXTRA_GAP;
-  return { gates, enemy, enemyBaseY, scroll: 0 as const };
+  return { gates, enemies, scroll: 0 as const };
 }
 
 // ── Dot cluster helpers ───────────────────────────────────────────────────────
@@ -283,16 +323,27 @@ function drawScene(ctx: CanvasRenderingContext2D, g: GS) {
     }
   }
 
-  // ── Enemy cluster ─────────────────────────────────────────────────────────
+  // ── Enemy clusters ────────────────────────────────────────────────────────
   if (g.phase === "battle-anim" || g.phase === "battle") {
-    // Fixed position; count reflects animation state
+    // The active battle enemy is frozen at battleEnemyY with animated count
     if (g.battleEnemyVis > 0) {
       drawDotCluster(ctx, CW / 2, g.battleEnemyY, g.battleEnemyVis, "#cc2233", "#ff4466");
     }
+    // Draw other non-cleared enemies normally (they're still scrolling)
+    for (const enemy of g.enemies) {
+      if (enemy.cleared || enemy === g.currentBattleEnemy) continue;
+      const esy = enemy.baseY + g.scroll;
+      if (esy > -80 && esy < CH + 40) {
+        drawDotCluster(ctx, CW / 2, esy, enemy.count, "#cc2233", "#ff4466");
+      }
+    }
   } else {
-    const esy = g.enemyBaseY + g.scroll;
-    if (esy > -80 && esy < CH + 40) {
-      drawDotCluster(ctx, CW / 2, esy, g.enemy, "#cc2233", "#ff4466");
+    for (const enemy of g.enemies) {
+      if (enemy.cleared) continue;
+      const esy = enemy.baseY + g.scroll;
+      if (esy > -80 && esy < CH + 40) {
+        drawDotCluster(ctx, CW / 2, esy, enemy.count, "#cc2233", "#ff4466");
+      }
     }
   }
 
@@ -351,8 +402,8 @@ export default function MobControlGame() {
     playerX: CW / 2,
     targetX: CW / 2,
     gates: [],
-    enemy: 0,
-    enemyBaseY: 0,
+    enemies: [],
+    currentBattleEnemy: null,
     flash: 0,
     flashMsg: "",
     flashGreen: true,
@@ -388,9 +439,8 @@ export default function MobControlGame() {
       // Advance world
       g.scroll += SCROLL_SPEED;
 
-      // Smooth player toward mouse/touch target
-      g.playerX += (g.targetX - g.playerX) * PLAYER_LERP;
-      g.playerX = Math.max(DOT_R * 2, Math.min(CW - DOT_R * 2, g.playerX));
+      // Direct movement — no interpolation
+      g.playerX = Math.max(DOT_R * 2, Math.min(CW - DOT_R * 2, g.targetX));
 
       // Countdown flash
       if (g.flash > 0) g.flash--;
@@ -414,20 +464,24 @@ export default function MobControlGame() {
         }
       }
 
-      // Check enemy — start battle animation instead of instant resolution
-      if (g.enemyBaseY + g.scroll >= PLAYER_Y - GATE_H / 2) {
-        // Freeze enemy at its current screen position
-        g.battleEnemyY = g.enemyBaseY + g.scroll;
-        g.battlePlayerVis = g.soldiers;
-        g.battleEnemyVis = g.enemy;
+      // Check enemies — start battle-anim on first non-cleared hit
+      for (const enemy of g.enemies) {
+        if (enemy.cleared) continue;
+        if (enemy.baseY + g.scroll >= PLAYER_Y - GATE_H / 2) {
+          g.currentBattleEnemy = enemy;
+          g.battleEnemyY = enemy.baseY + g.scroll;
+          g.battlePlayerVis = g.soldiers;
+          g.battleEnemyVis = enemy.count;
 
-        // Speed: aim for ~90 frames total regardless of troop count
-        const steps = Math.max(1, Math.min(g.soldiers, g.enemy));
-        g.battleFramesPerStep = Math.max(1, Math.round(90 / Math.min(steps, 60)));
-        g.battleAnimTimer = g.battleFramesPerStep;
+          // Speed: ~90 frames total regardless of count
+          const steps = Math.max(1, Math.min(g.soldiers, enemy.count));
+          g.battleFramesPerStep = Math.max(1, Math.round(90 / Math.min(steps, 60)));
+          g.battleAnimTimer = g.battleFramesPerStep;
 
-        g.phase = "battle-anim";
-        uiDirty = true;
+          g.phase = "battle-anim";
+          uiDirty = true;
+          break; // one battle at a time
+        }
       }
 
       if (uiDirty) syncUi();
@@ -441,39 +495,53 @@ export default function MobControlGame() {
         if (g.battlePlayerVis > 0) g.battlePlayerVis--;
         if (g.battleEnemyVis > 0) g.battleEnemyVis--;
 
-        // Done when the loser (or both) reaches 0
         if (g.battlePlayerVis === 0 || g.battleEnemyVis === 0) {
-          const win = g.soldiers > g.enemy;
-          // Update soldiers to survivor count
-          g.soldiers = win ? g.battlePlayerVis : 0;
+          const currentEnemy = g.currentBattleEnemy!;
+          const win = g.soldiers > currentEnemy.count;
+          g.soldiers = win ? Math.max(1, g.battlePlayerVis) : 0;
 
           g.phase = "battle";
-          g.flashMsg = win ? "✔ Sieg!" : "✘ Niederlage";
           g.flashGreen = win;
           g.flash = FLASH_FRAMES;
           syncUi();
 
-          setTimeout(() => {
-            const g2 = gsRef.current;
-            if (win) {
-              g2.score += 1;
-              g2.level += 1;
-              g2.soldiers = Math.max(5, g2.battlePlayerVis);
-              const next = makeLevel(g2.level, g2.soldiers);
-              g2.gates = next.gates;
-              g2.enemy = next.enemy;
-              g2.enemyBaseY = next.enemyBaseY;
-              g2.scroll = 0;
-              g2.flash = 0;
-              g2.phase = "playing";
-            } else {
-              g2.phase = "game-over";
-            }
-            syncUi();
-            if (g2.phase === "playing") {
-              g2.raf = requestAnimationFrame(gameLoop);
-            }
-          }, BATTLE_DELAY_MS);
+          if (win) {
+            currentEnemy.cleared = true;
+            const isBoss = currentEnemy.isBoss;
+            g.flashMsg = isBoss ? "✔ Level klar!" : "✔ Sieg!";
+
+            setTimeout(() => {
+              const g2 = gsRef.current;
+              if (isBoss) {
+                // Boss defeated → next level
+                g2.score += 1;
+                g2.level += 1;
+                g2.soldiers = Math.max(5, g2.soldiers);
+                const next = makeLevel(g2.level, g2.soldiers);
+                g2.gates = next.gates;
+                g2.enemies = next.enemies;
+                g2.currentBattleEnemy = null;
+                g2.scroll = 0;
+                g2.flash = 0;
+                g2.phase = "playing";
+              } else {
+                // Checkpoint defeated → keep scrolling
+                g2.currentBattleEnemy = null;
+                g2.flash = 0;
+                g2.phase = "playing";
+              }
+              syncUi();
+              if (g2.phase === "playing") {
+                g2.raf = requestAnimationFrame(gameLoop);
+              }
+            }, isBoss ? BATTLE_DELAY_MS : 600);
+          } else {
+            g.flashMsg = "✘ Niederlage";
+            setTimeout(() => {
+              gsRef.current.phase = "game-over";
+              syncUi();
+            }, BATTLE_DELAY_MS);
+          }
         }
       }
     } else if (g.phase === "battle") {
@@ -511,6 +579,7 @@ export default function MobControlGame() {
       targetX: CW / 2,
       flash: 0,
       flashMsg: "",
+      currentBattleEnemy: null,
       ...levelData,
     });
 
@@ -642,6 +711,13 @@ export default function MobControlGame() {
     </div>
   );
 }
+
+
+
+
+
+
+
 
 
 
