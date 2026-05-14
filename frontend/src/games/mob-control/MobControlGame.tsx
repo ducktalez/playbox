@@ -47,7 +47,7 @@ const GATE_H = 54; // height of the gate band
 
 // ── Dot cluster rendering ─────────────────────────────────────────────────────
 const DOT_R = 5; // radius of each soldier dot
-const MAX_VISUAL_DOTS = 30; // cap dots for performance / readability
+const MAX_VISUAL_DOTS = 80; // cap dots for performance / readability
 const FLASH_FRAMES = 30;
 const BATTLE_DELAY_MS = 1400;
 /** Pixels per frame the enemy cluster "grinds" forward during the clash. */
@@ -775,6 +775,7 @@ export default function MobControlGame() {
     </div>
   );
 }
+
 
 
 
