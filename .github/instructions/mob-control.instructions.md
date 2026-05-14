@@ -100,11 +100,28 @@ frontend/src/games/mob-control/
 - [x] Route `/mob-control`, lazy-loaded, added to Home grid and navigation
 - [x] German/English translations via shared i18n
 
-## Deferred / Future
-- High-score persistence (localStorage would suffice)
-- Touch-left / touch-right zone hints on mobile
-- Sound effects on gate pass and battle
-- Enemy variety (different colours / speeds for boss vs. checkpoint)
+## Deferred / Future (Phase 9)
+
+See `docs/Implementation-Plan.md § Phase 9` for the full prioritised roadmap.
+Short summary:
+
+**A — Quality of Life (next up)**
+- High-score persistence (localStorage)
+- Count label always visible (no overlap with cluster)
+- Gate labels colour-coded (green = positive, red = negative/divide)
+- Mobile first-run touch hint
+
+**B — Shooting mechanic** *(only after A is solid)*
+- `pointerdown` fires a bullet (small white circle) upward from player position
+- Bullet hits enemy outer edge → removes 1 enemy dot, bullet disappears
+- Bullets stored in `GS.bullets: { x, y }[]`; advanced each `playing` frame
+- Separate from battle-anim — shooting reduces enemy count *before* contact
+
+**C — Low-priority extras**
+- Sound effects (Web Audio API)
+- Distinct boss / checkpoint enemy rendering
+- Leaderboard backend (only if concrete demand)
+
 
 
 

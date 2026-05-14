@@ -18,6 +18,7 @@
 | 6 | Polish, PWA optimization, offline hardening | 2026-04 | ✅ done (icons deferred) |
 | 7 | Documentation & quality pass | 2026-04 | ✅ done |
 | 8 | Mob Control — arcade game MVP | 2026-05 | ✅ done |
+| 9 | Mob Control — enhancements (QoL → Shooting → Future) | — | 🔲 planned |
 
 ---
 
@@ -438,17 +439,67 @@ Pure frontend arcade game inspired by "Mob Control". No backend needed.
 ### Done
 
 - [x] Canvas-based game loop with `requestAnimationFrame`
-- [x] Soldier blob (blue circle) + enemy blob (red circle) with dynamic number display
-- [x] Gate pairs (`+`, `−`, `×`, `÷`) scrolling toward the player
-- [x] Tap left/right canvas half to choose a gate
-- [x] Operator applied to soldier count; flash feedback on choice
-- [x] Battle resolution at end of each level (soldiers vs. enemy)
-- [x] Level scaling: more gates, higher enemy counts, harder operators each level
-- [x] Survivors applied to next level (soldiers − 60 % of enemy on win)
+- [x] Phyllotaxis dot-cluster rendering (multiple small circles per blob)
+- [x] Gate pairs (`+`, `−`, `×`, `÷`) as full-width bands; player steers left/right with mouse/touch
+- [x] Auto-apply gate on contact based on current player X position
+- [x] Multiple enemy groups per level: checkpoints + boss structure
+- [x] Battle animation: clusters approach, dots removed front-to-back from point of contact
+- [x] Constant scroll speed (no level-scaling of pace)
+- [x] Survivors from battle carried into next level
 - [x] HUD: current level, score, soldier count
 - [x] Start screen + Game Over screen with final score
 - [x] Route `/mob-control`, lazy-loaded, added to Home grid and navigation
 - [x] German/English translations via shared i18n system
+
+---
+
+## Phase 9 — Mob Control Enhancements
+
+Prerequisite: base version (Phase 8) is stable and plays well.
+Priority order within this phase: **A → B → C**.
+
+### A — Quality of Life (no new mechanics)
+
+These polish the base game without adding complexity.
+
+- [ ] **High-score persistence** — save best score in `localStorage`; show on game-over screen
+- [ ] **Count label positioning** — move soldier/enemy count to always be visible (never overlapped by the cluster itself); dynamically position above or below based on available space
+- [ ] **Difficulty curve** — checkpoint/boss ratio tuning so early levels feel approachable and later levels are genuinely hard; playtest-driven constant adjustments
+- [ ] **Gate label clarity** — colour-code gate text (green = positive, red = negative/divide) to make left/right decision easier at a glance
+- [ ] **Mobile touch hint** — brief first-run overlay showing "← slide left/right →" (dismiss on first touch)
+
+### B — Shooting Mechanic
+
+Player soldiers can fire projectiles at an approaching enemy group before contact.
+Shooting reduces the enemy count before the battle animation.
+
+**Design:**
+- Tap/click on the canvas during `playing` phase spawns a bullet at the player's current X
+- Bullets travel upward at a fixed speed (e.g. 8 px/frame)
+- When a bullet's Y reaches the enemy cluster's outer edge, it removes 1 enemy soldier and disappears
+- One bullet is fired per tap; rapid tapping fires multiple bullets
+- Bullets are rendered as small white circles (DOT_R / 2)
+- No "ammo" limit — shooting is always available but limited by tap rate
+
+**Implementation notes:**
+- Add `bullets: Bullet[]` to GS (`{ x, y: number }` each)
+- Each `playing` frame: advance all bullets upward, check collision with each non-cleared enemy
+- Collision: `|bullet.y - enemy.screenY| < clusterRadius + DOT_R`
+- Remove colliding bullet + decrement `enemy.count` (min 1; enemy not immediately cleared — battle still required)
+- Draw bullets in `drawScene` (white filled circle)
+- `onPointerDown` on canvas wrapper fires a bullet (works for both mouse and touch)
+- Steering (left/right) via `pointermove`; shooting via `pointerdown` — both on the same wrapper
+
+### C — Deferred / Future
+
+Low priority; do not implement until A and B are complete and stable.
+
+- [ ] Sound effects: gate pass chime, collision thud, level-clear fanfare (Web Audio API, no external lib)
+- [ ] Enemy variety: boss enemies rendered with a distinct colour and larger DOT_R; checkpoint enemies slightly transparent
+- [ ] Merge mechanic: if player passes through two consecutive × gates, show a brief merge flash
+- [ ] Animated gate labels: gates pulse/glow when player is directly aligned with them
+- [ ] Leaderboard: backend endpoint + weekly top-10 display (requires introducing a backend module — only if there is concrete demand)
+
 
 
 
