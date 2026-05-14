@@ -50,7 +50,8 @@ const DOT_R = 5; // radius of each soldier dot
 const MAX_VISUAL_DOTS = 30; // cap dots for performance / readability
 const FLASH_FRAMES = 30;
 const BATTLE_DELAY_MS = 1400;
-const BATTLE_APPROACH_FRAMES = 20; // frames for the two clusters to close in before clashing
+/** Pixels per frame the enemy cluster "grinds" forward during the clash. */
+const BATTLE_GRIND_SPEED = 0.5;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Op = "+" | "−" | "×" | "÷";
@@ -103,16 +104,12 @@ interface GS {
   flashMsg: string;
   flashGreen: boolean;
   // ── Battle animation state ──────────────────────────────────────────────
-  battlePlayerVis: number;    // actual player count (counts down during clash)
-  battleEnemyVis: number;     // actual enemy count (counts down during clash)
-  battleAnimTimer: number;    // frames until next clash decrement step
+  battlePlayerVis: number;     // actual player count (counts down during clash)
+  battleEnemyVis: number;      // actual enemy count (counts down during clash)
+  battleAnimTimer: number;     // frames until next clash decrement step
   battleFramesPerStep: number; // frames between decrements
-  battleEnemyY: number;       // current screen-Y of enemy cluster during battle
-
-  // Pre-computed once at battle start (approach phase)
-  battleApproachFrames: number;  // remaining approach frames (0 = clash phase)
-  battleApproachStep: number;    // enemy Y delta per approach frame
-  battleContactY: number;        // enemy center Y when outer edges touch
+  /** Enemy Y during battle-anim — starts at outer-edge contact, creeps toward PLAYER_Y. */
+  battleEnemyY: number;
 
   // Sorted dot positions: outermost-facing dots are at index 0 (removed first).
   // Computed once at battle start; drawn by skipping the first N removed entries.
@@ -463,9 +460,6 @@ export default function MobControlGame() {
     battleAnimTimer: 0,
     battleFramesPerStep: 2,
     battleEnemyY: 0,
-    battleApproachFrames: 0,
-    battleApproachStep: 0,
-    battleContactY: 0,
     battlePlayerSortedPos: [],
     battleEnemySortedPos: [],
     raf: 0,
@@ -520,30 +514,28 @@ export default function MobControlGame() {
         }
       }
 
-      // Check enemies — start battle-anim on first non-cleared hit
+      // Check enemies — trigger exactly when outer edges of both clusters touch
       for (const enemy of g.enemies) {
         if (enemy.cleared) continue;
-        if (enemy.baseY + g.scroll >= PLAYER_Y - GATE_H / 2) {
+
+        const playerDots = Math.min(g.soldiers, MAX_VISUAL_DOTS);
+        const enemyDots  = Math.min(enemy.count, MAX_VISUAL_DOTS);
+        // triggerY: enemy center Y when the two outer edges first meet
+        const triggerY = PLAYER_Y - clusterRadius(playerDots) - clusterRadius(enemyDots);
+
+        if (enemy.baseY + g.scroll >= triggerY) {
           g.currentBattleEnemy = enemy;
 
-          const startY = enemy.baseY + g.scroll;
-          const playerDots = Math.min(g.soldiers, MAX_VISUAL_DOTS);
-          const enemyDots  = Math.min(enemy.count, MAX_VISUAL_DOTS);
-
           // Pre-sort positions once: index 0 = dot facing the opponent (removed first)
-          // Player: top-most dots (smallest Y) face the enemy above → sort ascending Y
-          // Enemy:  bottom-most dots (largest Y) face the player below → sort descending Y
+          // Player: top-most (smallest Y) faces enemy above  → sort ascending Y
+          // Enemy:  bottom-most (largest Y) faces player below → sort descending Y
           g.battlePlayerSortedPos = phyllotaxisPositions(playerDots)
             .sort(([, ay], [, by]) => ay - by);
           g.battleEnemySortedPos  = phyllotaxisPositions(enemyDots)
             .sort(([, ay], [, by]) => by - ay);
 
-          // Approach: enemy moves until outer edges of both clusters touch
-          const contactY = PLAYER_Y - clusterRadius(playerDots) - clusterRadius(enemyDots);
-          g.battleEnemyY       = startY;
-          g.battleContactY     = contactY;
-          g.battleApproachStep  = (contactY - startY) / BATTLE_APPROACH_FRAMES;
-          g.battleApproachFrames = BATTLE_APPROACH_FRAMES;
+          // Position enemy at the exact contact point (no separate approach phase)
+          g.battleEnemyY = triggerY;
 
           // Clash speed: ~90 frames regardless of troop count
           const steps = Math.max(1, Math.min(g.soldiers, enemy.count));
@@ -562,15 +554,13 @@ export default function MobControlGame() {
       if (uiDirty) syncUi();
 
     } else if (g.phase === "battle-anim") {
-      // Phase 1 — approach: enemy moves toward player until outer edges touch
-      if (g.battleApproachFrames > 0) {
-        g.battleApproachFrames--;
-        g.battleEnemyY += g.battleApproachStep;
-      } else {
-        // Phase 2 — clash: outermost (facing) dots removed first via sorted positions
-        g.battleAnimTimer--;
-        if (g.battleAnimTimer <= 0) {
-          g.battleAnimTimer = g.battleFramesPerStep;
+      // Enemy "grinds" slowly toward player center while dots are removed
+      g.battleEnemyY = Math.min(g.battleEnemyY + BATTLE_GRIND_SPEED, PLAYER_Y);
+
+      // Dot removal: outermost facing dots first (pre-sorted positions)
+      g.battleAnimTimer--;
+      if (g.battleAnimTimer <= 0) {
+        g.battleAnimTimer = g.battleFramesPerStep;
           if (g.battlePlayerVis > 0) g.battlePlayerVis--;
           if (g.battleEnemyVis > 0) g.battleEnemyVis--;
 
@@ -618,7 +608,6 @@ export default function MobControlGame() {
             }
           }
         }
-      }
     } else if (g.phase === "battle") {
       if (g.flash > 0) g.flash--;
     }
@@ -786,6 +775,12 @@ export default function MobControlGame() {
     </div>
   );
 }
+
+
+
+
+
+
 
 
 

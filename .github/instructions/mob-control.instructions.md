@@ -26,11 +26,13 @@ start → playing → battle-anim → battle → playing (non-boss win)
                                         → game-over (lose)
 ```
 - `playing`: world scrolls, player steers, gates auto-apply, enemy collision detected.
-- `battle-anim` — **two sub-phases**:
-  1. *Approach* (`battleApproachFrames > 0`): enemy cluster moves toward player until
-     outer edges touch (`battleContactY = PLAYER_Y − playerRadius − enemyRadius`).
-  2. *Clash* (`battleApproachFrames == 0`): dot counts decrement; outermost-facing dots
-     disappear first (pre-sorted positions, computed once at battle start).
+- `battle-anim` — single continuous clash phase:
+  - Trigger fires exactly when the **outer edges** of both clusters first touch:
+    `triggerY = PLAYER_Y − clusterRadius(playerDots) − clusterRadius(enemyDots)`.
+  - Enemy cluster **grinds forward** at `BATTLE_GRIND_SPEED` (0.5 px/frame) toward
+    `PLAYER_Y`, capped there — like armies pushing against each other.
+  - Dot removal (via pre-sorted positions, front-facing first) runs simultaneously
+    from the very first frame of contact — no separate approach phase.
 - `battle`: brief result flash; `setTimeout` triggers next-level or game-over.
 - `start` / `game-over`: canvas is static; DOM overlay rendered on top.
 
@@ -103,6 +105,7 @@ frontend/src/games/mob-control/
 - Touch-left / touch-right zone hints on mobile
 - Sound effects on gate pass and battle
 - Enemy variety (different colours / speeds for boss vs. checkpoint)
+
 
 
 
