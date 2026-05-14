@@ -45,7 +45,10 @@ start → playing → battle-anim → battle → playing (non-boss win)
 ### Dot cluster rendering
 - Blobs are rendered as clusters of small circles (phyllotaxis / golden-angle spiral layout).
 - `phyllotaxisPositions(n)` is deterministic for a given `n` — stable across frames, no RNG per draw.
-- Visual dot count capped at `MAX_VISUAL_DOTS` (30); actual count shown as text below cluster.
+- Visual dot count capped at `MAX_VISUAL_DOTS` (100); actual count shown as text below cluster.
+- **Elliptical layout for large groups**: `phyllotaxisPositions` scales the X axis by
+  `aspect = 1 + max(0, (n − 30) / 70)` — circular at n ≤ 30, up to 2× wider at n = 100.
+  Y spread is unchanged, so vertical collision math (`clusterRadius`) remains correct.
 - During `battle-anim`, positions are **pre-sorted once** at battle start — not recomputed per frame:
   - Player: sorted ascending Y (topmost = facing enemy) → index 0 removed first.
   - Enemy: sorted descending Y (bottommost = facing player) → index 0 removed first.
@@ -121,6 +124,7 @@ Short summary:
 - Sound effects (Web Audio API)
 - Distinct boss / checkpoint enemy rendering
 - Leaderboard backend (only if concrete demand)
+
 
 
 

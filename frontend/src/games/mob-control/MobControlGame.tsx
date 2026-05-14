@@ -47,7 +47,7 @@ const GATE_H = 54; // height of the gate band
 
 // ── Dot cluster rendering ─────────────────────────────────────────────────────
 const DOT_R = 5; // radius of each soldier dot
-const MAX_VISUAL_DOTS = 80; // cap dots for performance / readability
+const MAX_VISUAL_DOTS = 100; // cap dots for performance / readability
 const FLASH_FRAMES = 30;
 const BATTLE_DELAY_MS = 1400;
 /** Pixels per frame the enemy cluster "grinds" forward during the clash. */
@@ -201,15 +201,21 @@ function makeLevel(level: number, soldiers: number) {
 /**
  * Phyllotaxis (golden-angle spiral) layout — gives a natural "crowd" look.
  * Returns up to n positions, stable across frames (deterministic for same n).
+ *
+ * When n > 30 the cluster widens horizontally so it fits the canvas better:
+ *   aspect = 1.0 at n ≤ 30  →  2.0 at n = 100  (linear interpolation)
+ * The Y spread stays unchanged, so vertical collision math is unaffected.
  */
 function phyllotaxisPositions(n: number): [number, number][] {
   const phi = Math.PI * (3 - Math.sqrt(5)); // golden angle ≈ 137.5°
-  const spread = 9 + Math.sqrt(n) * 4.5;    // cluster radius grows with count
+  const spread = 9 + Math.sqrt(n) * 4.5;    // cluster Y-radius grows with count
+  // Horizontal stretch: 1× for small groups, up to 2× for large groups
+  const aspect = 1 + Math.max(0, (n - 30) / 70);
   const result: [number, number][] = [];
   for (let i = 0; i < n; i++) {
     const r = spread * Math.sqrt((i + 0.5) / n);
     const theta = i * phi;
-    result.push([r * Math.cos(theta), r * Math.sin(theta)]);
+    result.push([r * Math.cos(theta) * aspect, r * Math.sin(theta)]);
   }
   return result;
 }
@@ -775,6 +781,8 @@ export default function MobControlGame() {
     </div>
   );
 }
+
+
 
 
 
