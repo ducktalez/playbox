@@ -9,11 +9,14 @@ export const mobControlTranslations: TranslationBundle = {
     "playAgain": "Nochmal",
     "gameOver": "Game Over",
     "finalScore": "Erreichte Level",
+    "bestScore": "Bestleistung",
+    "newBest": "🏆 Neuer Rekord!",
     "levelClear": "Level geschafft!",
     "battle.win": "Sieg! 🎉",
     "battle.lose": "Niederlage! 💀",
     "hint.choose": "Tippe links oder rechts",
     "soldiers": "Soldaten",
+    "steerHint": "bewegen",
   },
   en: {
     "title": "Mob Control",
@@ -23,13 +26,17 @@ export const mobControlTranslations: TranslationBundle = {
     "playAgain": "Play again",
     "gameOver": "Game Over",
     "finalScore": "Levels reached",
+    "bestScore": "Best",
+    "newBest": "🏆 New record!",
     "levelClear": "Level cleared!",
     "battle.win": "Victory! 🎉",
     "battle.lose": "Defeated! 💀",
     "hint.choose": "Tap left or right",
     "soldiers": "Soldiers",
+    "steerHint": "move",
   },
 };
+
 
 
 

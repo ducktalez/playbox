@@ -47,6 +47,12 @@ The project is in early development. Only implement what is **technically necess
 - Media (clips, images, docs) are stored as **files**, referenced by URL — never binary in the DB.
 - See `.github/instructions/database.instructions.md` for full ORM/SQL conventions (session handling, query style, transaction patterns, test DB strategy).
 
+## Working Behaviour
+- **Proactive code review**: When working on a task, report any **bugs**, **code smells**, or **questionable patterns** discovered along the way — even if unrelated to the current task. Include a brief suggestion for each finding.
+- **Don't silently fix ambiguous findings**: Only fix a discovered issue directly if it is **unambiguously wrong** (missing import, typo, off-by-one). If the intent is unclear, or a comment/print suggests ongoing work — **ask first** or add a `# TODO` instead of removing/rewriting it. Debug prints or markers like `# discuss` are investigation aids, not dead code.
+- **Open tasks → implementation plan**: Add new TODOs to `docs/implementation-plan.md` instead of writing `# TODO` in source code.
+- **Design discussions → implementation plan**: Open architectural questions and trade-off decisions go into the **Design Discussions** section of `docs/implementation-plan.md`. Do not embed them inline in source code.
+- **Raise concerns**: If an approach seems risky, fragile, or architecturally problematic, voice the concern explicitly before or alongside the implementation.
 ## Maintaining These Instructions
 When a change introduces new conventions, pitfalls, or architectural decisions, **update the relevant instruction file** (this file, or `.github/instructions/*.instructions.md`). Keep them accurate and lean.
 
@@ -54,4 +60,5 @@ When a change introduces new conventions, pitfalls, or architectural decisions, 
 - Update architectural changes in `docs/Architecture.md`.
 - Track deferred work in `docs/Implementation-Plan.md`.
 - New games get their own module in `backend/app/games/` and `frontend/src/games/` — never add game logic to `core/`.
+
 

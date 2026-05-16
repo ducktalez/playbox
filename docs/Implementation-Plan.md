@@ -3,7 +3,7 @@
 ## Current Status
 
 **Phase:** All phases complete — maintenance mode
-**Last Updated:** 2026-05-13
+**Last Updated:** 2026-05-14
 
 ## Roadmap
 
@@ -462,11 +462,11 @@ Priority order within this phase: **A → B → C**.
 
 These polish the base game without adding complexity.
 
-- [ ] **High-score persistence** — save best score in `localStorage`; show on game-over screen
-- [ ] **Count label positioning** — move soldier/enemy count to always be visible (never overlapped by the cluster itself); dynamically position above or below based on available space
+- [x] **High-score persistence** — save best score in `localStorage`; show on game-over screen (new-record banner for first-time best)
+- [x] **Count label positioning** — dark pill background behind count text; always legible regardless of cluster colour/overlap
 - [ ] **Difficulty curve** — checkpoint/boss ratio tuning so early levels feel approachable and later levels are genuinely hard; playtest-driven constant adjustments
-- [ ] **Gate label clarity** — colour-code gate text (green = positive, red = negative/divide) to make left/right decision easier at a glance
-- [ ] **Mobile touch hint** — brief first-run overlay showing "← slide left/right →" (dismiss on first touch)
+- [x] **Gate label clarity** — colour-coded gate text (green = `+`/`×`, red = `−`/`÷`) for instant left/right decision
+- [x] **Mobile touch hint** — brief first-run overlay "← move →" shown once; dismissed on first touch; flag persisted in `localStorage`
 
 ### B — Shooting Mechanic
 

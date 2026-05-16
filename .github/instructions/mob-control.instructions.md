@@ -91,30 +91,35 @@ frontend/src/games/mob-control/
 └── translations.ts      # German/English strings (uses shared i18n system)
 ```
 
-## Current Status (Phase 8 — done)
+## Current Status (Phase 8+9A — done)
 - [x] Canvas game loop with requestAnimationFrame
-- [x] Dot-cluster rendering (phyllotaxis)
+- [x] Dot-cluster rendering (phyllotaxis, elliptical for large groups)
 - [x] Gate pairs — two full-width halves, direct mouse/touch steering
 - [x] Auto-apply gate on collision (left/right based on playerX)
 - [x] Multiple enemy groups per level (checkpoint + boss structure)
-- [x] Battle animation — dots removed one by one from both sides
+- [x] Battle animation — dots removed one by one from both sides, front-first
 - [x] Level scaling — more/stronger enemies, constant scroll speed
 - [x] HUD (level, score, soldiers), start screen, game-over screen
 - [x] Route `/mob-control`, lazy-loaded, added to Home grid and navigation
 - [x] German/English translations via shared i18n
+- [x] **Shooting** — `pointerdown` fires bullet upward from player; hits enemies/barriers
+- [x] **HP Barriers** — shoot down (hp → 0) to clear; if they reach player with hp > 0,
+      dots in barrier's X range are swept; survivors animate back into formation (regroup)
+- [x] **Regroup animation** — smoothstep lerp from scattered positions to new phyllotaxis layout
+- [x] **More numerous enemies** — checkpoint ≈ 70 %, boss ≈ 180 %+ of current soldiers
 
 ## Deferred / Future (Phase 9)
 
 See `docs/Implementation-Plan.md § Phase 9` for the full prioritised roadmap.
 Short summary:
 
-**A — Quality of Life (next up)**
-- High-score persistence (localStorage)
-- Count label always visible (no overlap with cluster)
-- Gate labels colour-coded (green = positive, red = negative/divide)
-- Mobile first-run touch hint
+**A — Quality of Life (done)**
+- ~~High-score persistence (localStorage)~~ ✅
+- ~~Count label always visible (no overlap with cluster)~~ ✅ — dark pill background behind label
+- ~~Gate labels colour-coded (green = positive, red = negative/divide)~~ ✅
+- ~~Mobile first-run touch hint~~ ✅ — dismissed on first touch, flag in localStorage
 
-**B — Shooting mechanic** *(only after A is solid)*
+**B — Shooting mechanic** *(done)*
 - `pointerdown` fires a bullet (small white circle) upward from player position
 - Bullet hits enemy outer edge → removes 1 enemy dot, bullet disappears
 - Bullets stored in `GS.bullets: { x, y }[]`; advanced each `playing` frame
@@ -124,6 +129,8 @@ Short summary:
 - Sound effects (Web Audio API)
 - Distinct boss / checkpoint enemy rendering
 - Leaderboard backend (only if concrete demand)
+
+
 
 
 
