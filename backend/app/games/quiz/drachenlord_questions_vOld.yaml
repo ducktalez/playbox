@@ -1,0 +1,395 @@
+- 'Was schafft Rainer im GTA V tutorial mehrere Minuten lang nicht?':
+    'correct':
+      - 'Das Handy zu benutzen'
+    'false':
+      - 'Den Charakter zu wechseln'
+      - 'die Türe zu sprengen'
+      - 'die Geiseln zu schützen'
+- 'Was behauptet Rainer fälschlicherweise über die Haut?':
+    'correct':
+      - 'Sie ist kein Organ'
+    'false':
+      - 'Sie wächst nur bis zum 18. Lebensjahr'
+      - 'Sie sollte nur einmal wöchentlich gewaschen werden'
+      - 'Sie kann auch von Bildschirmen Sonnenbrand bekommen'
+- 'In welchem Ort wohnt Rainer?':
+    'correct':
+      - 'Altschauerberg'
+    'false':
+      - 'Nürnberg'
+      - 'Neuschauerberg'
+      - 'Emskirchen'
+- 'Wo behauptet Rainer fälschlicherweise NICHT zu wohnen?':
+    'correct':
+      - 'Bayern'
+    'false':
+      - 'Franken'
+      - 'Deutschland'
+      - 'Barcelona'
+      - '12'
+- 'Wielang war Rainer nach eigener Aussage am ertrinken?':
+    'correct':
+      - '30 Minuten'
+    'false':
+      - 'noch nie'
+      - '3-4 Minuten'
+      - '10 Minuten'
+      - '12'
+- 'Welches Wort schreibt Rainer falsch über seinen Balkon?':
+    'correct':
+      - 'unbesigt'
+    'false':
+      - 'Dache'
+      - 'Meddl'
+      - 'Reiner Winkler'
+      - '2'
+- 'Wie heißt Rainers Mutter?':
+    'correct':
+      - 'Rita'
+    'false':
+      - 'Ramona'
+      - 'Helga'
+      - 'Sabine'
+      - '2'
+- 'Wie heißt Rainers erstes Internet Pseudonym?':
+    'correct':
+      - 'Drachenlord1510'
+    'false':
+      - 'Drachenlord'
+      - 'Drache'
+      - 'DrachenGames'
+- 'Welcher Supermarkt liegt für Rainer am nächsten?':
+    'correct':
+      - 'Rewe'
+    'false':
+      - 'Edeka'
+      - 'Aldi'
+      - 'Penny'
+- 'Welches Restaurant ist für seine excellenten Pizzen berüchtigt?':
+    'correct':
+      - 'Rotes Herz'
+    'false':
+      - 'Frankennest'
+      - 'Ginos'
+      - 'Pizza Hut'
+- 'Welche Farbe hat Rainers Auto?':
+    'correct':
+      - 'rot'
+    'false':
+      - 'schwarz'
+      - 'weiß'
+      - 'blau'
+- 'Welcher Freund Rainers ist als Emallah bekannt?':
+    'correct':
+      - 'Daniel Richter'
+    'false':
+      - 'Thomas Schweighöfer'
+      - 'Martin Walger'
+      - 'Emil Maier'
+- 'Welche Band war eine der Gründe weshalb sich Rainer für Metal zu interessieren begann?':
+    'correct':
+      - 'Landser'
+    'false':
+      - 'ACDC'
+      - 'Metallica'
+      - 'Amon Amarth'
+- 'Auf welchen Hater-Trick fällt SIDO nach seinem Gespräch rein? Er':
+    'correct':
+      - 'Er grüßt Rudi aus Buddeln'
+      - 'Er grüßt Rita aus Weiden'
+    'false':
+      - 'Er grüßt Sea Kyle'
+      - 'Er grüßt das Regenbogenschaf'
+      - 'Er grüßt Dorian'
+- 'Wie heißt eine umstrittene Doku über den Drachenlord und seine Hater?':
+    'correct':
+      - 'Hass ist ihr Hobby'
+    'false':
+      - 'Der Fall Drachenlord: Wenn Onlinehass Reaität wird'
+      - 'Internetmobbing Hautnah'
+      - 'Lösch dich nicht!'
+- 'Welcher Song wurde von Dorian veröffentlicht?':
+    'correct':
+      - 'Drachentango'
+    'false':
+      - 'Niemals'
+      - 'Buttergolem'
+      - 'Barrenkrieg'
+- 'Wie groß ich Rainer laut einer seiner ersten Aussagen?':
+    'correct':
+      - '1.96m'
+    'false':
+      - '2.00m'
+      - '1.90m'
+      - '1.94m'
+- 'Wie alt ist das Mädchen die Rainer zu seiner gibt nedzu jung       - nur zu eng       - treibt?':
+    'correct':
+      - 15
+    'false':
+      - 14
+      - 13
+      - 12'
+- 'Welcher Youtuber sorgte früh im game mit einem Besuch für einen Besucherstrom nach ihm benannter Kinder?':
+    'correct':
+      - 'KuchenTV'
+    'false':
+      - 'iBlali'
+      - 'Hans Entertainment'
+      - 'Lachflat'
+- 'Welche ELO hat der Schachcomputer gegen den Rainer live verliert?':
+    'correct':
+      - '500'
+    'false':
+      - '400'
+      - '800'
+      - '1000'
+- 'Als welches Tier verkleidet trat früh im game ein Gast in einem Video auf?':
+    'correct':
+      - 'Wolf'
+    'false':
+      - 'Drache'
+      - 'Bär'
+      - 'Löwe'
+- 'Was ist die Aufgabe eines Charakters in Vier Drachen und der Metal? Er':
+    'correct':
+      - 'ist für die Musik zuständig'
+    'false':
+      - 'soll die hater fernhalten'
+      - 'soll den Bass spielen'
+      - 'macht Effekte'
+- 'Welche Aussage über Rainers Hamsterkäfig stimmt?':
+    'correct':
+      - 'Er hat zwei Stockwerke'
+    'false':
+      - 'ist schwarz'
+      - 'ist eigentlich ein Hasenkäfig'
+      - 'wurde auf dem Flomarkt Emskirchen gekauft'
+- 'Was macht laut Rainer eine Hamstermutter nach der Geburt?':
+    'correct':
+      - 'Gibt ihren Kindern einen Namen in der Hamstersprache'
+    'false':
+      - 'sorgt sich nur 2 Wochen lang um ihre Kinder'
+      - 'verliert bei der Geburt die Hälfte ihres Gewichtes'
+      - 'Zwei WOchen Lang Erziehung'
+- 'Mit welchem Trick umgeht Rainer einem Hack der Hater?':
+    'correct':
+      - 'Einem zweiten Nildschirm'
+    'false':
+      - 'Dem Taskmanager'
+      - 'Einem Screenshot'
+      - 'Durch ziehen des WLAN Kabels'
+- 'Welche Info erwähnt Rainer in seinem Video dass er keinen Strom mehr hat nebenbei?':
+    'correct':
+      - 'Er hat nicht geweint, nur geschwitzt'
+    'false':
+      - 'Es hat gerade geregnet'
+      - 'er muss noch ein Paket beim Nachbarn holen'
+      - 'Er kriegt noch eine menge Gelkd von Youtube'
+      - 'Der Amazon-bote war grad da'
+- 'Wodurch fühlt sich Rainer disktiminiert? Wenn Leute':
+    'correct':
+      - 'Meddl statt Metal schreiben'
+    'false':
+      - 'er als pummelig bezeichnet wird'
+      - 'Gino die Pizza zu klein macht'
+      - 'ihm sagen dass der Stream laggt'
+- 'Wie lautet Regel 3 Rainers ersten Regelwerkesauf Facebook?':
+    'correct':
+      - 'Auf die rechtschreibung achten.'
+    'false':
+      - 'Getrollt wird ned.'
+      - 'Man muss sich nicht an die Regeln halten.'
+      - 'Freundlich sein       - nicht haten.'
+- 'Was glaubt Rainer über Sex im Mittelalter zu wissen?':
+    'correct':
+      - 'Kinder schauten ihren Eltern beim Sex zu'
+    'false':
+      - 'Lanzen wurden auch als Sexspielzeug verwendet'
+      - 'Ritterrüstungen konnten auch beim Sex getragen werden'
+      - 'man durfte mit Minderjährigen Sex haben'
+- 'Wie hieß keine frühe Haterseite auf Facebook?':
+    'correct':
+      - 'Rainer Winkler leckt Hoden'
+    'false':
+      - 'Rainer Winkler klaut Memes'
+      - 'Rainer Winkler gegen Rhythmus'
+      - 'Rainer Winkler gegen alberne Kopfbedeckungen'
+      - 'Rainer Winkler gegen Rechtschreibung'
+      - 'Rainer Winkler Partei'
+- 'Was plant Rainer als 1.000 Abonnenten Special?':
+    'correct':
+      - 'Eine Don Antonio Zigarre zu rauchen'
+    'false':
+      - 'Ein Fantreffen in Emskirchen'
+      - 'Mit dem Auto nach Nürnberg zu fahren'
+      - 'Einen Livestream zu machen'
+- 'Als was bezeichnet Rainer den amerikanischen geheimdienst NICHT?':
+    'correct':
+      - 'FBI'
+      - 'CIA'
+    'false':
+      - 'CSI'
+      - 'NSA'
+      - 'USA'
+- 'Was kann Rainer nicht in seinen Midrange PC einbauen, sodass er ihn nicht benutzen kann?':
+    'correct':
+      - 'nvme SSD'
+    'false':
+      - 'led'
+      - 'Lüfter'
+      - 'Arbeitsspeicher'
+- 'Was braucht auch Nahrung um zu wachsen?':
+    'correct':
+      - 'Wasser'
+    'false':
+      - 'Pflanzen'
+      - 'Nahrung'
+      - 'Bäume'
+- 'Welche Lordvariation stammt von Rainer?':
+    'correct':
+      - 'Mittelalterlord'
+    'false':
+      - 'Fettlord'
+      - 'Lustlord'
+      - 'Lügenlord'
+      - 'Ankündigungslord,'
+- 'Auf welchem Festival war Rainer nicht?':
+    'correct':
+      - 'Tomorrowland'
+    'false':
+      - 'Out and Loud'
+      - 'Summer breze'
+      - 'Wacken'
+- 'Wen wollte Rainer umarmen auf einer Frage über ask.fm.':
+    'correct':
+      - 'Sein Kind (wenn er eins hätte)'
+    'false':
+      - 'Seinen Vater (wenn er noch leben würde)'
+      - 'Seine Freundin (wenn sie da wäre)'
+      - 'Seine Schwester (wenn sie ihn noch mögen würde)'
+      - '15'
+- 'Welches Tier wurde noch nicht auf Rainers Grundstück gesichtet?':
+    'correct':
+      - 'Reh'
+    'false':
+      - 'weiße Spinnen'
+      - 'Ente'
+      - 'Aal'
+      - 'haterfliege'
+      - 'maus'
+      - 'ratte'
+- 'Welche Farbe hatte der Sichtschutz an Rainers Zaun?':
+    'correct':
+      - 'blau'
+    'false':
+      - 'olivgrün'
+      - 'weiß'
+      - 'gelb'
+- 'Wie weit reicht laut Rainer vor Gericht seine Überwachungskamera?':
+    'correct':
+      - '1m über das Grundstück'
+    'false':
+      - 'bis zur Grundstücksgrenze'
+      - 'bis über die Straße'
+      - 'er kann es jetzt nicht sagen'
+- 'Was behauptet Rainer aufgrund seines Berufes als Youtuber vor Gericht?':
+    'correct':
+      - 'Sein Einkommen wird in Amerika versteuert'
+    'false':
+      - 'er ist eigentlich Journalist'
+      - 'braucht Internet im Gefängnis'
+      - 'Könnte eine Haftstrafe mit Fußfessel daheim absitzen'
+- 'Was behauptet ein Methjunkie das er am Schanzenfest bei Drachenlord machen würde?':
+    'correct':
+      - 'Seine Scheisse fressen'
+    'false':
+      - 'Ihm die Prügel nausschmeißen'
+      - 'Ihn mit Kacke bewerfen'
+      - 'Rudi ausbuddeln'
+- 'Weshalb wäre es schwer mit Rainer laut seiner Bewerbung Kontakt aufzunehmen?':
+    'correct':
+      - 'Die angegebene Handynummer ist nicht in Benutzung'
+    'false':
+      - 'Er hat keinen Briefkasten'
+      - 'Er eine Mailadresse aber kein Internet'
+      - 'Er kennt zwar sein Dorf       - aber nicht die Postleitzahl'
+- 'Welches Kleidungsstück hat Rainer noch nicht in einem Video getragen?':
+    'correct':
+      - 'Kettenhemd'
+    'false':
+      - 'Anzug'
+      - 'Schottenrock'
+      - 'Springerstiefel'
+- 'Eines der beliebtesten Formate heißt Vier Drachen...':
+    'correct':
+      - 'und der Metal'
+    'false':
+      - 'in Valhalla'
+      - 'und der Hate'
+      - 'und ein Schaf'
+- 'Weshalb hält sich Rainer für besonders hygienisch?':
+    'correct':
+      - 'Er duscht nach dem kacken'
+    'false':
+      - 'Er schwitzt nur wenig weil er kaum Sport macht'
+      - 'er rasiert sich täglich'
+      - 'er stinkt eigentlich nie'
+- 'Wer hat sich noch nie zu Drachenlord geäußert?':
+    'correct':
+      - 'JuliensBlog'
+    'false':
+      - 'Der Bayrische Innenminister Hermann'
+      - 'Gronkh'
+      - 'Sido'
+- 'Wem wurde versucht einzureden dass Rainer Winkler Anführer einer gegen ihn gerichtete VErschwörung ist?':
+    'correct':
+      - 'Mimon Baraka'
+    'false':
+      - 'Kopfnusskalli'
+      - 'Fler'
+      - 'Atila Hildmann'
+- 'Wodurch wird Regenbogenschafs Identität auf?':
+    'correct':
+      - 'Er lässt ein Bier im Rewe fallen'
+    'false':
+      - 'ein Fan erkennt ihn und verrät Rainer seine Facebook Daten'
+      - 'Er wurde angezeigt'
+      - 'Rainer erkennt ihn vor seinem Tor'
+- 'Welche Schule besuchte Rainer nach der Grundschule?':
+    'correct':
+      - 'Sonderschule'
+    'false':
+      - 'Hauptschule'
+      - 'Realschule'
+      - 'Gymnasium'
+- 'Wen trifft Rainer in Köln?':
+    'correct':
+      - 'Florentin Will von den RocketBeans'
+      - 'Joseph DeChangeman'
+    'false':
+      - 'Etienne'
+      - 'Simon'
+      - 'Mudi'
+- 'Was hat Rainer in seiner Aussage schon mit 4 im Wald getan?':
+    'correct':
+      - 'xxx'
+    'false':
+      - 'Holz gehackt'
+      - 'gejagt'
+      - 'Pilze gesammelt'
+      - 'Beeren gepflückt'
+- 'Mit welchem Youtuber hat sich Rainer noch nie getroffen?':
+    'correct':
+      - 'iBlali'
+    'false':
+      - 'RocketBeans'
+      - 'Kevin Wolter'
+      - 'Der dunkle Parabelritter'
+- 'Wo versteckt sich iBlali Laut Rainer um ihn nicht treffen zu müssen':
+    'correct':
+      - 'Japan'
+    'false':
+      - 'Schweiz'
+      - 'In seinem Keller'
+      - 'Amerika'
+      - 'Berlin'
